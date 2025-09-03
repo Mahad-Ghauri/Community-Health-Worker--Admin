@@ -7,7 +7,6 @@ import 'package:chw_tb/controllers/input_controllers.dart';
 import 'package:provider/provider.dart';
 import 'package:chw_tb/controllers/providers/app_providers.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -50,7 +49,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         displayName: inputs.nameController.text,
       );
       if (!mounted) return;
-      context.go('/home');
+
+      Navigator.pushReplacementNamed(context, '/home');
     } on Exception catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -71,119 +71,154 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-            const AuthHeader(
-              title: 'Create Account',
-              subtitle: 'Join us on your learning journey',
-              logoPath: 'assets/icons/logo.jpeg',
-            ),
-            Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: AuthForm(
-                    formKey: inputs.formKey,
-                    children: [
-                      AuthFormField(
-                        labelText: 'Full Name',
-                        hintText: 'Enter your full name',
-                        controller: inputs.nameController,
-                        prefixIcon: Icons.person_outline,
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Name is required'
-                            : null,
-                      ),
-                      const SizedBox(height: 20),
-                      AuthFormField(
-                        labelText: 'Phone',
-                        hintText: '+92xxxxxxxxxx',
-                        keyboardType: TextInputType.phone,
-                        controller: inputs.phoneController,
-                        prefixIcon: Icons.phone_outlined,
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Phone is required'
-                            : null,
-                      ),
-                      const SizedBox(height: 20),
-                      AuthFormField(
-                        labelText: 'Email',
-                        hintText: 'Enter your email',
-                        keyboardType: TextInputType.emailAddress,
-                        controller: inputs.emailController,
-                        prefixIcon: Icons.email_outlined,
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Email is required'
-                            : null,
-                      ),
-                      const SizedBox(height: 20),
-                      AuthFormField(
-                        labelText: 'Password',
-                        hintText: 'Create a password',
-                        controller: inputs.passwordController,
-                        obscureText: true,
-                        prefixIcon: Icons.lock_outline,
-                        validator: (v) => (v == null || v.length < 6)
-                            ? 'Min 6 characters'
-                            : null,
-                      ),
-                      const SizedBox(height: 20),
-                      AuthFormField(
-                        labelText: 'Confirm Password',
-                        hintText: 'Re-enter your password',
-                        controller: inputs.confirmPasswordController,
-                        obscureText: true,
-                        prefixIcon: Icons.lock_outline,
-                        validator: (v) => (v == null || v.length < 6)
-                            ? 'Min 6 characters'
-                            : null,
-                      ),
-                      const SizedBox(height: 20),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark
+        ? const Color(0xFF0B2239)
+        : const Color(0xFFFDFDFD);
 
-                      GlassmorphismButton(
-                        label: 'Create Account',
-                        loading: inputs.loading,
-                        onPressed: _handleSignUp,
-                        icon: Icons.person_add,
-                      ),
-                      const SizedBox(height: 16),
-                      Center(
-                        child: TextButton(
-                          onPressed: () => context.go('/sign-in'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            textStyle: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          child: RichText(
-                            text: const TextSpan(
-                              text: "Already have an account? ",
-                              style: TextStyle(color: Colors.black),
-                              children: [
-                                TextSpan(
-                                  text: "Sign In",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: Stack(
+        children: [
+          // Animated background gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.center,
+                radius: 1.5,
+                colors: isDark
+                    ? [
+                        const Color(0xFF0B2239),
+                        const Color(0xFF162B45).withOpacity(0.8),
+                        const Color(0xFF009688).withOpacity(0.1),
+                      ]
+                    : [
+                        const Color(0xFFFDFDFD),
+                        const Color(0xFF009688).withOpacity(0.05),
+                        const Color(0xFF2ECC71).withOpacity(0.03),
+                      ],
+                stops: const [0.0, 0.7, 1.0],
               ),
             ),
-          ],
-        ),
+          ),
+
+          SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 40),
+                const AuthHeader(
+                  title: 'Create Account',
+                  subtitle: 'Join us on your learning journey',
+                  logoPath: 'assets/icons/logo.jpeg',
+                ),
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: AuthForm(
+                        formKey: inputs.formKey,
+                        children: [
+                          AuthFormField(
+                            labelText: 'Full Name',
+                            hintText: 'Enter your full name',
+                            controller: inputs.nameController,
+                            prefixIcon: Icons.person_outline,
+                            validator: (v) => (v == null || v.isEmpty)
+                                ? 'Name is required'
+                                : null,
+                          ),
+                          const SizedBox(height: 20),
+                          AuthFormField(
+                            labelText: 'Phone',
+                            hintText: '+92xxxxxxxxxx',
+                            keyboardType: TextInputType.phone,
+                            controller: inputs.phoneController,
+                            prefixIcon: Icons.phone_outlined,
+                            validator: (v) => (v == null || v.isEmpty)
+                                ? 'Phone is required'
+                                : null,
+                          ),
+                          const SizedBox(height: 20),
+                          AuthFormField(
+                            labelText: 'Email',
+                            hintText: 'Enter your email',
+                            keyboardType: TextInputType.emailAddress,
+                            controller: inputs.emailController,
+                            prefixIcon: Icons.email_outlined,
+                            validator: (v) => (v == null || v.isEmpty)
+                                ? 'Email is required'
+                                : null,
+                          ),
+                          const SizedBox(height: 20),
+                          AuthFormField(
+                            labelText: 'Password',
+                            hintText: 'Create a password',
+                            controller: inputs.passwordController,
+                            obscureText: true,
+                            prefixIcon: Icons.lock_outline,
+                            validator: (v) => (v == null || v.length < 6)
+                                ? 'Min 6 characters'
+                                : null,
+                          ),
+                          const SizedBox(height: 20),
+                          AuthFormField(
+                            labelText: 'Confirm Password',
+                            hintText: 'Re-enter your password',
+                            controller: inputs.confirmPasswordController,
+                            obscureText: true,
+                            prefixIcon: Icons.lock_outline,
+                            validator: (v) => (v == null || v.length < 6)
+                                ? 'Min 6 characters'
+                                : null,
+                          ),
+                          const SizedBox(height: 20),
+
+                          GlassmorphismButton(
+                            label: 'Create Account',
+                            loading: inputs.loading,
+                            onPressed: _handleSignUp,
+                            icon: Icons.person_add,
+                          ),
+                          const SizedBox(height: 16),
+                          Center(
+                            child: TextButton(
+                              onPressed: () => Navigator.pushReplacementNamed(
+                                context,
+                                '/sign-in',
+                              ), 
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                textStyle: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              child: RichText(
+                                text: const TextSpan(
+                                  text: "Already have an account? ",
+                                  style: TextStyle(color: Colors.black),
+                                  children: [
+                                    TextSpan(
+                                      text: "Sign In",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

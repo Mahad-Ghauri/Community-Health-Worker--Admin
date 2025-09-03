@@ -162,81 +162,85 @@ class _AuthFormFieldState extends State<AuthFormField> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.labelText,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: widget.controller,
-            focusNode: _focusNode,
-            keyboardType: widget.keyboardType,
-            obscureText: _isObscured,
-            validator: widget.validator,
-            style: const TextStyle(color: Colors.white, fontSize: 16),
-            decoration: InputDecoration(
-              hintText: widget.hintText,
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.8)),
-              prefixIcon: widget.prefixIcon != null
-                  ? Icon(
-                      widget.prefixIcon,
-                      color: _isFocused
-                          ? Colors.white
-                          : Colors.white.withOpacity(0.7),
-                    )
-                  : null,
-              suffixIcon: widget.obscureText
-                  ? IconButton(
-                      icon: Icon(
-                        _isObscured ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isObscured = !_isObscured;
-                        });
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: _isFocused
-                  ? Colors.white.withOpacity(0.15)
-                  : Colors.white.withOpacity(0.1),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: Colors.white.withOpacity(0.6),
-                  width: 2,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return TextFormField(
+      controller: widget.controller,
+      focusNode: _focusNode,
+      keyboardType: widget.keyboardType,
+      obscureText: _isObscured,
+      validator: widget.validator,
+      style: TextStyle(
+        fontSize: 16,
+        color: isDark ? Colors.white : Colors.black87,
+      ),
+      decoration: InputDecoration(
+        labelText: widget.labelText,
+        hintText: widget.hintText,
+        labelStyle: TextStyle(
+          color: _isFocused
+              ? theme.primaryColor
+              : theme.primaryColor.withOpacity(0.7),
+          fontWeight: FontWeight.w500,
+        ),
+        hintStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black45),
+        prefixIcon: widget.prefixIcon != null
+            ? Icon(
+                widget.prefixIcon,
+                color: _isFocused
+                    ? theme.primaryColor
+                    : theme.primaryColor.withOpacity(0.7),
+                size: 22,
+              )
+            : null,
+        suffixIcon: widget.obscureText
+            ? IconButton(
+                icon: Icon(
+                  _isObscured ? Icons.visibility_off : Icons.visibility,
+                  color: _isFocused
+                      ? theme.primaryColor
+                      : theme.primaryColor.withOpacity(0.7),
                 ),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Colors.redAccent, width: 1),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Colors.redAccent, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
-            ),
+                onPressed: () {
+                  setState(() {
+                    _isObscured = !_isObscured;
+                  });
+                },
+              )
+            : null,
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        filled: true,
+        fillColor: _isFocused
+            ? (isDark ? const Color(0xFF333333) : Colors.grey.shade100)
+            : (isDark ? const Color(0xFF252525) : Colors.grey.shade50),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 16,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+            width: 1,
           ),
-        ],
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.primaryColor, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.colorScheme.error, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
+        ),
       ),
     );
   }

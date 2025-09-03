@@ -77,12 +77,12 @@ class _AuthHeaderState extends State<AuthHeader>
                       end: Alignment.bottomRight,
                       colors: [
                         Theme.of(context).primaryColor,
-                        Theme.of(context).primaryColor,
+                        Theme.of(context).primaryColor.withOpacity(0.7),
                       ],
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).primaryColor,
+                        color: Theme.of(context).primaryColor.withOpacity(0.3),
                         blurRadius: 20,
                         spreadRadius: 5,
                       ),
