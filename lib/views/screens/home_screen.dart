@@ -1,24 +1,40 @@
-import 'package:flutter/material.dart';
+// ignore_for_file: use_build_context_synchronously
 
-class HomeScreen extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:chw_tb/components/bottom_navigation.dart';
+import 'package:chw_tb/controllers/services/auth_service.dart';
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+
+  void _onItemTapped(int index) {
+    setState(() => _selectedIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Home')),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Welcome to Home!'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).maybePop(),
-              child: const Text('Back'),
-            ),
-          ],
+        child: ElevatedButton(
+          onPressed: () async {
+            await AuthService.instance.signOut();
+            if (!mounted) return;
+            Navigator.pushReplacementNamed(context, '/sign-in');
+          },
+          child: const Text("Sign Out"),
         ),
+      ),
+      bottomNavigationBar: NavBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
       ),
     );
   }
