@@ -6,6 +6,8 @@ import 'package:chw_tb/components/glassmorphism_button.dart';
 import 'package:chw_tb/controllers/input_controllers.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:chw_tb/controllers/providers/app_providers.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -24,7 +26,37 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _handleSignIn() async {
-    // Implement sign-in logic here with snackbar error handling
+    if (!inputs.validateForm()) return;
+
+    setState(() => inputs.loading = true);
+    try {
+      final auth = context.read<AuthProvider>();
+      await auth.signIn(
+        inputs.emailController.text,
+        inputs.passwordController.text,
+      );
+      if (!mounted) return;
+      context.go('/home');
+    } on Exception catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_friendlyError(e))));
+    } finally {
+      if (mounted) setState(() => inputs.loading = false);
+    }
+  }
+
+  String _friendlyError(Exception e) {
+    final msg = e.toString();
+    // Minimal mapping for FirebaseAuth errors without importing types directly here
+    if (msg.contains('wrong-password')) return 'Incorrect password';
+    if (msg.contains('user-not-found')) return 'No user found for this email';
+    if (msg.contains('invalid-email')) return 'Invalid email address';
+    if (msg.contains('too-many-requests')) {
+      return 'Too many attempts, try later';
+    }
+    return 'Sign in failed: $msg';
   }
 
   @override
@@ -78,7 +110,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         child: TextButton(
                           onPressed: () => context.go('/sign-up'),
                           style: TextButton.styleFrom(
-                            foregroundColor: Colors.white70,
+                            foregroundColor: Colors.white,
                             textStyle: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -87,7 +119,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           child: RichText(
                             text: const TextSpan(
                               text: "Don't have an account? ",
-                              style: TextStyle(color: Colors.white70),
+                              style: TextStyle(color: Colors.black),
                               children: [
                                 TextSpan(
                                   text: "Sign Up",

@@ -37,18 +37,12 @@ class _AuthFormState extends State<AuthForm>
     _slideAnimation = Tween<double>(
       begin: 30,
       end: 0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _opacityAnimation = Tween<double>(
       begin: 0,
       end: 1,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) _controller.forward();
@@ -82,17 +76,18 @@ class _AuthFormState extends State<AuthForm>
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Colors.white.withOpacity(0.15),
-                          Colors.white.withOpacity(0.05),
+                          Colors.teal.withOpacity(0.3),
+                          Colors.teal.withOpacity(0.6),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.tealAccent.withOpacity(0.2),
                         width: 1,
                       ),
                     ),
-                    padding: widget.padding ??
+                    padding:
+                        widget.padding ??
                         const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 32,
@@ -187,15 +182,10 @@ class _AuthFormFieldState extends State<AuthFormField> {
             keyboardType: widget.keyboardType,
             obscureText: _isObscured,
             validator: widget.validator,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 16),
             decoration: InputDecoration(
               hintText: widget.hintText,
-              hintStyle: TextStyle(
-                color: Colors.white.withOpacity(0.5),
-              ),
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.8)),
               prefixIcon: widget.prefixIcon != null
                   ? Icon(
                       widget.prefixIcon,
@@ -207,7 +197,7 @@ class _AuthFormFieldState extends State<AuthFormField> {
               suffixIcon: widget.obscureText
                   ? IconButton(
                       icon: Icon(
-                        _isObscured ? Icons.visibility : Icons.visibility_off,
+                        _isObscured ? Icons.visibility_off : Icons.visibility,
                         color: Colors.white.withOpacity(0.7),
                       ),
                       onPressed: () {
@@ -228,23 +218,17 @@ class _AuthFormFieldState extends State<AuthFormField> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
-                  color: Colors.white.withOpacity(0.4),
+                  color: Colors.white.withOpacity(0.6),
                   width: 2,
                 ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(
-                  color: Colors.redAccent,
-                  width: 1,
-                ),
+                borderSide: const BorderSide(color: Colors.redAccent, width: 1),
               ),
               focusedErrorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(
-                  color: Colors.redAccent,
-                  width: 2,
-                ),
+                borderSide: const BorderSide(color: Colors.redAccent, width: 2),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,

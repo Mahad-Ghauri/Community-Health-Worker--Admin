@@ -46,18 +46,12 @@ class _GlassmorphismButtonState extends State<GlassmorphismButton>
     _scaleAnimation = Tween<double>(
       begin: 1.0,
       end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     _shimmerAnimation = Tween<double>(
       begin: -2,
       end: 2,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -84,7 +78,7 @@ class _GlassmorphismButtonState extends State<GlassmorphismButton>
   @override
   Widget build(BuildContext context) {
     final isEnabled = !widget.loading && widget.onPressed != null;
-    
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -119,7 +113,7 @@ class _GlassmorphismButtonState extends State<GlassmorphismButton>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.white.withOpacity(0.1),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -137,7 +131,10 @@ class _GlassmorphismButtonState extends State<GlassmorphismButton>
                           child: Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                begin: Alignment(-1 + _shimmerAnimation.value, -1),
+                                begin: Alignment(
+                                  -1 + _shimmerAnimation.value,
+                                  -1,
+                                ),
                                 end: Alignment(1 + _shimmerAnimation.value, 1),
                                 colors: [
                                   Colors.transparent,

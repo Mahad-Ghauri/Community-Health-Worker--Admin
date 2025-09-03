@@ -14,9 +14,7 @@ class InputControllers {
   
   // Loading state
   bool loading = false;
-  
-  // Role selection for sign up (if needed)
-  String? selectedRole;
+
   
   // Dispose all controllers
   void dispose() {
@@ -33,8 +31,7 @@ class InputControllers {
     passwordController.clear();
     nameController.clear();
     confirmPasswordController.clear();
-    phoneController.clear();
-    selectedRole = null;
+    phoneController.clear();  
   }
   
   // Validate form

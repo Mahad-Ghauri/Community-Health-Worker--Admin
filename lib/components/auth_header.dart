@@ -77,12 +77,12 @@ class _AuthHeaderState extends State<AuthHeader>
                       end: Alignment.bottomRight,
                       colors: [
                         Theme.of(context).primaryColor,
-                        Theme.of(context).primaryColor.withOpacity(0.7),
+                        Theme.of(context).primaryColor,
                       ],
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).primaryColor.withOpacity(0.3),
+                        color: Theme.of(context).primaryColor,
                         blurRadius: 20,
                         spreadRadius: 5,
                       ),
@@ -109,7 +109,7 @@ class _AuthHeaderState extends State<AuthHeader>
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Colors.black,
                     letterSpacing: -1,
                   ),
                   textAlign: TextAlign.center,
@@ -119,7 +119,7 @@ class _AuthHeaderState extends State<AuthHeader>
                   widget.subtitle,
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.black.withOpacity(0.8),
                     fontWeight: FontWeight.w400,
                   ),
                   textAlign: TextAlign.center,

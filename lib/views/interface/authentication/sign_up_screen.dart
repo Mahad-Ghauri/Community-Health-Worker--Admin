@@ -4,14 +4,13 @@ import 'package:chw_tb/components/auth_form.dart';
 import 'package:chw_tb/components/auth_header.dart';
 import 'package:chw_tb/components/glassmorphism_button.dart';
 import 'package:chw_tb/controllers/input_controllers.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:chw_tb/controllers/providers/app_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class SignUpScreen extends StatefulWidget {
-  final String? initialRole; // expects 'qari' or 'student' (any case)
-  const SignUpScreen({super.key, this.initialRole});
+  const SignUpScreen({super.key});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -32,7 +31,42 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _handleSignUp() async {
-    // Implement sign-up logic here with snackbar error handling
+    if (!inputs.validateForm()) return;
+
+    if (inputs.passwordController.text !=
+        inputs.confirmPasswordController.text) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
+      return;
+    }
+
+    setState(() => inputs.loading = true);
+    try {
+      final auth = context.read<AuthProvider>();
+      await auth.signUp(
+        email: inputs.emailController.text,
+        password: inputs.passwordController.text,
+        displayName: inputs.nameController.text,
+      );
+      if (!mounted) return;
+      context.go('/home');
+    } on Exception catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_friendlyError(e))));
+    } finally {
+      if (mounted) setState(() => inputs.loading = false);
+    }
+  }
+
+  String _friendlyError(Exception e) {
+    final msg = e.toString();
+    if (msg.contains('email-already-in-use')) return 'Email already in use';
+    if (msg.contains('weak-password')) return 'Password is too weak';
+    if (msg.contains('invalid-email')) return 'Invalid email address';
+    return 'Sign up failed: $msg';
   }
 
   @override
@@ -108,32 +142,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             : null,
                       ),
                       const SizedBox(height: 20),
-                      // Glassmorphism Role Selector
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Role',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 1,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
+
                       GlassmorphismButton(
                         label: 'Create Account',
                         loading: inputs.loading,
@@ -145,7 +154,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         child: TextButton(
                           onPressed: () => context.go('/sign-in'),
                           style: TextButton.styleFrom(
-                            foregroundColor: Colors.white70,
+                            foregroundColor: Colors.white,
                             textStyle: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -154,7 +163,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           child: RichText(
                             text: const TextSpan(
                               text: "Already have an account? ",
-                              style: TextStyle(color: Colors.white70),
+                              style: TextStyle(color: Colors.black),
                               children: [
                                 TextSpan(
                                   text: "Sign In",
