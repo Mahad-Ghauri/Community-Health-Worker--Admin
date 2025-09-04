@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => AuthProvider())],
+      providers: AppProviders.getProviders(),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         navigatorKey: AppRouter.navigatorKey,

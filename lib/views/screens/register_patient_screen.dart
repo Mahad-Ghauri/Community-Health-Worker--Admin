@@ -2,6 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:provider/provider.dart';
+import 'package:chw_tb/controllers/providers/patient_provider.dart';
+import 'package:chw_tb/controllers/services/gps_service.dart';
 
 class RegisterPatientScreen extends StatefulWidget {
   const RegisterPatientScreen({super.key});
@@ -33,15 +36,149 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
   String _selectedTbStatus = '';
   String _selectedFacility = '';
   DateTime? _diagnosisDate;
+  Map<String, double>? _currentLocation;
+  List<Map<String, dynamic>> _facilities = [];
 
   final List<String> _genderOptions = ['Male', 'Female', 'Other'];
   final List<String> _tbStatusOptions = [
-    'Newly Diagnosed',
-    'On Treatment',
-    'Relapse',
-    'Treatment After Failure',
-    'Other',
+    'newly_diagnosed',
+    'on_treatment',
+    'relapse',
+    'treatment_after_failure',
+    'other',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
+    _fadeController.forward();
+    
+    _loadFacilities();
+    _getCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _pageController.dispose();
+    _nameController.dispose();
+    _ageController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadFacilities() async {
+    try {
+      // TODO: Load from Firestore facilities collection
+      // For now using mock data
+      setState(() {
+        _facilities = [
+          {'id': 'fac_001', 'name': 'Civil Hospital Karachi', 'type': 'public'},
+          {'id': 'fac_002', 'name': 'Aga Khan University Hospital', 'type': 'private'},
+          {'id': 'fac_003', 'name': 'Jinnah Postgraduate Medical Centre', 'type': 'public'},
+          {'id': 'fac_004', 'name': 'National Institute of Child Health', 'type': 'public'},
+        ];
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load facilities: $e'),
+            backgroundColor: MadadgarTheme.errorColor,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      final gpsService = GPSService();
+      final location = await gpsService.getCurrentLocation();
+      setState(() {
+        _currentLocation = location;
+        _gpsEnabled = true;
+      });
+    } catch (e) {
+      setState(() {
+        _gpsEnabled = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('GPS Error: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _registerPatient() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (!_consentGiven) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Patient consent is required'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final patientProvider = context.read<PatientProvider>();
+      
+      final patientId = await patientProvider.registerPatient(
+        name: _nameController.text.trim(),
+        age: int.parse(_ageController.text.trim()),
+        phone: _phoneController.text.trim(),
+        address: _addressController.text.trim(),
+        gender: _selectedGender,
+        tbStatus: _selectedTbStatus,
+        treatmentFacility: _selectedFacility,
+        consent: _consentGiven,
+        consentSignature: 'Digital consent given during registration',
+        diagnosisDate: _diagnosisDate,
+      );
+      
+      if (mounted && patientId != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Patient registered successfully! ID: $patientId'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate back to patient list
+        Navigator.pushReplacementNamed(context, '/patients');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Registration failed: $e'),
+            backgroundColor: MadadgarTheme.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   final List<FormStep> _formSteps = [
     FormStep(
@@ -61,30 +198,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
     ),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
-    );
-    _fadeController.forward();
-  }
-
-  @override
-  void dispose() {
-    _fadeController.dispose();
-    _pageController.dispose();
-    _nameController.dispose();
-    _ageController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
-    super.dispose();
-  }
-
   void _nextStep() {
     if (_currentStep < _formSteps.length - 1) {
       setState(() => _currentStep++);
@@ -103,44 +216,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
         curve: Curves.easeInOut,
       );
     }
-  }
-
-  void _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (!_consentGiven) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Patient consent is required to proceed',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: MadadgarTheme.errorColor,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    
-    // Simulate form submission
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (!mounted) return;
-    
-    setState(() => _isLoading = false);
-    
-    // Show success and navigate back
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Patient registered successfully!',
-          style: GoogleFonts.poppins(),
-        ),
-        backgroundColor: Colors.green,
-      ),
-    );
-    
-    Navigator.pop(context);
   }
 
   @override
@@ -406,14 +481,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
           ),
           const SizedBox(height: 20),
           
-          _buildDropdownField(
-            label: 'Treatment Facility *',
-            value: _selectedFacility,
-            items: const [], // Will be populated from Firestore
-            onChanged: (value) => setState(() => _selectedFacility = value!),
-            icon: Icons.local_hospital,
-            placeholder: 'Select facility',
-          ),
+          _buildFacilityDropdown(),
           
           const SizedBox(height: 16),
           Card(
@@ -609,6 +677,45 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
     );
   }
 
+  Widget _buildFacilityDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedFacility.isEmpty ? null : _selectedFacility,
+      decoration: InputDecoration(
+        labelText: 'Treatment Facility *',
+        prefixIcon: Icon(Icons.local_hospital, color: MadadgarTheme.primaryColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      ),
+      hint: Text(
+        'Select facility',
+        style: GoogleFonts.poppins(fontSize: 14),
+        overflow: TextOverflow.ellipsis,
+      ),
+      isExpanded: true,
+      items: _facilities.map((facility) => DropdownMenuItem(
+        value: facility['id'] as String,
+        child: Text(
+          '${facility['name']} (${facility['type']})',
+          style: GoogleFonts.poppins(fontSize: 14),
+          overflow: TextOverflow.ellipsis,
+        ),
+      )).toList(),
+      onChanged: (value) => setState(() => _selectedFacility = value!),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Treatment facility is required';
+        }
+        return null;
+      },
+    );
+  }
+
   Widget _buildDropdownField({
     required String label,
     required String value,
@@ -729,7 +836,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
             child: ElevatedButton(
               onPressed: _isLoading 
                   ? null 
-                  : (_currentStep == _formSteps.length - 1 ? _submitForm : _nextStep),
+                  : (_currentStep == _formSteps.length - 1 ? _registerPatient : _nextStep),
               style: ElevatedButton.styleFrom(
                 backgroundColor: MadadgarTheme.primaryColor,
                 foregroundColor: Colors.white,

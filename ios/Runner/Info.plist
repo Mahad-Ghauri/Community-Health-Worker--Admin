@@ -45,5 +45,32 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- =================== REQUIRED iOS PERMISSIONS =================== -->
+	
+	<!-- Location permissions for GPS tracking during patient visits -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs location access to automatically record GPS coordinates during patient visits and track CHW field work for TB treatment monitoring.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs location access to automatically record GPS coordinates during patient visits and track CHW field work for TB treatment monitoring.</string>
+	
+	<!-- Camera permission for patient photos and visit documentation -->
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to capture patient photos for identification and document visit evidence during TB treatment monitoring.</string>
+	
+	<!-- Photo library access for saving and retrieving patient photos -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs photo library access to save patient photos and visit documentation for TB treatment monitoring records.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app needs photo library access to save patient photos and visit documentation for TB treatment monitoring records.</string>
+	
+	<!-- Notification permissions for visit reminders and alerts -->
+	<key>NSUserNotificationUsageDescription</key>
+	<string>This app sends notifications for patient visit reminders, medication adherence alerts, and important TB treatment updates.</string>
+	
+	<!-- Microphone permission (if needed for future features) -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app may use microphone for voice notes during patient visits and treatment documentation.</string>
+	
 </dict>
 </plist>

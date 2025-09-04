@@ -1,8 +1,47 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- =================== REQUIRED PERMISSIONS =================== -->
+    
+    <!-- Internet access for Firebase and data synchronization -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <!-- GPS and Location permissions for visit tracking and patient GPS coordinates -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    
+    <!-- Camera permission for patient photos and visit documentation -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    
+    <!-- Storage permissions for saving photos and offline data -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    
+    <!-- Notification permissions for visit reminders and alerts -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
+    <!-- Phone permission for patient contact verification -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    
+    <!-- For Android 13+ notification permissions -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- Camera and storage features -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    
     <application
-        android:label="chw_tb"
+        android:label="CHW TB Tracker"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="true"
+        android:usesCleartextTraffic="true"
+        android:requestLegacyExternalStorage="true"
+        android:hardwareAccelerated="true">
+        
         <activity
             android:name=".MainActivity"
             android:exported="true"
