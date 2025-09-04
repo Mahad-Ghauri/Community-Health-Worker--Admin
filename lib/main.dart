@@ -11,6 +11,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // Create dummy data (call only once for testing)
+  
+
   runApp(const MyApp());
 }
 

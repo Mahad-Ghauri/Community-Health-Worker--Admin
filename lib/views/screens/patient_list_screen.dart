@@ -1,0 +1,553 @@
+// ignore_for_file: deprecated_member_use
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:chw_tb/config/theme.dart';
+
+class PatientListScreen extends StatefulWidget {
+  const PatientListScreen({super.key});
+
+  @override
+  State<PatientListScreen> createState() => _PatientListScreenState();
+}
+
+class _PatientListScreenState extends State<PatientListScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+  
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedFilter = 'all_patients';
+  String _selectedSort = 'last_visit';
+
+  final List<String> _filterOptions = [
+    'all_patients',
+    'on_treatment',
+    'newly_diagnosed',
+    'treatment_completed',
+    'lost_to_followup',
+  ];
+
+  final List<String> _sortOptions = [
+    'last_visit',
+    'name',
+    'registration_date',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
+    );
+    _fadeController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  String _getFilterDisplayName(String filter) {
+    switch (filter) {
+      case 'all_patients':
+        return 'All Patients';
+      case 'on_treatment':
+        return 'On Treatment';
+      case 'newly_diagnosed':
+        return 'Newly Diagnosed';
+      case 'treatment_completed':
+        return 'Treatment Completed';
+      case 'lost_to_followup':
+        return 'Lost to Follow-up';
+      default:
+        return 'All Patients';
+    }
+  }
+
+  String _getSortDisplayName(String sort) {
+    switch (sort) {
+      case 'last_visit':
+        return 'Last Visit Date';
+      case 'name':
+        return 'Name';
+      case 'registration_date':
+        return 'Registration Date';
+      default:
+        return 'Last Visit Date';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: MadadgarTheme.backgroundColor,
+      appBar: AppBar(
+        title: Text(
+          'My Patients',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: MadadgarTheme.primaryColor,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.pushNamed(context, '/search-patients'),
+            icon: const Icon(Icons.search),
+          ),
+          IconButton(
+            onPressed: _showFilterBottomSheet,
+            icon: const Icon(Icons.filter_list),
+          ),
+        ],
+      ),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Column(
+          children: [
+            // Search and filter section
+            Container(
+              color: MadadgarTheme.primaryColor,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search patients by name or ID...',
+                        hintStyle: GoogleFonts.poppins(color: Colors.grey.shade500),
+                        prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                                icon: const Icon(Icons.clear, color: Colors.grey),
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      onChanged: (value) => setState(() {}),
+                    ),
+                  ),
+                  
+                  // Filter chips
+                  Container(
+                    height: 50,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _buildActiveFilterChip(),
+                                const SizedBox(width: 8),
+                                _buildActiveSortChip(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+            
+            // Patient list content
+            Expanded(
+              child: _buildPatientList(),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.pushNamed(context, '/register-patient'),
+        backgroundColor: MadadgarTheme.secondaryColor,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.person_add),
+        label: Text(
+          'Add Patient',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveFilterChip() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.filter_alt,
+            size: 16,
+            color: Colors.white.withOpacity(0.9),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            _getFilterDisplayName(_selectedFilter),
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActiveSortChip() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.sort,
+            size: 16,
+            color: Colors.white.withOpacity(0.9),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            _getSortDisplayName(_selectedSort),
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPatientList() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Patient count header
+          Row(
+            children: [
+              Text(
+                'Patients',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: MadadgarTheme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Loading...', // Will show actual count
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: MadadgarTheme.primaryColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Patient list placeholder
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.people_outline,
+                    size: 80,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Patients Found',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Start by registering your first patient',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey.shade500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.pushNamed(context, '/register-patient'),
+                    icon: const Icon(Icons.person_add),
+                    label: Text(
+                      'Register Patient',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MadadgarTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Text(
+                    'Filter & Sort',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedFilter = 'all_patients';
+                        _selectedSort = 'last_visit';
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      'Reset',
+                      style: GoogleFonts.poppins(
+                        color: MadadgarTheme.primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Filter section
+                    Text(
+                      'Filter by Status',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ..._filterOptions.map((filter) => _buildFilterOption(filter)),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Sort section
+                    Text(
+                      'Sort by',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ..._sortOptions.map((sort) => _buildSortOption(sort)),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Apply button
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MadadgarTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Apply Filters',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterOption(String filter) {
+    final isSelected = _selectedFilter == filter;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFilter = filter),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? MadadgarTheme.primaryColor.withOpacity(0.1)
+              : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected 
+                ? MadadgarTheme.primaryColor
+                : Colors.grey.shade200,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: isSelected ? MadadgarTheme.primaryColor : Colors.grey,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              _getFilterDisplayName(filter),
+              style: GoogleFonts.poppins(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? MadadgarTheme.primaryColor : Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortOption(String sort) {
+    final isSelected = _selectedSort == sort;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedSort = sort),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? MadadgarTheme.primaryColor.withOpacity(0.1)
+              : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected 
+                ? MadadgarTheme.primaryColor
+                : Colors.grey.shade200,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: isSelected ? MadadgarTheme.primaryColor : Colors.grey,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              _getSortDisplayName(sort),
+              style: GoogleFonts.poppins(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? MadadgarTheme.primaryColor : Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
