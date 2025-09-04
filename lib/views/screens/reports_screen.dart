@@ -14,11 +14,11 @@ class _ReportsScreenState extends State<ReportsScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  
+
   String _selectedPeriod = 'This Month';
   String _selectedReportType = 'Overview';
   bool _isGenerating = false;
-  
+
   Map<String, dynamic> _reportData = {};
   List<Map<String, dynamic>> _recentReports = [];
 
@@ -29,11 +29,12 @@ class _ReportsScreenState extends State<ReportsScreen>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
     _fadeController.forward();
-    
+
     _loadReportData();
   }
 
@@ -65,7 +66,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       'totalWorkingHours': 176,
       'performanceRating': 'Excellent',
     };
-    
+
     // Mock recent reports
     _recentReports = [
       {
@@ -113,7 +114,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         'progress': 0.75,
       },
     ];
-    
+
     setState(() {});
   }
 
@@ -192,7 +193,9 @@ class _ReportsScreenState extends State<ReportsScreen>
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isGenerating ? null : _generateReport,
-        backgroundColor: _isGenerating ? Colors.grey : MadadgarTheme.primaryColor,
+        backgroundColor: _isGenerating
+            ? Colors.grey
+            : MadadgarTheme.primaryColor,
         icon: _isGenerating
             ? const SizedBox(
                 width: 20,
@@ -238,93 +241,83 @@ class _ReportsScreenState extends State<ReportsScreen>
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Period selector
               Row(
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Time Period',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black87,
-                          ),
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedPeriod,
+                      isExpanded: true, // 👈 Important
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          value: _selectedPeriod,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          ),
-                          items: [
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                      items:
+                          [
                             'This Week',
                             'This Month',
                             'Last Month',
                             'This Quarter',
                             'Last Quarter',
                             'This Year',
-                            'Custom Range'
+                            'Custom Range',
                           ].map((period) {
                             return DropdownMenuItem(
                               value: period,
-                              child: Text(period, style: GoogleFonts.poppins(fontSize: 14)),
+                              child: Text(
+                                period,
+                                style: GoogleFonts.poppins(fontSize: 14),
+                              ),
                             );
                           }).toList(),
-                          onChanged: (value) {
-                            setState(() => _selectedPeriod = value ?? 'This Month');
-                          },
-                        ),
-                      ],
+                      onChanged: (value) {
+                        setState(() => _selectedPeriod = value ?? 'This Month');
+                      },
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Report Type',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black87,
-                          ),
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedReportType,
+                      isExpanded: true, // 👈 Important
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          value: _selectedReportType,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          ),
-                          items: [
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                      items:
+                          [
                             'Overview',
                             'Patient Management',
                             'Adherence Analysis',
                             'Side Effects',
                             'Performance Metrics',
                             'Data Quality',
-                            'Custom Report'
+                            'Custom Report',
                           ].map((type) {
                             return DropdownMenuItem(
                               value: type,
-                              child: Text(type, style: GoogleFonts.poppins(fontSize: 14)),
+                              child: Text(
+                                type,
+                                style: GoogleFonts.poppins(fontSize: 14),
+                              ),
                             );
                           }).toList(),
-                          onChanged: (value) {
-                            setState(() => _selectedReportType = value ?? 'Overview');
-                          },
-                        ),
-                      ],
+                      onChanged: (value) {
+                        setState(
+                          () => _selectedReportType = value ?? 'Overview',
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -347,17 +340,19 @@ class _ReportsScreenState extends State<ReportsScreen>
             children: [
               Row(
                 children: [
-                  Icon(Icons.analytics, color: Colors.blue),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Key Performance Indicators',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  Icon(Icons.analytics, color: Colors.blue, size: 20),
+                  const SizedBox(width: 8), // Add spacing back
+                  Expanded(
+                    // Wrap title with Expanded to prevent overflow
+                    child: Text(
+                      'Key Performance Indicators',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16, // Slightly reduced
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   Text(
                     _selectedPeriod,
                     style: GoogleFonts.poppins(
@@ -367,16 +362,16 @@ class _ReportsScreenState extends State<ReportsScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              
-              // KPI Grid
+              const SizedBox(height: 12),
+
+              // KPI Grid with better aspect ratio
               GridView.count(
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 2.2,
+                childAspectRatio: 2.5, // Increased from 2.2 to give more height
                 children: [
                   _buildKPICard(
                     'Total Patients',
@@ -435,7 +430,14 @@ class _ReportsScreenState extends State<ReportsScreen>
     );
   }
 
-  Widget _buildKPICard(String title, String value, IconData icon, Color color, String change, bool isPositive) {
+  Widget _buildKPICard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+    String change,
+    bool isPositive,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -445,16 +447,22 @@ class _ReportsScreenState extends State<ReportsScreen>
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min, // Important: Use min size
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 20),
+              Icon(icon, color: color, size: 18), // Reduced icon size
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 4,
+                  vertical: 1,
+                ), // Reduced padding
                 decoration: BoxDecoration(
-                  color: isPositive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  color: isPositive
+                      ? Colors.green.withOpacity(0.1)
+                      : Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -462,12 +470,13 @@ class _ReportsScreenState extends State<ReportsScreen>
                     Icon(
                       isPositive ? Icons.arrow_upward : Icons.arrow_downward,
                       color: isPositive ? Colors.green : Colors.red,
-                      size: 10,
+                      size: 8, // Reduced icon size
                     ),
+                    const SizedBox(width: 2),
                     Text(
                       change,
                       style: GoogleFonts.poppins(
-                        fontSize: 8,
+                        fontSize: 7, // Reduced font size
                         color: isPositive ? Colors.green : Colors.red,
                         fontWeight: FontWeight.w600,
                       ),
@@ -477,21 +486,32 @@ class _ReportsScreenState extends State<ReportsScreen>
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
+          const SizedBox(height: 4), // Reduced spacing
+          Flexible(
+            // Wrap with Flexible to prevent overflow
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 18, // Slightly reduced font size
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: 2), // Reduced spacing
+          Flexible(
+            // Wrap with Flexible
+            child: Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 10, // Reduced font size
+                color: Colors.black54,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -506,7 +526,11 @@ class _ReportsScreenState extends State<ReportsScreen>
         'description': 'Registration, treatment status, and outcomes',
         'icon': Icons.people,
         'color': MadadgarTheme.primaryColor,
-        'fields': ['Total patients', 'New registrations', 'Treatment completion'],
+        'fields': [
+          'Total patients',
+          'New registrations',
+          'Treatment completion',
+        ],
       },
       {
         'title': 'Adherence Analysis',
@@ -520,14 +544,22 @@ class _ReportsScreenState extends State<ReportsScreen>
         'description': 'Home visits, follow-ups, and scheduling',
         'icon': Icons.event_note,
         'color': Colors.blue,
-        'fields': ['Visits conducted', 'Follow-up rates', 'Missed appointments'],
+        'fields': [
+          'Visits conducted',
+          'Follow-up rates',
+          'Missed appointments',
+        ],
       },
       {
         'title': 'Side Effects Monitoring',
         'description': 'Adverse reactions and safety reporting',
         'icon': Icons.report_problem,
         'color': Colors.orange,
-        'fields': ['Side effects reported', 'Severity levels', 'Referrals made'],
+        'fields': [
+          'Side effects reported',
+          'Severity levels',
+          'Referrals made',
+        ],
       },
       {
         'title': 'Performance Metrics',
@@ -544,7 +576,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         'fields': ['Data completeness', 'Sync success rate', 'Error rates'],
       },
     ];
-    
+
     return Container(
       margin: const EdgeInsets.all(16),
       child: Card(
@@ -555,20 +587,23 @@ class _ReportsScreenState extends State<ReportsScreen>
             children: [
               Row(
                 children: [
-                  Icon(Icons.library_books, color: Colors.brown),
+                  Icon(Icons.library_books, color: Colors.brown, size: 20),
                   const SizedBox(width: 8),
-                  Text(
-                    'Available Report Types',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  Expanded(
+                    // Wrap with Expanded to prevent overflow
+                    child: Text(
+                      'Available Report Types',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16, 
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               ...reportTypes.map((reportType) {
                 return _buildReportTypeCard(reportType);
               }).toList(),
@@ -602,7 +637,11 @@ class _ReportsScreenState extends State<ReportsScreen>
             children: [
               Row(
                 children: [
-                  Icon(reportType['icon'], color: reportType['color'], size: 24),
+                  Icon(
+                    reportType['icon'],
+                    color: reportType['color'],
+                    size: 24,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -636,7 +675,10 @@ class _ReportsScreenState extends State<ReportsScreen>
                 runSpacing: 4,
                 children: reportType['fields'].map<Widget>((field) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: reportType['color'].withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
@@ -683,13 +725,13 @@ class _ReportsScreenState extends State<ReportsScreen>
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               ..._recentReports.map((report) {
                 return _buildRecentReportItem(report);
               }).toList(),
-              
+
               const SizedBox(height: 16),
-              
+
               Center(
                 child: TextButton.icon(
                   onPressed: () => _viewAllReports(),
@@ -710,7 +752,7 @@ class _ReportsScreenState extends State<ReportsScreen>
   Widget _buildRecentReportItem(Map<String, dynamic> report) {
     Color statusColor = _getReportStatusColor(report['status']);
     IconData statusIcon = _getReportStatusIcon(report['status']);
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       padding: const EdgeInsets.all(12),
@@ -724,7 +766,11 @@ class _ReportsScreenState extends State<ReportsScreen>
         children: [
           Row(
             children: [
-              Icon(Icons.description, color: MadadgarTheme.primaryColor, size: 20),
+              Icon(
+                Icons.description,
+                color: MadadgarTheme.primaryColor,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -771,9 +817,9 @@ class _ReportsScreenState extends State<ReportsScreen>
               ),
             ],
           ),
-          
+
           const SizedBox(height: 8),
-          
+
           // Progress bar for generating reports
           if (report['status'] == 'Generating')
             Column(
@@ -801,7 +847,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                 const SizedBox(height: 8),
               ],
             ),
-          
+
           Row(
             children: [
               if (report['status'] == 'Completed') ...[
@@ -815,50 +861,74 @@ class _ReportsScreenState extends State<ReportsScreen>
               ] else if (report['status'] == 'Generating') ...[
                 Text(
                   'Generating report...',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.blue,
-                  ),
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.blue),
                 ),
               ],
               const Spacer(),
               Text(
                 _formatDate(report['generatedDate']),
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.black54,
-                ),
+                style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
               ),
             ],
           ),
-          
+
           if (report['status'] == 'Completed')
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Row(
                 children: [
-                  TextButton.icon(
-                    onPressed: () => _viewReport(report),
-                    icon: const Icon(Icons.visibility, size: 16),
-                    label: Text(
-                      'View',
-                      style: GoogleFonts.poppins(fontSize: 12),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => _viewReport(report),
+                      icon: const Icon(Icons.visibility, size: 14),
+                      label: Text(
+                        'View',
+                        style: GoogleFonts.poppins(fontSize: 11),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: () => _downloadReport(report),
-                    icon: const Icon(Icons.download, size: 16),
-                    label: Text(
-                      'Download',
-                      style: GoogleFonts.poppins(fontSize: 12),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => _downloadReport(report),
+                      icon: const Icon(Icons.download, size: 14),
+                      label: Text(
+                        'Download',
+                        style: GoogleFonts.poppins(fontSize: 11),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: () => _shareReport(report),
-                    icon: const Icon(Icons.share, size: 16),
-                    label: Text(
-                      'Share',
-                      style: GoogleFonts.poppins(fontSize: 12),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => _shareReport(report),
+                      icon: const Icon(Icons.share, size: 14),
+                      label: Text(
+                        'Share',
+                        style: GoogleFonts.poppins(fontSize: 11),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                     ),
                   ),
                 ],
@@ -905,12 +975,12 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   void _generateReport() async {
     setState(() => _isGenerating = true);
-    
+
     // Simulate report generation
     await Future.delayed(const Duration(seconds: 3));
-    
+
     setState(() => _isGenerating = false);
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -927,7 +997,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         ),
       ),
     );
-    
+
     // Add new report to recent reports list
     final newReport = {
       'id': 'RPT${DateTime.now().millisecondsSinceEpoch}',
@@ -940,7 +1010,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       'pages': 10,
       'downloadUrl': 'https://example.com/new_report.pdf',
     };
-    
+
     setState(() {
       _recentReports.insert(0, newReport);
     });
@@ -948,7 +1018,12 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   void _showReportSettings() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Report settings feature coming soon!', style: GoogleFonts.poppins())),
+      SnackBar(
+        content: Text(
+          'Report settings feature coming soon!',
+          style: GoogleFonts.poppins(),
+        ),
+      ),
     );
   }
 
@@ -968,43 +1043,78 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   void _exportAllReports() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Export all reports feature coming soon!', style: GoogleFonts.poppins())),
+      SnackBar(
+        content: Text(
+          'Export all reports feature coming soon!',
+          style: GoogleFonts.poppins(),
+        ),
+      ),
     );
   }
 
   void _scheduleReport() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Schedule report feature coming soon!', style: GoogleFonts.poppins())),
+      SnackBar(
+        content: Text(
+          'Schedule report feature coming soon!',
+          style: GoogleFonts.poppins(),
+        ),
+      ),
     );
   }
 
   void _clearOldReports() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Clear old reports feature coming soon!', style: GoogleFonts.poppins())),
+      SnackBar(
+        content: Text(
+          'Clear old reports feature coming soon!',
+          style: GoogleFonts.poppins(),
+        ),
+      ),
     );
   }
 
   void _viewAllReports() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('View all reports feature coming soon!', style: GoogleFonts.poppins())),
+      SnackBar(
+        content: Text(
+          'View all reports feature coming soon!',
+          style: GoogleFonts.poppins(),
+        ),
+      ),
     );
   }
 
   void _viewReport(Map<String, dynamic> report) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Opening ${report['title']}...', style: GoogleFonts.poppins())),
+      SnackBar(
+        content: Text(
+          'Opening ${report['title']}...',
+          style: GoogleFonts.poppins(),
+        ),
+      ),
     );
   }
 
   void _downloadReport(Map<String, dynamic> report) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Downloading ${report['title']}...', style: GoogleFonts.poppins())),
+      SnackBar(
+        content: Text(
+          'Downloading ${report['title']}...',
+          style: GoogleFonts.poppins(),
+        ),
+      ),
     );
   }
 
   void _shareReport(Map<String, dynamic> report) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Sharing ${report['title']}...', style: GoogleFonts.poppins())),
+      SnackBar(
+        content: Text(
+          'Sharing ${report['title']}...',
+          style: GoogleFonts.poppins(),
+        ),
+      ),
     );
   }
 }

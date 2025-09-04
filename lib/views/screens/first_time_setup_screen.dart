@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:provider/provider.dart';
+import 'package:chw_tb/controllers/providers/app_providers.dart';
 
 class FirstTimeSetupScreen extends StatefulWidget {
   const FirstTimeSetupScreen({super.key});
@@ -86,9 +88,16 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
           _isLoading = false;
         });
       } else {
-        // All permissions requested, navigate to main navigation
+        // All permissions requested: mark setup complete, then go to main navigation
         if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/main-navigation');
+        final ok = await context.read<AuthProvider>().completeFirstTimeSetup();
+        if (!mounted) return;
+        if (ok) {
+          Navigator.pushReplacementNamed(context, '/main-navigation');
+        } else {
+          // Fallback navigation even if flag update failed
+          Navigator.pushReplacementNamed(context, '/main-navigation');
+        }
       }
     } catch (e) {
       setState(() => _isLoading = false);
@@ -102,7 +111,10 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
     }
   }
 
-  void _skipSetup() {
+  Future<void> _skipSetup() async {
+    // Mark setup as complete when skipping to avoid being redirected here again later
+    final ok = await context.read<AuthProvider>().completeFirstTimeSetup();
+    if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/main-navigation');
   }
 
@@ -133,26 +145,40 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
               opacity: _fadeAnimation,
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  children: [
-                    // Header
-                    _buildHeader(),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: IntrinsicHeight(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Header
+                              _buildHeader(),
 
-                    const SizedBox(height: 40),
+                              const SizedBox(height: 40),
 
-                    // Progress indicator
-                    _buildProgressIndicator(),
+                              // Progress indicator
+                              _buildProgressIndicator(),
 
-                    const SizedBox(height: 40),
+                              const SizedBox(height: 40),
 
-                    // Current step content - FIXED: Made it flexible
-                    Expanded(flex: 1, child: _buildStepContent()),
+                              // Current step content
+                              Expanded(child: _buildStepContent()),
 
-                    const SizedBox(height: 24),
+                              const SizedBox(height: 24),
 
-                    // Action buttons
-                    _buildActionButtons(),
-                  ],
+                              // Action buttons
+                              _buildActionButtons(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
