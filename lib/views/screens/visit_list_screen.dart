@@ -1,7 +1,10 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/controllers/providers/patient_provider.dart';
+import 'package:chw_tb/models/core_models.dart';
 
 class VisitListScreen extends StatefulWidget {
   const VisitListScreen({super.key});
@@ -39,6 +42,12 @@ class _VisitListScreenState extends State<VisitListScreen>
     );
     _tabController = TabController(length: 3, vsync: this);
     _fadeController.forward();
+    
+    // Initialize visit data when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final visitProvider = Provider.of<VisitProvider>(context, listen: false);
+      visitProvider.initialize();
+    });
   }
 
   @override
@@ -67,7 +76,9 @@ class _VisitListScreenState extends State<VisitListScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Consumer2<VisitProvider, PatientProvider>(
+      builder: (context, visitProvider, patientProvider, child) {
+        return Scaffold(
       backgroundColor: MadadgarTheme.backgroundColor,
       appBar: AppBar(
         title: Text(
@@ -147,9 +158,9 @@ class _VisitListScreenState extends State<VisitListScreen>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildVisitContent('all'),
-                  _buildVisitContent('completed'),
-                  _buildVisitContent('scheduled'),
+                  _buildVisitContent('all', visitProvider, patientProvider),
+                  _buildVisitContent('completed', visitProvider, patientProvider),
+                  _buildVisitContent('scheduled', visitProvider, patientProvider),
                 ],
               ),
             ),
@@ -166,6 +177,8 @@ class _VisitListScreenState extends State<VisitListScreen>
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
       ),
+    );
+      },
     );
   }
 
@@ -215,18 +228,21 @@ class _VisitListScreenState extends State<VisitListScreen>
     );
   }
 
-  Widget _buildVisitContent(String tabType) {
+  Widget _buildVisitContent(String tabType, VisitProvider visitProvider, PatientProvider patientProvider) {
     switch (_selectedView) {
       case 'calendar':
         return _buildCalendarView(tabType);
       case 'map':
         return _buildMapView(tabType);
       default:
-        return _buildListView(tabType);
+        return _buildListView(tabType, visitProvider, patientProvider);
     }
   }
 
-  Widget _buildListView(String tabType) {
+  Widget _buildListView(String tabType, VisitProvider visitProvider, PatientProvider patientProvider) {
+    // Filter visits based on tab type and current filter
+    List<Visit> filteredVisits = _getFilteredVisits(visitProvider.visits, tabType);
+    
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -250,7 +266,7 @@ class _VisitListScreenState extends State<VisitListScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  'Loading...',
+                  visitProvider.isLoading ? 'Loading...' : '${filteredVisits.length} visits',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -262,62 +278,312 @@ class _VisitListScreenState extends State<VisitListScreen>
           ),
           const SizedBox(height: 16),
           
-          // Visit list placeholder
+          // Visit list or empty state
           Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _getTabIcon(tabType),
-                    size: 80,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No ${_getTabTitle(tabType)} Found',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _getEmptyMessage(tabType),
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () => Navigator.pushNamed(context, '/new-visit'),
-                    icon: const Icon(Icons.add_location),
-                    label: Text(
-                      'Schedule Visit',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: MadadgarTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
+            child: visitProvider.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : filteredVisits.isEmpty
+                    ? _buildEmptyState(tabType)
+                    : ListView.builder(
+                        itemCount: filteredVisits.length,
+                        itemBuilder: (context, index) {
+                          final visit = filteredVisits[index];
+                          final patient = patientProvider.patients
+                              .where((p) => p.patientId == visit.patientId)
+                              .firstOrNull;
+                          return _buildVisitCard(visit, patient);
+                        },
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to filter visits based on tab type and date filters
+  List<Visit> _getFilteredVisits(List<Visit> visits, String tabType) {
+    DateTime now = DateTime.now();
+    
+    List<Visit> filtered = visits.where((visit) {
+      // Apply tab type filter
+      switch (tabType) {
+        case 'completed':
+          return visit.found; // Assuming completed means patient was found
+        case 'scheduled':
+          return !visit.found; // Assuming scheduled means not completed yet
+        default: // 'all'
+          return true;
+      }
+    }).where((visit) {
+      // Apply date filter
+      switch (_selectedFilter) {
+        case 'today':
+          return visit.date.year == now.year &&
+                 visit.date.month == now.month &&
+                 visit.date.day == now.day;
+        case 'this_week':
+          DateTime weekStart = now.subtract(Duration(days: now.weekday - 1));
+          DateTime weekEnd = weekStart.add(Duration(days: 6));
+          return visit.date.isAfter(weekStart.subtract(Duration(days: 1))) &&
+                 visit.date.isBefore(weekEnd.add(Duration(days: 1)));
+        case 'completed':
+          return visit.found;
+        case 'scheduled':
+          return !visit.found;
+        default: // 'all'
+          return true;
+      }
+    }).toList();
+
+    // Sort by date (newest first)
+    filtered.sort((a, b) => b.date.compareTo(a.date));
+    return filtered;
+  }
+
+  // Build empty state widget
+  Widget _buildEmptyState(String tabType) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            _getTabIcon(tabType),
+            size: 80,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No ${_getTabTitle(tabType)} Found',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _getEmptyMessage(tabType),
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pushNamed(context, '/new-visit'),
+            icon: const Icon(Icons.add_location),
+            label: Text(
+              'Schedule Visit',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: MadadgarTheme.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  // Build individual visit card
+  Widget _buildVisitCard(Visit visit, Patient? patient) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          // Navigate to visit details
+          Navigator.pushNamed(
+            context,
+            '/visit-details',
+            arguments: visit.visitId,
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row
+              Row(
+                children: [
+                  // Visit type icon
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _getVisitTypeColor(visit.visitType).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      _getVisitTypeIcon(visit.visitType),
+                      color: _getVisitTypeColor(visit.visitType),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Visit info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          patient?.name ?? 'Unknown Patient',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          _formatVisitType(visit.visitType),
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Status indicator
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: visit.found ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      visit.found ? 'Completed' : 'Scheduled',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: visit.found ? Colors.green.shade700 : Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Date and location
+              Row(
+                children: [
+                  Icon(Icons.schedule, size: 14, color: Colors.grey.shade600),
+                  const SizedBox(width: 4),
+                  Text(
+                    _formatDate(visit.date),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(Icons.location_on, size: 14, color: Colors.grey.shade600),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      patient?.address ?? 'Location not available',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              if (visit.notes.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  visit.notes,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey.shade700,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper methods for visit card styling
+  IconData _getVisitTypeIcon(String visitType) {
+    switch (visitType.toLowerCase()) {
+      case 'home_visit':
+        return Icons.home;
+      case 'follow_up':
+        return Icons.schedule;
+      case 'tracing':
+        return Icons.search;
+      case 'medicine_delivery':
+        return Icons.local_pharmacy;
+      case 'counseling':
+        return Icons.chat_bubble;
+      default:
+        return Icons.location_on;
+    }
+  }
+
+  Color _getVisitTypeColor(String visitType) {
+    switch (visitType.toLowerCase()) {
+      case 'home_visit':
+        return Colors.blue;
+      case 'follow_up':
+        return Colors.green;
+      case 'tracing':
+        return Colors.orange;
+      case 'medicine_delivery':
+        return Colors.purple;
+      case 'counseling':
+        return Colors.teal;
+      default:
+        return MadadgarTheme.primaryColor;
+    }
+  }
+
+  String _formatVisitType(String visitType) {
+    switch (visitType.toLowerCase()) {
+      case 'home_visit':
+        return 'Home Visit';
+      case 'follow_up':
+        return 'Follow-up';
+      case 'tracing':
+        return 'Contact Tracing';
+      case 'medicine_delivery':
+        return 'Medicine Delivery';
+      case 'counseling':
+        return 'Counseling';
+      default:
+        return visitType.replaceAll('_', ' ').toUpperCase();
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final visitDate = DateTime(date.year, date.month, date.day);
+    
+    if (visitDate == today) {
+      return 'Today ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else if (visitDate == today.subtract(Duration(days: 1))) {
+      return 'Yesterday ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else {
+      return '${date.day}/${date.month}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    }
   }
 
   Widget _buildCalendarView(String tabType) {

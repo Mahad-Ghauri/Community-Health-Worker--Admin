@@ -2,7 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/controllers/providers/patient_provider.dart';
+import 'package:chw_tb/controllers/providers/app_providers.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,18 +21,39 @@ class _DashboardScreenState extends State<DashboardScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Mock data - will be replaced with real data later
-  final int _totalPatients = 24;
-  final int _recentVisits = 8;
-  final int _pendingNotifications = 3;
-  final String _lastSyncTime = '2 hours ago';
-  final bool _isOnline = true;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
     _startAnimations();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      // Load all necessary data for dashboard
+      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+      final visitProvider = Provider.of<VisitProvider>(context, listen: false);
+      final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
+      
+      // Initialize providers
+      await Future.wait([
+        patientProvider.initialize(),
+        visitProvider.initialize(),
+        appStateProvider.initialize(),
+      ]);
+      
+    } catch (e) {
+      print('Error loading dashboard data: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _initializeAnimations() {
@@ -58,6 +82,23 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
+  String _formatSyncTime(DateTime? lastSync) {
+    if (lastSync == null) return 'Never';
+    
+    final now = DateTime.now();
+    final difference = now.difference(lastSync);
+    
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
+  }
+
   @override
   void dispose() {
     _fadeController.dispose();
@@ -69,53 +110,59 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: MadadgarTheme.backgroundColor,
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Column(
-            children: [
-              // Header with user info and sync status
-              _buildHeader(),
-              
-              // Main dashboard content
-              Expanded(
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Consumer4<PatientProvider, VisitProvider, AppStateProvider, AuthProvider>(
+              builder: (context, patientProvider, visitProvider, appStateProvider, authProvider, child) {
+                return SafeArea(
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Quick stats cards
-                        _buildQuickStatsSection(),
+                        // Header with user info and sync status
+                        _buildHeader(appStateProvider, authProvider),
                         
-                        const SizedBox(height: 24),
-                        
-                        // Quick actions grid
-                        _buildQuickActionsSection(),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Recent activity
-                        _buildRecentActivitySection(),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Weather widget for field work
-                        _buildWeatherWidget(),
+                        // Main dashboard content
+                        Expanded(
+                          child: SlideTransition(
+                            position: _slideAnimation,
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Quick stats cards
+                                  _buildQuickStatsSection(patientProvider, visitProvider),
+                                  
+                                  const SizedBox(height: 24),
+                                  
+                                  // Quick actions grid
+                                  _buildQuickActionsSection(),
+                                  
+                                  const SizedBox(height: 24),
+                                  
+                                  // Recent activity
+                                  _buildRecentActivitySection(visitProvider, patientProvider),
+                                  
+                                  const SizedBox(height: 24),
+                                  
+                                  // Weather widget for field work
+                                  _buildWeatherWidget(),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+                );
+              },
+            ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppStateProvider appStateProvider, AuthProvider authProvider) {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -147,14 +194,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Good Morning!',
+                      _getGreeting(),
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         color: Colors.white.withOpacity(0.9),
                       ),
                     ),
                     Text(
-                      'Ahmad Khan', // Will be dynamic later
+                      authProvider.chwUser?.name ?? 'CHW User',
                       style: GoogleFonts.poppins(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -166,37 +213,13 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               
               // Notification bell
-              Stack(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.pushNamed(context, '/notifications'),
-                    icon: const Icon(
-                      Icons.notifications_outlined,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                  if (_pendingNotifications > 0)
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: MadadgarTheme.errorColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          _pendingNotifications.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+              IconButton(
+                onPressed: () => Navigator.pushNamed(context, '/notifications'),
+                icon: const Icon(
+                  Icons.notifications_outlined,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
             ],
           ),
@@ -204,13 +227,13 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 16),
           
           // Sync status bar
-          _buildSyncStatusBar(),
+          _buildSyncStatusBar(appStateProvider),
         ],
       ),
     );
   }
 
-  Widget _buildSyncStatusBar() {
+  Widget _buildSyncStatusBar(AppStateProvider appStateProvider) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -221,13 +244,15 @@ class _DashboardScreenState extends State<DashboardScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            _isOnline ? Icons.cloud_done : Icons.cloud_off,
-            color: _isOnline ? Colors.green : Colors.orange,
+            appStateProvider.isOnline ? Icons.cloud_done : Icons.cloud_off,
+            color: appStateProvider.isOnline ? Colors.green : Colors.orange,
             size: 16,
           ),
           const SizedBox(width: 8),
           Text(
-            _isOnline ? 'Online • Last sync: $_lastSyncTime' : 'Offline mode',
+            appStateProvider.isOnline 
+                ? 'Online • Last sync: ${_formatSyncTime(appStateProvider.lastSyncTime)}' 
+                : 'Offline mode',
             style: GoogleFonts.poppins(
               fontSize: 12,
               color: Colors.white.withOpacity(0.9),
@@ -238,7 +263,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildQuickStatsSection() {
+  Widget _buildQuickStatsSection(PatientProvider patientProvider, VisitProvider visitProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -256,7 +281,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             Expanded(
               child: _buildStatCard(
                 title: 'Total Patients',
-                value: _totalPatients.toString(),
+                value: patientProvider.patients.length.toString(),
                 icon: Icons.people_outline,
                 color: MadadgarTheme.primaryColor,
                 onTap: () => Navigator.pushNamed(context, '/patients'),
@@ -266,7 +291,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             Expanded(
               child: _buildStatCard(
                 title: 'Recent Visits',
-                value: _recentVisits.toString(),
+                value: visitProvider.recentVisits.length.toString(),
                 icon: Icons.home_outlined,
                 color: MadadgarTheme.secondaryColor,
                 onTap: () => Navigator.pushNamed(context, '/visits'),
@@ -435,7 +460,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildRecentActivitySection() {
+  Widget _buildRecentActivitySection(VisitProvider visitProvider, PatientProvider patientProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -465,32 +490,109 @@ class _DashboardScreenState extends State<DashboardScreen>
         const SizedBox(height: 16),
         Card(
           child: Column(
-            children: [
-              _buildActivityItem(
-                title: 'Visit to Maria Ahmed',
-                subtitle: 'Home visit completed • 2 hours ago',
-                icon: Icons.home,
-                color: Colors.green,
-              ),
-              const Divider(height: 1),
-              _buildActivityItem(
-                title: 'New patient registered',
-                subtitle: 'Ali Hassan • 5 hours ago',
-                icon: Icons.person_add,
-                color: MadadgarTheme.primaryColor,
-              ),
-              const Divider(height: 1),
-              _buildActivityItem(
-                title: 'Adherence logged',
-                subtitle: 'Fatima Khan • Yesterday',
-                icon: Icons.medication,
-                color: MadadgarTheme.secondaryColor,
-              ),
-            ],
+            children: _buildRecentActivityItems(visitProvider, patientProvider),
           ),
         ),
       ],
     );
+  }
+
+  // Build dynamic recent activity items from real data
+  List<Widget> _buildRecentActivityItems(VisitProvider visitProvider, PatientProvider patientProvider) {
+    List<Widget> items = [];
+    
+    // Get recent visits (last 5)
+    final recentVisits = visitProvider.recentVisits.take(3).toList();
+    
+    // Get recently registered patients (last 2)
+    final recentPatients = patientProvider.patients
+        .where((p) => DateTime.now().difference(p.createdAt).inDays <= 7)
+        .take(2)
+        .toList();
+    
+    // Add recent visits
+    for (int i = 0; i < recentVisits.length; i++) {
+      final visit = recentVisits[i];
+      final patient = patientProvider.patients
+          .where((p) => p.patientId == visit.patientId)
+          .firstOrNull;
+      
+      if (patient != null) {
+        items.add(_buildActivityItem(
+          title: 'Visit to ${patient.name}',
+          subtitle: '${_formatVisitType(visit.visitType)} • ${_formatTimeAgo(visit.date)}',
+          icon: visit.found ? Icons.check_circle : Icons.schedule,
+          color: visit.found ? Colors.green : Colors.orange,
+        ));
+        
+        if (i < recentVisits.length - 1 || recentPatients.isNotEmpty) {
+          items.add(const Divider(height: 1));
+        }
+      }
+    }
+    
+    // Add recent patient registrations
+    for (int i = 0; i < recentPatients.length; i++) {
+      final patient = recentPatients[i];
+      items.add(_buildActivityItem(
+        title: 'New patient registered',
+        subtitle: '${patient.name} • ${_formatTimeAgo(patient.createdAt)}',
+        icon: Icons.person_add,
+        color: MadadgarTheme.primaryColor,
+      ));
+      
+      if (i < recentPatients.length - 1) {
+        items.add(const Divider(height: 1));
+      }
+    }
+    
+    // If no recent activity, show placeholder
+    if (items.isEmpty) {
+      items.add(_buildActivityItem(
+        title: 'No recent activity',
+        subtitle: 'Start by registering patients or conducting visits',
+        icon: Icons.info_outline,
+        color: Colors.grey,
+      ));
+    }
+    
+    return items;
+  }
+
+  // Helper method to format visit types for display
+  String _formatVisitType(String visitType) {
+    switch (visitType.toLowerCase()) {
+      case 'home_visit':
+        return 'Home visit completed';
+      case 'follow_up':
+        return 'Follow-up completed';
+      case 'tracing':
+        return 'Contact tracing completed';
+      case 'medicine_delivery':
+        return 'Medicine delivery completed';
+      case 'counseling':
+        return 'Counseling session completed';
+      default:
+        return 'Visit completed';
+    }
+  }
+
+  // Helper method to format time ago
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inDays > 7) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays > 0) {
+      return difference.inDays == 1 ? 'Yesterday' : '${difference.inDays} days ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hours ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minutes ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   Widget _buildActivityItem({
@@ -592,5 +694,18 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       ),
     );
+  }
+
+  // Helper method to get time-based greeting
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    
+    if (hour < 12) {
+      return 'Good Morning!';
+    } else if (hour < 17) {
+      return 'Good Afternoon!';
+    } else {
+      return 'Good Evening!';
+    }
   }
 }
