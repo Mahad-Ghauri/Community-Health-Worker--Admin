@@ -2,7 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/controllers/providers/patient_provider.dart';
+import 'package:chw_tb/models/core_models.dart';
 
 class NewVisitScreen extends StatefulWidget {
   const NewVisitScreen({super.key});
@@ -18,21 +21,22 @@ class _NewVisitScreenState extends State<NewVisitScreen>
   
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _patientSearchController = TextEditingController();
   
   bool _isLoading = false;
   bool _gpsEnabled = false;
   bool _patientFound = true;
-  String _selectedPatient = '';
-  String _selectedVisitType = '';
+  String? _selectedPatientId;
+  Patient? _selectedPatient;
+  String _selectedVisitType = 'home_visit';
   final List<String> _capturedPhotos = [];
+  Map<String, double>? _currentLocation;
 
-  final List<String> _visitTypes = [
-    'home_visit',
-    'follow_up',
-    'tracing',
-    'medicine_delivery',
-    'counseling',
+  final List<Map<String, String>> _visitTypes = [
+    {'value': 'home_visit', 'label': 'Home Visit'},
+    {'value': 'follow_up', 'label': 'Follow-up Visit'},
+    {'value': 'tracing', 'label': 'Contact Tracing'},
+    {'value': 'medicine_delivery', 'label': 'Medicine Delivery'},
+    {'value': 'counseling', 'label': 'Counseling Session'},
   ];
 
   @override
@@ -46,31 +50,45 @@ class _NewVisitScreenState extends State<NewVisitScreen>
       CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
     );
     _fadeController.forward();
+    _loadInitialData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Get patient ID from route arguments if navigated from patient details
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args != null && args is Map<String, dynamic> && args['patientId'] != null) {
+      _selectedPatientId = args['patientId'];
+      _loadSelectedPatient();
+    }
+  }
+
+  Future<void> _loadInitialData() async {
+    setState(() => _isLoading = true);
+    
+    // Load patients for selection
+    final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+    await patientProvider.loadPatients();
+    
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> _loadSelectedPatient() async {
+    if (_selectedPatientId != null) {
+      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+      await patientProvider.selectPatient(_selectedPatientId!);
+      setState(() {
+        _selectedPatient = patientProvider.selectedPatient;
+      });
+    }
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
     _notesController.dispose();
-    _patientSearchController.dispose();
     super.dispose();
-  }
-
-  String _getVisitTypeDisplayName(String type) {
-    switch (type) {
-      case 'home_visit':
-        return 'Home Visit';
-      case 'follow_up':
-        return 'Follow-up';
-      case 'tracing':
-        return 'Patient Tracing';
-      case 'medicine_delivery':
-        return 'Medicine Delivery';
-      case 'counseling':
-        return 'Counseling Session';
-      default:
-        return 'Home Visit';
-    }
   }
 
   IconData _getVisitTypeIcon(String type) {
@@ -93,53 +111,54 @@ class _NewVisitScreenState extends State<NewVisitScreen>
   void _submitVisit() async {
     if (!_formKey.currentState!.validate()) return;
     
-    if (_selectedPatient.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Please select a patient',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: MadadgarTheme.errorColor,
-        ),
-      );
+    if (_selectedPatient == null) {
+      _showSnackBar('Please select a patient', isError: true);
       return;
     }
 
     if (_selectedVisitType.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Please select visit type',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: MadadgarTheme.errorColor,
-        ),
-      );
+      _showSnackBar('Please select visit type', isError: true);
       return;
     }
 
     setState(() => _isLoading = true);
-    
-    // Simulate visit submission
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (!mounted) return;
-    
-    setState(() => _isLoading = false);
-    
-    // Show success and navigate back
+
+    try {
+      final visitProvider = Provider.of<VisitProvider>(context, listen: false);
+      
+      final visitId = await visitProvider.createVisit(
+        patientId: _selectedPatient!.patientId,
+        visitType: _selectedVisitType,
+        found: _patientFound,
+        notes: _notesController.text.trim(),
+        photos: _capturedPhotos.isNotEmpty ? _capturedPhotos : null,
+      );
+
+      if (visitId != null && mounted) {
+        _showSnackBar('Visit recorded successfully!');
+        Navigator.pop(context, true); // Return success result
+      } else {
+        _showSnackBar('Failed to record visit', isError: true);
+      }
+    } catch (e) {
+      _showSnackBar('Error: $e', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Visit logged successfully!',
+          message,
           style: GoogleFonts.poppins(),
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: isError ? MadadgarTheme.errorColor : Colors.green,
       ),
     );
-    
-    Navigator.pop(context);
   }
 
   @override
@@ -254,33 +273,66 @@ class _NewVisitScreenState extends State<NewVisitScreen>
             ),
             const SizedBox(height: 16),
             
-            TextFormField(
-              controller: _patientSearchController,
-              decoration: InputDecoration(
-                labelText: 'Search Patient',
-                hintText: 'Search by name or ID...',
-                prefixIcon: Icon(Icons.search, color: MadadgarTheme.primaryColor),
-                suffixIcon: IconButton(
-                  onPressed: () => Navigator.pushNamed(context, '/search-patients'),
-                  icon: Icon(Icons.person_search, color: MadadgarTheme.primaryColor),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
-                ),
+            // Patient dropdown or selected patient display
+            if (_selectedPatient == null) ...[
+              Consumer<PatientProvider>(
+                builder: (context, patientProvider, child) {
+                  final patients = patientProvider.filteredPatients;
+                  
+                  return DropdownButtonFormField<Patient>(
+                    decoration: InputDecoration(
+                      labelText: 'Select Patient',
+                      hintText: 'Choose a patient...',
+                      prefixIcon: Icon(Icons.person, color: MadadgarTheme.primaryColor),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
+                      ),
+                    ),
+                    value: _selectedPatient,
+                    items: patients.map((patient) {
+                      return DropdownMenuItem<Patient>(
+                        value: patient,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              patient.name,
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              'ID: ${patient.patientId} • ${patient.phone}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (Patient? patient) {
+                      setState(() {
+                        _selectedPatient = patient;
+                        _selectedPatientId = patient?.patientId;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null) {
+                        return 'Please select a patient';
+                      }
+                      return null;
+                    },
+                  );
+                },
               ),
-              onChanged: (value) {
-                // Simulate patient search
-                setState(() {
-                  _selectedPatient = value.isNotEmpty ? value : '';
-                });
-              },
-            ),
-            
-            if (_selectedPatient.isNotEmpty) ...[
+            ] else ...[
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -301,14 +353,14 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _selectedPatient,
+                            _selectedPatient!.name,
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w600,
                               color: Colors.black87,
                             ),
                           ),
                           Text(
-                            'Patient selected',
+                            'ID: ${_selectedPatient!.patientId} • ${_selectedPatient!.phone}',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               color: Colors.black54,
@@ -360,10 +412,10 @@ class _NewVisitScreenState extends State<NewVisitScreen>
               itemCount: _visitTypes.length,
               itemBuilder: (context, index) {
                 final type = _visitTypes[index];
-                final isSelected = _selectedVisitType == type;
+                final isSelected = _selectedVisitType == type['value'];
                 
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedVisitType = type),
+                  onTap: () => setState(() => _selectedVisitType = type['value']!),
                   child: Container(
                     decoration: BoxDecoration(
                       color: isSelected 
@@ -381,7 +433,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          _getVisitTypeIcon(type),
+                          _getVisitTypeIcon(type['value']!),
                           color: isSelected 
                               ? MadadgarTheme.primaryColor
                               : Colors.grey.shade600,
@@ -389,7 +441,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _getVisitTypeDisplayName(type),
+                          type['label']!,
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
