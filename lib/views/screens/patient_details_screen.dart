@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chw_tb/config/theme.dart';
 import 'package:chw_tb/controllers/providers/patient_provider.dart';
 import 'package:chw_tb/models/core_models.dart';
@@ -21,6 +22,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   late TabController _tabController;
   String? patientId;
   Patient? patient;
+  String? facilityName;
 
   @override
   void initState() {
@@ -62,6 +64,32 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
       setState(() {
         patient = patientProvider.selectedPatient;
       });
+      
+      // Load facility name if patient has a treatment facility
+      if (patient?.treatmentFacility != null && patient!.treatmentFacility.isNotEmpty) {
+        await _loadFacilityName(patient!.treatmentFacility);
+      }
+    }
+  }
+
+  Future<void> _loadFacilityName(String facilityId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('facilities')
+          .doc(facilityId)
+          .get();
+      
+      if (doc.exists && mounted) {
+        setState(() {
+          facilityName = doc.data()?['name'] ?? 'Unknown Facility';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          facilityName = 'Unknown Facility';
+        });
+      }
     }
   }
 
@@ -76,7 +104,16 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   Widget build(BuildContext context) {
     return Consumer<PatientProvider>(
       builder: (context, patientProvider, child) {
-        patient = patientProvider.selectedPatient;
+        final currentPatient = patientProvider.selectedPatient;
+        
+        // Check if patient changed and load facility name
+        if (currentPatient != null && currentPatient != patient) {
+          patient = currentPatient;
+          facilityName = null; // Reset facility name
+          if (patient!.treatmentFacility.isNotEmpty) {
+            _loadFacilityName(patient!.treatmentFacility);
+          }
+        }
         
         return Scaffold(
           backgroundColor: MadadgarTheme.backgroundColor,
@@ -344,7 +381,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
             children: [
               _buildInfoRow('TB Status', _getStatusLabel(patient?.tbStatus ?? '')),
               _buildInfoRow('Diagnosis Date', patient?.diagnosisDate != null ? _formatDate(patient!.diagnosisDate!) : 'N/A'),
-              _buildInfoRow('Treatment Facility', patient?.treatmentFacility ?? 'N/A'),
+              _buildInfoRow('Treatment Facility', facilityName ?? patient?.treatmentFacility ?? 'N/A'),
               _buildInfoRow('Registration Date', patient?.createdAt != null ? _formatDate(patient!.createdAt) : 'N/A'),
               _buildInfoRow('Consent Given', patient?.consent == true ? 'Yes' : 'No'),
             ],
