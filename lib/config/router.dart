@@ -1,9 +1,58 @@
 import 'package:chw_tb/components/elegeant_route.dart';
 import 'package:flutter/material.dart';
+
+// Core Screens
 import '../views/screens/splash_screen.dart';
+import '../views/screens/home_screen.dart';
+import '../views/screens/dashboard_screen.dart';
+import '../views/screens/main_navigation_screen.dart';
+import '../views/screens/first_time_setup_screen.dart';
+
+// Authentication Screens
 import '../views/interface/authentication/sign_in_screen.dart';
 import '../views/interface/authentication/sign_up_screen.dart';
-import '../views/screens/home_screen.dart';
+import '../views/interface/authentication/forget_password.dart';
+
+// Patient Management Screens
+import '../views/screens/patient_list_screen.dart';
+import '../views/screens/patient_search_screen.dart';
+import '../views/screens/patient_details_screen.dart';
+import '../views/screens/register_patient_screen.dart';
+import '../views/screens/edit_patient_screen.dart';
+import '../views/screens/household_members_screen.dart';
+import '../views/screens/add_household_member_screen.dart';
+
+// Visit Management Screens
+import '../views/screens/visit_list_screen.dart';
+import '../views/screens/visit_details_screen.dart';
+import '../views/screens/new_visit_screen.dart';
+import '../views/screens/edit_visit_screen.dart';
+
+// Clinical Screens
+import '../views/screens/contact_screening_screen.dart';
+import '../views/screens/screening_results_screen.dart';
+import '../views/screens/treatment_plan_screen.dart';
+import '../views/screens/adherence_tracking_screen.dart';
+import '../views/screens/pill_count_screen.dart';
+import '../views/screens/side_effects_log_screen.dart';
+import '../views/screens/missed_followup_alert_screen.dart';
+
+// Notification Screens
+import '../views/screens/notifications_list_screen.dart';
+import '../views/screens/notifications_screen.dart';
+
+// Settings & Profile Screens
+import '../views/screens/profile_settings_screen.dart';
+import '../views/screens/app_settings_screen.dart';
+
+// Reports & Data Screens
+import '../views/screens/reports_screen.dart';
+import '../views/screens/sync_status_screen.dart';
+import '../views/screens/offline_queue_screen.dart';
+
+// Help & Support Screens
+import '../views/screens/help_faq_screen.dart';
+import '../views/screens/about_screen.dart';
 
 class AppRouter {
   // Global navigator key to allow navigation outside of a BuildContext with a Navigator
@@ -12,17 +61,148 @@ class AppRouter {
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+      // =================== CORE NAVIGATION ===================
       case '/':
         return ElegantRoute.build(const SplashScreen());
+      case '/main-navigation':
+        return ElegantRoute.build(const MainNavigationScreen());
+      case '/dashboard':
+        return ElegantRoute.build(const DashboardScreen());
+      case '/home':
+        return ElegantRoute.build(const HomeScreen());
+      case '/first-time-setup':
+        return ElegantRoute.build(const FirstTimeSetupScreen());
+
+      // =================== AUTHENTICATION ===================
       case '/sign-in':
         return ElegantRoute.build(const SignInScreen());
       case '/sign-up':
         return ElegantRoute.build(const SignUpScreen());
-      case '/home':
-        return ElegantRoute.build(const HomeScreen());
+      case '/forgot-password':
+        return ElegantRoute.build(const ForgetPasswordScreen());
+
+      // =================== PATIENT MANAGEMENT ===================
+      case '/patients':
+      case '/patient-list':
+        return ElegantRoute.build(const PatientListScreen());
+      case '/patient-search':
+      case '/search-patients':
+        return ElegantRoute.build(const PatientSearchScreen());
+      case '/patient-details':
+        return ElegantRoute.build(const PatientDetailsScreen());
+      case '/register-patient':
+        return ElegantRoute.build(const RegisterPatientScreen());
+      case '/edit-patient':
+        return ElegantRoute.build(const EditPatientScreen());
+      case '/household-members':
+        return ElegantRoute.build(const HouseholdMembersScreen());
+      case '/add-household-member':
+        return ElegantRoute.build(const AddHouseholdMemberScreen());
+
+      // =================== VISIT MANAGEMENT ===================
+      case '/visits':
+      case '/visit-list':
+        return ElegantRoute.build(const VisitListScreen());
+      case '/visit-details':
+        return ElegantRoute.build(const VisitDetailsScreen());
+      case '/new-visit':
+        return ElegantRoute.build(const NewVisitScreen());
+      case '/edit-visit':
+        return ElegantRoute.build(const EditVisitScreen());
+
+      // =================== CLINICAL WORKFLOWS ===================
+      case '/contact-screening':
+        return ElegantRoute.build(const ContactScreeningScreen());
+      case '/screening-results':
+        return ElegantRoute.build(const ScreeningResultsScreen());
+      case '/treatment-plan':
+        return ElegantRoute.build(const TreatmentPlanScreen());
+      case '/adherence-tracking':
+        return ElegantRoute.build(const AdherenceTrackingScreen());
+      case '/pill-count':
+        return ElegantRoute.build(const PillCountScreen());
+      case '/side-effects':
+        return ElegantRoute.build(const SideEffectsLogScreen());
+      case '/missed-followup':
+        return ElegantRoute.build(const MissedFollowupAlertScreen());
+
+      // =================== NOTIFICATIONS ===================
+      case '/notifications':
+        return ElegantRoute.build(const NotificationsScreen());
+      case '/notifications-list':
+        return ElegantRoute.build(const NotificationsListScreen());
+
+      // =================== PROFILE & SETTINGS ===================
+     
+      case '/profile-settings':
+        return ElegantRoute.build(const ProfileSettingsScreen());
+      case '/settings':
+        return ElegantRoute.build(const AppSettingsScreen());
+
+      // =================== REPORTS & DATA ===================
+      case '/reports':
+        return ElegantRoute.build(const ReportsScreen());
+      case '/sync-status':
+        return ElegantRoute.build(const SyncStatusScreen());
+      case '/offline-queue':
+        return ElegantRoute.build(const OfflineQueueScreen());
+
+      // =================== HELP & SUPPORT ===================
+      case '/help':
+      case '/help-faq':
+        return ElegantRoute.build(const HelpFaqScreen());
+      case '/about':
+        return ElegantRoute.build(const AboutScreen());
+
+      // =================== 404 FALLBACK ===================
       default:
         return ElegantRoute.build(
-          const Scaffold(body: Center(child: Text("404 - Page not found"))),
+          Builder(
+            builder: (context) => Scaffold(
+              appBar: AppBar(
+                title: const Text('Page Not Found'),
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 100,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '404 - Page Not Found',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'The route "${settings.name}" does not exist.',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    ElevatedButton(
+                      onPressed: () {
+                        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                          '/main-navigation',
+                          (route) => false,
+                        );
+                      },
+                      child: const Text('Go to Dashboard'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         );
     }
   }

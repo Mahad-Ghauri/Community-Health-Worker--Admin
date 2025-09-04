@@ -30,32 +30,30 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() => inputs.loading = true);
     try {
       final auth = context.read<AuthProvider>();
-      await auth.signIn(
+      final navigationRoute = await auth.signIn(
         inputs.emailController.text,
         inputs.passwordController.text,
       );
+      
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
-    } on Exception catch (e) {
+      
+      if (navigationRoute != null) {
+        // Navigate based on first-time setup status
+        Navigator.pushReplacementNamed(context, navigationRoute);
+      } else {
+        // Show error if login failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(auth.error ?? 'Login failed')),
+        );
+      }
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(_friendlyError(e))));
+      ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
     } finally {
       if (mounted) setState(() => inputs.loading = false);
     }
-  }
-
-  String _friendlyError(Exception e) {
-    final msg = e.toString();
-    // Minimal mapping for FirebaseAuth errors without importing types directly here
-    if (msg.contains('wrong-password')) return 'Incorrect password';
-    if (msg.contains('user-not-found')) return 'No user found for this email';
-    if (msg.contains('invalid-email')) return 'Invalid email address';
-    if (msg.contains('too-many-requests')) {
-      return 'Too many attempts, try later';
-    }
-    return 'Sign in failed: $msg';
   }
 
   @override
@@ -139,7 +137,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             child: TextButton(
                               onPressed: () => Navigator.pushReplacementNamed(
                                 context,
-                                '/sign-in',
+                                '/sign-up',
                               ),
                               style: TextButton.styleFrom(
                                 foregroundColor: Colors.white,

@@ -22,9 +22,9 @@ class _AuthGateState extends State<AuthGate> {
     final currentRoute = ModalRoute.of(ctx)?.settings.name;
 
     if (isAuthed) {
-      if (currentRoute != '/home') {
-        // Clear stack to avoid back navigation to auth screens
-        navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+      if (currentRoute != '/main-navigation') {
+        // User is authenticated, navigate to main navigation
+        navigator.pushNamedAndRemoveUntil('/main-navigation', (route) => false);
       }
     } else {
       if (currentRoute != '/sign-in' && currentRoute != '/sign-up') {

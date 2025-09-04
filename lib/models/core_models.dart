@@ -3,27 +3,101 @@
 // ignore_for_file: avoid_print
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:geolocator/geolocator.dart';
 
-// =================== DATA MODELS ===================
+// =================== CHW CREATED COLLECTIONS ===================
 
-// Patient Model - Created by CHWs
+/// Users Collection - CHW registration and profile management
+/// Created by: CHW Registration Screen (Screen 2)
+/// Used by: Login (3), Forgot Password (4), Profile Settings (28)
+class CHWUser {
+  final String userId;
+  final String name;
+  final String email;
+  final String phone;
+  final String workingArea;
+  final String role; // Always 'chw' for CHWs
+  final String status; // 'active', 'inactive'
+  final String? facilityId; // Null because CHWs can work at multiple facilities
+  final String idNumber; // Automatically generated CHW ID (CHW001, CHW002, etc.)
+  final String? dateOfBirth; // Date of birth
+  final String? gender; // Gender
+  final bool isFirstTimeSetupComplete; // Track if first-time setup is done
+  final DateTime createdAt;
+
+  CHWUser({
+    required this.userId,
+    required this.name,
+    required this.email,
+    required this.phone,
+    required this.workingArea,
+    this.role = 'chw',
+    this.status = 'active',
+    this.facilityId, // Keep null for multi-facility work
+    required this.idNumber, // Required auto-generated ID
+    this.dateOfBirth,
+    this.gender,
+    this.isFirstTimeSetupComplete = false,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'userId': userId,
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'workingArea': workingArea,
+      'role': role,
+      'status': status,
+      'facilityId': facilityId, // Null for multi-facility CHWs
+      'idNumber': idNumber, // Auto-generated CHW ID
+      'dateOfBirth': dateOfBirth,
+      'gender': gender,
+      'isFirstTimeSetupComplete': isFirstTimeSetupComplete,
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
+
+  factory CHWUser.fromFirestore(Map<String, dynamic> data) {
+    return CHWUser(
+      userId: data['userId'] ?? '',
+      name: data['name'] ?? '',
+      email: data['email'] ?? '',
+      phone: data['phone'] ?? '',
+      workingArea: data['workingArea'] ?? '',
+      role: data['role'] ?? 'chw',
+      status: data['status'] ?? 'active',
+      facilityId: data['facilityId'], // Null for multi-facility CHWs
+      idNumber: data['idNumber'] ?? '', // Auto-generated CHW ID
+      dateOfBirth: data['dateOfBirth'],
+      gender: data['gender'],
+      isFirstTimeSetupComplete: data['isFirstTimeSetupComplete'] ?? false,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+}
+
+/// Patients Collection - TB patient registration and management
+/// Created by: Register New Patient Screen (Screen 10)
+/// Used by: Patient List (8), Patient Search (9), Patient Details (11), Edit Patient (12)
 class Patient {
   final String patientId;
   final String name;
   final int age;
   final String phone;
   final String address;
-  final String tbStatus;
+  final String gender;
+  final String tbStatus; // 'newly_diagnosed', 'on_treatment', 'treatment_completed', 'lost_to_followup'
   final String assignedCHW;
   final String assignedFacility;
   final String treatmentFacility;
   final Map<String, double> gpsLocation;
   final bool consent;
+  final String? consentSignature;
   final String createdBy;
   final String? validatedBy;
   final DateTime createdAt;
+  final DateTime? diagnosisDate;
 
   Patient({
     required this.patientId,
@@ -31,15 +105,18 @@ class Patient {
     required this.age,
     required this.phone,
     required this.address,
+    required this.gender,
     required this.tbStatus,
     required this.assignedCHW,
     required this.assignedFacility,
     required this.treatmentFacility,
     required this.gpsLocation,
     required this.consent,
+    this.consentSignature,
     required this.createdBy,
     this.validatedBy,
     required this.createdAt,
+    this.diagnosisDate,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -49,29 +126,57 @@ class Patient {
       'age': age,
       'phone': phone,
       'address': address,
+      'gender': gender,
       'tbStatus': tbStatus,
       'assignedCHW': assignedCHW,
       'assignedFacility': assignedFacility,
       'treatmentFacility': treatmentFacility,
       'gpsLocation': gpsLocation,
       'consent': consent,
+      'consentSignature': consentSignature,
       'createdBy': createdBy,
       'validatedBy': validatedBy,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'diagnosisDate': diagnosisDate != null ? Timestamp.fromDate(diagnosisDate!) : null,
     };
+  }
+
+  factory Patient.fromFirestore(Map<String, dynamic> data) {
+    return Patient(
+      patientId: data['patientId'] ?? '',
+      name: data['name'] ?? '',
+      age: data['age'] ?? 0,
+      phone: data['phone'] ?? '',
+      address: data['address'] ?? '',
+      gender: data['gender'] ?? '',
+      tbStatus: data['tbStatus'] ?? '',
+      assignedCHW: data['assignedCHW'] ?? '',
+      assignedFacility: data['assignedFacility'] ?? '',
+      treatmentFacility: data['treatmentFacility'] ?? '',
+      gpsLocation: Map<String, double>.from(data['gpsLocation'] ?? {}),
+      consent: data['consent'] ?? false,
+      consentSignature: data['consentSignature'],
+      createdBy: data['createdBy'] ?? '',
+      validatedBy: data['validatedBy'],
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      diagnosisDate: (data['diagnosisDate'] as Timestamp?)?.toDate(),
+    );
   }
 }
 
-// Visit Model - Created by CHWs
+/// Visits Collection - Every CHW visit to patient with GPS proof
+/// Created by: New Visit Screen (Screen 14)
+/// Used by: Visit List (13), Visit Details (15), Home Dashboard (6)
 class Visit {
   final String visitId;
   final String patientId;
   final String chwId;
-  final String visitType;
+  final String visitType; // 'home_visit', 'follow_up', 'tracing', 'medicine_delivery', 'counseling'
   final DateTime date;
-  final bool found;
+  final bool found; // Patient found/not found toggle
   final String notes;
   final Map<String, double> gpsLocation;
+  final List<String>? photos; // Photo capture URLs
 
   Visit({
     required this.visitId,
@@ -82,6 +187,7 @@ class Visit {
     required this.found,
     required this.notes,
     required this.gpsLocation,
+    this.photos,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -90,22 +196,40 @@ class Visit {
       'patientId': patientId,
       'chwId': chwId,
       'visitType': visitType,
-      'date': date.toIso8601String(),
+      'date': Timestamp.fromDate(date),
       'found': found,
       'notes': notes,
       'gpsLocation': gpsLocation,
+      'photos': photos,
     };
+  }
+
+  factory Visit.fromFirestore(Map<String, dynamic> data) {
+    return Visit(
+      visitId: data['visitId'] ?? '',
+      patientId: data['patientId'] ?? '',
+      chwId: data['chwId'] ?? '',
+      visitType: data['visitType'] ?? '',
+      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      found: data['found'] ?? false,
+      notes: data['notes'] ?? '',
+      gpsLocation: Map<String, double>.from(data['gpsLocation'] ?? {}),
+      photos: data['photos'] != null ? List<String>.from(data['photos']) : null,
+    );
   }
 }
 
-// Household Model - Created by CHWs
+/// Households Collection - Family members of TB patients
+/// Created by: Add Household Member Screen (Screen 17)
+/// Used by: Household Members Screen (Screen 16)
 class Household {
   final String householdId;
-  final String patientId;
+  final String patientId; // Index patient
   final String address;
   final int totalMembers;
   final int screenedMembers;
-  final List<Map<String, dynamic>> members;
+  final List<HouseholdMember> members;
+  final DateTime createdAt;
 
   Household({
     required this.householdId,
@@ -114,6 +238,7 @@ class Household {
     required this.totalMembers,
     required this.screenedMembers,
     required this.members,
+    required this.createdAt,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -123,29 +248,96 @@ class Household {
       'address': address,
       'totalMembers': totalMembers,
       'screenedMembers': screenedMembers,
-      'members': members,
+      'members': members.map((member) => member.toMap()).toList(),
+      'createdAt': Timestamp.fromDate(createdAt),
     };
+  }
+
+  factory Household.fromFirestore(Map<String, dynamic> data) {
+    return Household(
+      householdId: data['householdId'] ?? '',
+      patientId: data['patientId'] ?? '',
+      address: data['address'] ?? '',
+      totalMembers: data['totalMembers'] ?? 0,
+      screenedMembers: data['screenedMembers'] ?? 0,
+      members: (data['members'] as List<dynamic>?)
+              ?.map((memberData) => HouseholdMember.fromMap(memberData))
+              .toList() ??
+          [],
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
   }
 }
 
-// Treatment Adherence Model - Created by CHWs
+/// Household Member - Sub-document for households
+class HouseholdMember {
+  final String name;
+  final int age;
+  final String gender;
+  final String relationship; // to index patient
+  final String? phone;
+  final bool screened;
+  final String screeningStatus; // 'not_screened', 'negative', 'positive', 'pending'
+  final DateTime? lastScreeningDate;
+
+  HouseholdMember({
+    required this.name,
+    required this.age,
+    required this.gender,
+    required this.relationship,
+    this.phone,
+    this.screened = false,
+    this.screeningStatus = 'not_screened',
+    this.lastScreeningDate,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'age': age,
+      'gender': gender,
+      'relationship': relationship,
+      'phone': phone,
+      'screened': screened,
+      'screeningStatus': screeningStatus,
+      'lastScreeningDate': lastScreeningDate != null ? Timestamp.fromDate(lastScreeningDate!) : null,
+    };
+  }
+
+  factory HouseholdMember.fromMap(Map<String, dynamic> data) {
+    return HouseholdMember(
+      name: data['name'] ?? '',
+      age: data['age'] ?? 0,
+      gender: data['gender'] ?? '',
+      relationship: data['relationship'] ?? '',
+      phone: data['phone'],
+      screened: data['screened'] ?? false,
+      screeningStatus: data['screeningStatus'] ?? 'not_screened',
+      lastScreeningDate: (data['lastScreeningDate'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
+/// Treatment Adherence Collection - Medicine taking records by CHWs
+/// Created by: Adherence Tracking Screen (Screen 20)
+/// Used by: Patient Details (11), Side Effects Log (21), Pill Count (22)
 class TreatmentAdherence {
   final String adherenceId;
   final String patientId;
-  final String visitId;
+  final String? visitId; // Optional - can be standalone or linked to visit
   final DateTime date;
-  final String reportedBy;
-  final Map<String, String> dosesToday;
-  final List<String> sideEffects;
+  final String reportedBy; // CHW ID
+  final Map<String, String> dosesToday; // 'morning': 'taken', 'evening': 'missed', etc.
+  final List<String> sideEffects; // From predefined list
   final int pillsRemaining;
-  final double adherenceScore;
+  final double adherenceScore; // Calculated percentage
   final bool counselingGiven;
   final String notes;
 
   TreatmentAdherence({
     required this.adherenceId,
     required this.patientId,
-    required this.visitId,
+    this.visitId,
     required this.date,
     required this.reportedBy,
     required this.dosesToday,
@@ -161,7 +353,7 @@ class TreatmentAdherence {
       'adherenceId': adherenceId,
       'patientId': patientId,
       'visitId': visitId,
-      'date': date.toIso8601String(),
+      'date': Timestamp.fromDate(date),
       'reportedBy': reportedBy,
       'dosesToday': dosesToday,
       'sideEffects': sideEffects,
@@ -171,9 +363,27 @@ class TreatmentAdherence {
       'notes': notes,
     };
   }
+
+  factory TreatmentAdherence.fromFirestore(Map<String, dynamic> data) {
+    return TreatmentAdherence(
+      adherenceId: data['adherenceId'] ?? '',
+      patientId: data['patientId'] ?? '',
+      visitId: data['visitId'],
+      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      reportedBy: data['reportedBy'] ?? '',
+      dosesToday: Map<String, String>.from(data['dosesToday'] ?? {}),
+      sideEffects: List<String>.from(data['sideEffects'] ?? []),
+      pillsRemaining: data['pillsRemaining'] ?? 0,
+      adherenceScore: (data['adherenceScore'] ?? 0).toDouble(),
+      counselingGiven: data['counselingGiven'] ?? false,
+      notes: data['notes'] ?? '',
+    );
+  }
 }
 
-// Contact Tracing Model - Created by CHWs
+/// Contact Tracing Collection - Family screening results by CHWs
+/// Created by: Contact Screening Screen (Screen 18)
+/// Used by: Screening Results Screen (Screen 19)
 class ContactTracing {
   final String contactId;
   final String householdId;
@@ -183,11 +393,12 @@ class ContactTracing {
   final int age;
   final String gender;
   final DateTime screeningDate;
-  final String screenedBy;
-  final List<String> symptoms;
-  final String testResult;
+  final String screenedBy; // CHW ID
+  final List<String> symptoms; // From symptoms checklist
+  final String testResult; // 'negative', 'positive', 'pending', 'not_tested'
   final bool referralNeeded;
   final String notes;
+  final DateTime? followUpDate;
 
   ContactTracing({
     required this.contactId,
@@ -203,6 +414,7 @@ class ContactTracing {
     required this.testResult,
     required this.referralNeeded,
     required this.notes,
+    this.followUpDate,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -214,24 +426,47 @@ class ContactTracing {
       'relationship': relationship,
       'age': age,
       'gender': gender,
-      'screeningDate': screeningDate.toIso8601String(),
+      'screeningDate': Timestamp.fromDate(screeningDate),
       'screenedBy': screenedBy,
       'symptoms': symptoms,
       'testResult': testResult,
       'referralNeeded': referralNeeded,
       'notes': notes,
+      'followUpDate': followUpDate != null ? Timestamp.fromDate(followUpDate!) : null,
     };
+  }
+
+  factory ContactTracing.fromFirestore(Map<String, dynamic> data) {
+    return ContactTracing(
+      contactId: data['contactId'] ?? '',
+      householdId: data['householdId'] ?? '',
+      indexPatientId: data['indexPatientId'] ?? '',
+      contactName: data['contactName'] ?? '',
+      relationship: data['relationship'] ?? '',
+      age: data['age'] ?? 0,
+      gender: data['gender'] ?? '',
+      screeningDate: (data['screeningDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      screenedBy: data['screenedBy'] ?? '',
+      symptoms: List<String>.from(data['symptoms'] ?? []),
+      testResult: data['testResult'] ?? 'not_tested',
+      referralNeeded: data['referralNeeded'] ?? false,
+      notes: data['notes'] ?? '',
+      followUpDate: (data['followUpDate'] as Timestamp?)?.toDate(),
+    );
   }
 }
 
-// Audit Log Model - Created by CHWs (for their actions)
+/// Audit Logs Collection - Everything that happens in the system
+/// Created by: Multiple screens (10, 12, 14, 17, 18, 20)
+/// Used by: System tracking and compliance
 class AuditLog {
   final String logId;
-  final String action;
-  final String who;
-  final String what;
+  final String action; // 'registered_patient', 'home_visit', 'contact_screening', etc.
+  final String who; // CHW ID
+  final String what; // Patient ID, Visit ID, etc.
   final DateTime when;
-  final Map<String, double>? where;
+  final Map<String, double>? where; // GPS location
+  final Map<String, dynamic>? additionalData; // Extra context
 
   AuditLog({
     required this.logId,
@@ -240,6 +475,7 @@ class AuditLog {
     required this.what,
     required this.when,
     this.where,
+    this.additionalData,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -248,527 +484,295 @@ class AuditLog {
       'action': action,
       'who': who,
       'what': what,
-      'when': when.toIso8601String(),
+      'when': Timestamp.fromDate(when),
       'where': where,
+      'additionalData': additionalData,
     };
   }
-}
 
-// =================== DUMMY DATA SERVICE ===================
-
-class DummyDataService {
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  // Dummy Facilities (created by admin but needed for CHW dropdown)
-  static Future<void> createDummyFacilities() async {
-    final facilities = [
-      {
-        'facilityId': 'fac001',
-        'name': 'District TB Hospital',
-        'type': 'hospital',
-        'location': {
-          'address': 'Main Street, Karachi',
-          'district': 'District Central',
-          'region': 'Sindh',
-          'gps': {'lat': 24.8607, 'lng': 67.0011}
-        },
-        'contact': {
-          'phone': '+92-21-99211234',
-          'email': 'info@districthosp.gov.pk'
-        },
-        'staff': ['staff123', 'staff456'],
-        'supervisors': ['sup001'],
-        'services': ['tb_treatment', 'xray', 'lab_tests'],
-        'isActive': true,
-        'createdBy': 'admin123',
-        'createdAt': DateTime.now().subtract(Duration(days: 30)).toIso8601String(),
-      },
-      {
-        'facilityId': 'fac002',
-        'name': 'Gulshan Health Center',
-        'type': 'health_center',
-        'location': {
-          'address': 'Gulshan-e-Iqbal, Karachi',
-          'district': 'District East',
-          'region': 'Sindh',
-          'gps': {'lat': 24.9056, 'lng': 67.1000}
-        },
-        'contact': {
-          'phone': '+92-21-99225678',
-          'email': 'gulshan@health.gov.pk'
-        },
-        'staff': ['staff789'],
-        'supervisors': ['sup002'],
-        'services': ['tb_treatment', 'lab_tests'],
-        'isActive': true,
-        'createdBy': 'admin123',
-        'createdAt': DateTime.now().subtract(Duration(days: 25)).toIso8601String(),
-      },
-      {
-        'facilityId': 'fac003',
-        'name': 'Clifton Medical Center',
-        'type': 'clinic',
-        'location': {
-          'address': 'Clifton Block 2, Karachi',
-          'district': 'District South',
-          'region': 'Sindh',
-          'gps': {'lat': 24.8138, 'lng': 67.0299}
-        },
-        'contact': {
-          'phone': '+92-21-99234567',
-          'email': 'clifton@medical.gov.pk'
-        },
-        'staff': ['staff101'],
-        'supervisors': ['sup003'],
-        'services': ['tb_treatment', 'xray'],
-        'isActive': true,
-        'createdBy': 'admin123',
-        'createdAt': DateTime.now().subtract(Duration(days: 20)).toIso8601String(),
-      },
-    ];
-
-    for (var facility in facilities) {
-      await _firestore
-          .collection('facilities')
-          .doc(facility['facilityId'].toString())
-          .set(facility);
-    }
-    print('✅ Dummy facilities created');
-  }
-
-  // Dummy Patients (created by CHWs)
-  static Future<void> createDummyPatients() async {
-    final patients = [
-      Patient(
-        patientId: 'p001',
-        name: 'Fatima Ahmed',
-        age: 35,
-        phone: '+92-300-1234567',
-        address: 'House 123, Gulshan-e-Iqbal, Karachi',
-        tbStatus: 'on_treatment',
-        assignedCHW: 'chw123',
-        assignedFacility: 'fac001',
-        treatmentFacility: 'fac001',
-        gpsLocation: {'lat': 24.9056, 'lng': 67.1000},
-        consent: true,
-        createdBy: 'chw123',
-        validatedBy: 'staff123',
-        createdAt: DateTime.now().subtract(Duration(days: 15)),
-      ),
-      Patient(
-        patientId: 'p002',
-        name: 'Muhammad Ali',
-        age: 42,
-        phone: '+92-301-2345678',
-        address: 'Flat 45, Clifton Block 5, Karachi',
-        tbStatus: 'newly_diagnosed',
-        assignedCHW: 'chw123',
-        assignedFacility: 'fac002',
-        treatmentFacility: 'fac002',
-        gpsLocation: {'lat': 24.8138, 'lng': 67.0299},
-        consent: true,
-        createdBy: 'chw123',
-        createdAt: DateTime.now().subtract(Duration(days: 10)),
-      ),
-      Patient(
-        patientId: 'p003',
-        name: 'Aisha Khan',
-        age: 28,
-        phone: '+92-302-3456789',
-        address: 'Street 15, North Nazimabad, Karachi',
-        tbStatus: 'on_treatment',
-        assignedCHW: 'chw456',
-        assignedFacility: 'fac003',
-        treatmentFacility: 'fac003',
-        gpsLocation: {'lat': 24.9300, 'lng': 67.0800},
-        consent: true,
-        createdBy: 'chw456',
-        validatedBy: 'staff456',
-        createdAt: DateTime.now().subtract(Duration(days: 8)),
-      ),
-    ];
-
-    for (var patient in patients) {
-      await _firestore
-          .collection('patients')
-          .doc(patient.patientId)
-          .set(patient.toFirestore());
-    }
-    print('✅ Dummy patients created');
-  }
-
-  // Dummy Visits (created by CHWs)
-  static Future<void> createDummyVisits() async {
-    final visits = [
-      Visit(
-        visitId: 'v001',
-        patientId: 'p001',
-        chwId: 'chw123',
-        visitType: 'home_visit',
-        date: DateTime.now().subtract(Duration(days: 5)),
-        found: true,
-        notes: 'Patient taking medicine regularly. No side effects reported.',
-        gpsLocation: {'lat': 24.9056, 'lng': 67.1000},
-      ),
-      Visit(
-        visitId: 'v002',
-        patientId: 'p002',
-        chwId: 'chw123',
-        visitType: 'follow_up',
-        date: DateTime.now().subtract(Duration(days: 3)),
-        found: false,
-        notes: 'Patient not at home. Will try again tomorrow.',
-        gpsLocation: {'lat': 24.8138, 'lng': 67.0299},
-      ),
-      Visit(
-        visitId: 'v003',
-        patientId: 'p003',
-        chwId: 'chw456',
-        visitType: 'tracing',
-        date: DateTime.now().subtract(Duration(days: 1)),
-        found: true,
-        notes: 'Found patient. Missed appointment due to work. Counseled about importance.',
-        gpsLocation: {'lat': 24.9300, 'lng': 67.0800},
-      ),
-    ];
-
-    for (var visit in visits) {
-      await _firestore
-          .collection('visits')
-          .doc(visit.visitId)
-          .set(visit.toFirestore());
-    }
-    print('✅ Dummy visits created');
-  }
-
-  // Dummy Households (created by CHWs)
-  static Future<void> createDummyHouseholds() async {
-    final households = [
-      Household(
-        householdId: 'h001',
-        patientId: 'p001',
-        address: 'House 123, Gulshan-e-Iqbal, Karachi',
-        totalMembers: 4,
-        screenedMembers: 3,
-        members: [
-          {
-            'name': 'Ahmed Ali (Husband)',
-            'age': 38,
-            'screened': true,
-            'result': 'negative'
-          },
-          {
-            'name': 'Sara Ahmed (Daughter)',
-            'age': 12,
-            'screened': true,
-            'result': 'negative'
-          },
-          {
-            'name': 'Omar Ahmed (Son)',
-            'age': 8,
-            'screened': true,
-            'result': 'negative'
-          },
-          {
-            'name': 'Baby Zain (Son)',
-            'age': 2,
-            'screened': false,
-            'result': 'not_tested'
-          }
-        ],
-      ),
-      Household(
-        householdId: 'h002',
-        patientId: 'p002',
-        address: 'Flat 45, Clifton Block 5, Karachi',
-        totalMembers: 3,
-        screenedMembers: 2,
-        members: [
-          {
-            'name': 'Khadija Ali (Wife)',
-            'age': 35,
-            'screened': true,
-            'result': 'negative'
-          },
-          {
-            'name': 'Hassan Ali (Son)',
-            'age': 15,
-            'screened': true,
-            'result': 'negative'
-          },
-          {
-            'name': 'Maryam Ali (Daughter)',
-            'age': 10,
-            'screened': false,
-            'result': 'not_tested'
-          }
-        ],
-      ),
-    ];
-
-    for (var household in households) {
-      await _firestore
-          .collection('households')
-          .doc(household.householdId)
-          .set(household.toFirestore());
-    }
-    print('✅ Dummy households created');
-  }
-
-  // Dummy Treatment Adherence (created by CHWs)
-  static Future<void> createDummyAdherence() async {
-    final adherenceRecords = [
-      TreatmentAdherence(
-        adherenceId: 'adh001',
-        patientId: 'p001',
-        visitId: 'v001',
-        date: DateTime.now().subtract(Duration(days: 1)),
-        reportedBy: 'chw123',
-        dosesToday: {
-          'morning': 'taken',
-          'evening': 'taken'
-        },
-        sideEffects: [],
-        pillsRemaining: 45,
-        adherenceScore: 95.0,
-        counselingGiven: true,
-        notes: 'Patient very compliant with treatment',
-      ),
-      TreatmentAdherence(
-        adherenceId: 'adh002',
-        patientId: 'p003',
-        visitId: 'v003',
-        date: DateTime.now().subtract(Duration(days: 1)),
-        reportedBy: 'chw456',
-        dosesToday: {
-          'morning': 'taken',
-          'evening': 'missed'
-        },
-        sideEffects: ['nausea'],
-        pillsRemaining: 38,
-        adherenceScore: 80.0,
-        counselingGiven: true,
-        notes: 'Patient experiencing mild nausea, advised to take with food',
-      ),
-    ];
-
-    for (var adherence in adherenceRecords) {
-      await _firestore
-          .collection('treatmentAdherence')
-          .doc(adherence.adherenceId)
-          .set(adherence.toFirestore());
-    }
-    print('✅ Dummy adherence records created');
-  }
-
-  // Dummy Contact Tracing (created by CHWs)
-  static Future<void> createDummyContactTracing() async {
-    final contacts = [
-      ContactTracing(
-        contactId: 'contact001',
-        householdId: 'h001',
-        indexPatientId: 'p001',
-        contactName: 'Ahmed Ali',
-        relationship: 'husband',
-        age: 38,
-        gender: 'male',
-        screeningDate: DateTime.now().subtract(Duration(days: 12)),
-        screenedBy: 'chw123',
-        symptoms: [],
-        testResult: 'negative',
-        referralNeeded: false,
-        notes: 'No symptoms, chest X-ray normal',
-      ),
-      ContactTracing(
-        contactId: 'contact002',
-        householdId: 'h001',
-        indexPatientId: 'p001',
-        contactName: 'Sara Ahmed',
-        relationship: 'daughter',
-        age: 12,
-        gender: 'female',
-        screeningDate: DateTime.now().subtract(Duration(days: 10)),
-        screenedBy: 'chw123',
-        symptoms: ['cough'],
-        testResult: 'negative',
-        referralNeeded: false,
-        notes: 'Had mild cough but tested negative, advised to return if symptoms persist',
-      ),
-    ];
-
-    for (var contact in contacts) {
-      await _firestore
-          .collection('contactTracing')
-          .doc(contact.contactId)
-          .set(contact.toFirestore());
-    }
-    print('✅ Dummy contact tracing records created');
-  }
-
-  // Dummy Follow-ups (created by admin/staff but CHWs need to see)
-  static Future<void> createDummyFollowups() async {
-    final followups = [
-      {
-        'followupId': 'f001',
-        'patientId': 'p001',
-        'scheduledDate': DateTime.now().add(Duration(days: 7)).toIso8601String(),
-        'status': 'scheduled',
-        'facility': 'District TB Hospital',
-        'notes': 'Monthly check-up and medicine refill'
-      },
-      {
-        'followupId': 'f002',
-        'patientId': 'p002',
-        'scheduledDate': DateTime.now().subtract(Duration(days: 2)).toIso8601String(),
-        'status': 'missed',
-        'facility': 'Gulshan Health Center',
-        'notes': 'Patient missed appointment - needs tracing'
-      },
-      {
-        'followupId': 'f003',
-        'patientId': 'p003',
-        'scheduledDate': DateTime.now().add(Duration(days: 3)).toIso8601String(),
-        'status': 'scheduled',
-        'facility': 'Clifton Medical Center',
-        'notes': 'Follow-up for side effects monitoring'
-      },
-    ];
-
-    for (var followup in followups) {
-      await _firestore
-          .collection('followups')
-          .doc(followup['followupId'].toString())
-          .set(followup);
-    }
-    print('✅ Dummy followups created');
-  }
-
-  // Dummy Notifications (for CHWs)
-  static Future<void> createDummyNotifications() async {
-    final notifications = [
-      {
-        'notificationId': 'notif001',
-        'userId': 'chw123',
-        'type': 'missed_followup',
-        'title': 'Patient Missed Appointment',
-        'message': 'Muhammad Ali missed his follow-up at Gulshan Health Center',
-        'relatedId': 'p002',
-        'priority': 'high',
-        'status': 'unread',
-        'sentAt': DateTime.now().subtract(Duration(hours: 2)).toIso8601String(),
-        'readAt': null
-      },
-      {
-        'notificationId': 'notif002',
-        'userId': 'chw456',
-        'type': 'new_assignment',
-        'title': 'New Patient Assigned',
-        'message': 'New patient Aisha Khan has been assigned to you',
-        'relatedId': 'p003',
-        'priority': 'medium',
-        'status': 'read',
-        'sentAt': DateTime.now().subtract(Duration(days: 1)).toIso8601String(),
-        'readAt': DateTime.now().subtract(Duration(hours: 20)).toIso8601String()
-      },
-      {
-        'notificationId': 'notif003',
-        'userId': 'chw123',
-        'type': 'reminder',
-        'title': 'Visit Reminder',
-        'message': 'Remember to visit Fatima Ahmed today for medicine check',
-        'relatedId': 'p001',
-        'priority': 'medium',
-        'status': 'unread',
-        'sentAt': DateTime.now().subtract(Duration(minutes: 30)).toIso8601String(),
-        'readAt': null
-      },
-    ];
-
-    for (var notification in notifications) {
-      await _firestore
-          .collection('notifications')
-          .doc(notification['notificationId'].toString())
-          .set(notification);
-    }
-    print('✅ Dummy notifications created');
-  }
-
-  // Dummy Audit Logs (created by CHWs actions)
-  static Future<void> createDummyAuditLogs() async {
-    final auditLogs = [
-      AuditLog(
-        logId: 'log001',
-        action: 'registered_patient',
-        who: 'chw123',
-        what: 'p001',
-        when: DateTime.now().subtract(Duration(days: 15)),
-        where: {'lat': 24.9056, 'lng': 67.1000},
-      ),
-      AuditLog(
-        logId: 'log002',
-        action: 'home_visit',
-        who: 'chw123',
-        what: 'v001',
-        when: DateTime.now().subtract(Duration(days: 5)),
-        where: {'lat': 24.9056, 'lng': 67.1000},
-      ),
-      AuditLog(
-        logId: 'log003',
-        action: 'contact_screening',
-        who: 'chw123',
-        what: 'contact001',
-        when: DateTime.now().subtract(Duration(days: 12)),
-        where: {'lat': 24.9056, 'lng': 67.1000},
-      ),
-    ];
-
-    for (var log in auditLogs) {
-      await _firestore
-          .collection('auditLogs')
-          .doc(log.logId)
-          .set(log.toFirestore());
-    }
-    print('✅ Dummy audit logs created');
-  }
-
-  // Master function to create all dummy data
-  static Future<void> createAllDummyData() async {
-    try {
-      print('🚀 Creating dummy data for CHW TB App...');
-      
-      await createDummyFacilities();
-      await createDummyPatients();
-      await createDummyVisits();
-      await createDummyHouseholds();
-      await createDummyAdherence();
-      await createDummyContactTracing();
-      await createDummyFollowups();
-      await createDummyNotifications();
-      await createDummyAuditLogs();
-      
-      print('✅ All dummy data created successfully!');
-      print('📱 Ready to test CHW TB App');
-      
-    } catch (e) {
-      print('❌ Error creating dummy data: $e');
-    }
+  factory AuditLog.fromFirestore(Map<String, dynamic> data) {
+    return AuditLog(
+      logId: data['logId'] ?? '',
+      action: data['action'] ?? '',
+      who: data['who'] ?? '',
+      what: data['what'] ?? '',
+      when: (data['when'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      where: data['where'] != null ? Map<String, double>.from(data['where']) : null,
+      additionalData: data['additionalData'],
+    );
   }
 }
 
-// =================== USAGE EXAMPLE ===================
+// =================== CHW READ-ONLY COLLECTIONS ===================
 
-// Call this function in your main.dart or wherever you initialize your app
-// DummyDataService.createAllDummyData();
+/// Facilities Collection - Hospitals and clinics (Created by Admin)
+/// Used by: Register New Patient Screen (Screen 10)
+class Facility {
+  final String facilityId;
+  final String name;
+  final String type; // 'hospital', 'health_center', 'clinic'
+  final Map<String, dynamic> location;
+  final Map<String, String> contact;
+  final List<String> staff;
+  final List<String> supervisors;
+  final List<String> services; // 'tb_treatment', 'xray', 'lab_tests'
+  final bool isActive;
+  final String createdBy;
+  final DateTime createdAt;
 
-// Example of how to call this in main.dart:
-/*
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  Facility({
+    required this.facilityId,
+    required this.name,
+    required this.type,
+    required this.location,
+    required this.contact,
+    required this.staff,
+    required this.supervisors,
+    required this.services,
+    required this.isActive,
+    required this.createdBy,
+    required this.createdAt,
+  });
+
+  factory Facility.fromFirestore(Map<String, dynamic> data) {
+    return Facility(
+      facilityId: data['facilityId'] ?? '',
+      name: data['name'] ?? '',
+      type: data['type'] ?? '',
+      location: Map<String, dynamic>.from(data['location'] ?? {}),
+      contact: Map<String, String>.from(data['contact'] ?? {}),
+      staff: List<String>.from(data['staff'] ?? []),
+      supervisors: List<String>.from(data['supervisors'] ?? []),
+      services: List<String>.from(data['services'] ?? []),
+      isActive: data['isActive'] ?? true,
+      createdBy: data['createdBy'] ?? '',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+}
+
+/// Follow-ups Collection - Hospital appointments (Created by Admin/Staff)
+/// Used by: Patient Details (11), Notifications List (23), Missed Follow-up Alert (24)
+class Followup {
+  final String followupId;
+  final String patientId;
+  final DateTime scheduledDate;
+  final String status; // 'scheduled', 'completed', 'missed', 'cancelled'
+  final String facility;
+  final String notes;
+  final DateTime? completedDate;
+
+  Followup({
+    required this.followupId,
+    required this.patientId,
+    required this.scheduledDate,
+    required this.status,
+    required this.facility,
+    required this.notes,
+    this.completedDate,
+  });
+
+  factory Followup.fromFirestore(Map<String, dynamic> data) {
+    return Followup(
+      followupId: data['followupId'] ?? '',
+      patientId: data['patientId'] ?? '',
+      scheduledDate: (data['scheduledDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      status: data['status'] ?? 'scheduled',
+      facility: data['facility'] ?? '',
+      notes: data['notes'] ?? '',
+      completedDate: (data['completedDate'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
+/// Notifications Collection - Alerts and messages sent to CHWs
+/// Used by: Home Dashboard (6), Notifications List (23), Missed Follow-up Alert (24)
+class CHWNotification {
+  final String notificationId;
+  final String userId; // CHW ID
+  final String type; // 'missed_followup', 'new_assignment', 'reminder', 'system_update', 'emergency_alert'
+  final String title;
+  final String message;
+  final String? relatedId; // Patient ID, Visit ID, etc.
+  final String priority; // 'low', 'medium', 'high', 'urgent'
+  final String status; // 'unread', 'read', 'archived'
+  final DateTime sentAt;
+  final DateTime? readAt;
+
+  CHWNotification({
+    required this.notificationId,
+    required this.userId,
+    required this.type,
+    required this.title,
+    required this.message,
+    this.relatedId,
+    required this.priority,
+    required this.status,
+    required this.sentAt,
+    this.readAt,
+  });
+
+  factory CHWNotification.fromFirestore(Map<String, dynamic> data) {
+    return CHWNotification(
+      notificationId: data['notificationId'] ?? '',
+      userId: data['userId'] ?? '',
+      type: data['type'] ?? '',
+      title: data['title'] ?? '',
+      message: data['message'] ?? '',
+      relatedId: data['relatedId'],
+      priority: data['priority'] ?? 'medium',
+      status: data['status'] ?? 'unread',
+      sentAt: (data['sentAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      readAt: (data['readAt'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
+/// Assignments Collection - Which CHW handles which patients
+/// Used by: Patient List Screen (Screen 8)
+class Assignment {
+  final String assignmentId;
+  final String chwId;
+  final List<String> patientIds;
+  final String assignedBy; // Staff ID
+  final String facilityId;
+  final DateTime assignedDate;
+  final String status; // 'active', 'inactive', 'transferred'
+  final String workArea;
+  final String priority; // 'low', 'medium', 'high'
+
+  Assignment({
+    required this.assignmentId,
+    required this.chwId,
+    required this.patientIds,
+    required this.assignedBy,
+    required this.facilityId,
+    required this.assignedDate,
+    required this.status,
+    required this.workArea,
+    required this.priority,
+  });
+
+  factory Assignment.fromFirestore(Map<String, dynamic> data) {
+    return Assignment(
+      assignmentId: data['assignmentId'] ?? '',
+      chwId: data['chwId'] ?? '',
+      patientIds: List<String>.from(data['patientIds'] ?? []),
+      assignedBy: data['assignedBy'] ?? '',
+      facilityId: data['facilityId'] ?? '',
+      assignedDate: (data['assignedDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      status: data['status'] ?? 'active',
+      workArea: data['workArea'] ?? '',
+      priority: data['priority'] ?? 'medium',
+    );
+  }
+}
+
+/// Outcomes Collection - Final treatment results (Created by Staff)
+/// Used by: Patient Details Screen (Screen 11)
+class TreatmentOutcome {
+  final String outcomeId;
+  final String patientId;
+  final DateTime treatmentStartDate;
+  final DateTime? treatmentEndDate;
+  final String outcome; // 'cured', 'treatment_completed', 'failed', 'died', 'lost_to_followup'
+  final String recordedBy; // Staff ID
+  final String facilityId;
+  final String notes;
+  final double? finalWeight;
+  final String? finalXrayResult;
+  final DateTime recordedAt;
+
+  TreatmentOutcome({
+    required this.outcomeId,
+    required this.patientId,
+    required this.treatmentStartDate,
+    this.treatmentEndDate,
+    required this.outcome,
+    required this.recordedBy,
+    required this.facilityId,
+    required this.notes,
+    this.finalWeight,
+    this.finalXrayResult,
+    required this.recordedAt,
+  });
+
+  factory TreatmentOutcome.fromFirestore(Map<String, dynamic> data) {
+    return TreatmentOutcome(
+      outcomeId: data['outcomeId'] ?? '',
+      patientId: data['patientId'] ?? '',
+      treatmentStartDate: (data['treatmentStartDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      treatmentEndDate: (data['treatmentEndDate'] as Timestamp?)?.toDate(),
+      outcome: data['outcome'] ?? '',
+      recordedBy: data['recordedBy'] ?? '',
+      facilityId: data['facilityId'] ?? '',
+      notes: data['notes'] ?? '',
+      finalWeight: data['finalWeight']?.toDouble(),
+      finalXrayResult: data['finalXrayResult'],
+      recordedAt: (data['recordedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+}
+
+// =================== ENUMS AND CONSTANTS ===================
+
+class TBStatus {
+  static const String newlyDiagnosed = 'newly_diagnosed';
+  static const String onTreatment = 'on_treatment';
+  static const String treatmentCompleted = 'treatment_completed';
+  static const String lostToFollowup = 'lost_to_followup';
   
-  // Create dummy data (call only once for testing)
-  // await DummyDataService.createAllDummyData();
-  
-  runApp(MyApp());
+  static List<String> get all => [newlyDiagnosed, onTreatment, treatmentCompleted, lostToFollowup];
 }
-*/
+
+class VisitType {
+  static const String homeVisit = 'home_visit';
+  static const String followUp = 'follow_up';
+  static const String tracing = 'tracing';
+  static const String medicineDelivery = 'medicine_delivery';
+  static const String counseling = 'counseling';
+  
+  static List<String> get all => [homeVisit, followUp, tracing, medicineDelivery, counseling];
+}
+
+class DoseStatus {
+  static const String taken = 'taken';
+  static const String missed = 'missed';
+  static const String late = 'late';
+  static const String vomited = 'vomited';
+  
+  static List<String> get all => [taken, missed, late, vomited];
+}
+
+class SideEffects {
+  static const String nausea = 'nausea';
+  static const String vomiting = 'vomiting';
+  static const String rash = 'rash';
+  static const String dizziness = 'dizziness';
+  static const String hearingProblems = 'hearing_problems';
+  static const String jointPain = 'joint_pain';
+  static const String visionChanges = 'vision_changes';
+  
+  static List<String> get all => [nausea, vomiting, rash, dizziness, hearingProblems, jointPain, visionChanges];
+}
+
+class Symptoms {
+  static const String persistentCough = 'persistent_cough';
+  static const String weightLoss = 'weight_loss';
+  static const String nightSweats = 'night_sweats';
+  static const String fever = 'fever';
+  static const String fatigue = 'fatigue';
+  static const String lossOfAppetite = 'loss_of_appetite';
+  
+  static List<String> get all => [persistentCough, weightLoss, nightSweats, fever, fatigue, lossOfAppetite];
+}
+
+class NotificationType {
+  static const String missedFollowup = 'missed_followup';
+  static const String newAssignment = 'new_assignment';
+  static const String reminder = 'reminder';
+  static const String systemUpdate = 'system_update';
+  static const String emergencyAlert = 'emergency_alert';
+  
+  static List<String> get all => [missedFollowup, newAssignment, reminder, systemUpdate, emergencyAlert];
+}

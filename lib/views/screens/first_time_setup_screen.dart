@@ -81,9 +81,9 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
           _isLoading = false;
         });
       } else {
-        // All permissions requested, navigate to dashboard
+        // All permissions requested, navigate to main navigation
         if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        Navigator.pushReplacementNamed(context, '/main-navigation');
       }
     } catch (e) {
       setState(() => _isLoading = false);
@@ -98,7 +98,7 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
   }
 
   void _skipSetup() {
-    Navigator.pushReplacementNamed(context, '/dashboard');
+    Navigator.pushReplacementNamed(context, '/main-navigation');
   }
 
   @override

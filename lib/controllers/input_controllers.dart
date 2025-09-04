@@ -11,6 +11,9 @@ class InputControllers {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
+  final TextEditingController workingAreaController = TextEditingController();
+  final TextEditingController idNumberController = TextEditingController();
+  final TextEditingController dateOfBirthController = TextEditingController();
   
   // Loading state
   bool loading = false;
@@ -23,6 +26,9 @@ class InputControllers {
     nameController.dispose();
     confirmPasswordController.dispose();
     phoneController.dispose();
+    workingAreaController.dispose();
+    idNumberController.dispose();
+    dateOfBirthController.dispose();
   }
   
   // Clear all fields
@@ -31,7 +37,10 @@ class InputControllers {
     passwordController.clear();
     nameController.clear();
     confirmPasswordController.clear();
-    phoneController.clear();  
+    phoneController.clear();
+    workingAreaController.clear();
+    idNumberController.clear();
+    dateOfBirthController.clear();
   }
   
   // Validate form
