@@ -2,7 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/controllers/providers/patient_provider.dart';
+import 'package:chw_tb/models/core_models.dart';
 
 class PatientDetailsScreen extends StatefulWidget {
   const PatientDetailsScreen({super.key});
@@ -16,6 +19,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   late TabController _tabController;
+  String? patientId;
+  Patient? patient;
 
   @override
   void initState() {
@@ -32,6 +37,35 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (patientId == null) {
+      // Get patient ID from route arguments
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args != null) {
+        if (args is String) {
+          patientId = args;
+        } else if (args is Map<String, dynamic> && args['patientId'] != null) {
+          patientId = args['patientId'];
+        }
+        if (patientId != null) {
+          _loadPatientData();
+        }
+      }
+    }
+  }
+
+  Future<void> _loadPatientData() async {
+    if (patientId != null) {
+      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+      await patientProvider.selectPatient(patientId!);
+      setState(() {
+        patient = patientProvider.selectedPatient;
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _fadeController.dispose();
     _tabController.dispose();
@@ -40,105 +74,121 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MadadgarTheme.backgroundColor,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            SliverAppBar(
-              expandedHeight: 300,
-              floating: false,
-              pinned: true,
-              backgroundColor: MadadgarTheme.primaryColor,
-              iconTheme: const IconThemeData(color: Colors.white),
-              actions: [
-                IconButton(
-                  onPressed: () => Navigator.pushNamed(context, '/edit-patient'),
-                  icon: const Icon(Icons.edit),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: _handleMenuAction,
-                  icon: const Icon(Icons.more_vert),
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'new_visit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.add_location),
-                          SizedBox(width: 8),
-                          Text('New Visit'),
-                        ],
+    return Consumer<PatientProvider>(
+      builder: (context, patientProvider, child) {
+        patient = patientProvider.selectedPatient;
+        
+        return Scaffold(
+          backgroundColor: MadadgarTheme.backgroundColor,
+          body: patientProvider.isLoading 
+            ? const Center(child: CircularProgressIndicator())
+            : FadeTransition(
+                opacity: _fadeAnimation,
+                child: NestedScrollView(
+                  headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                    SliverAppBar(
+                      expandedHeight: 300,
+                      floating: false,
+                      pinned: true,
+                      backgroundColor: MadadgarTheme.primaryColor,
+                      iconTheme: const IconThemeData(color: Colors.white),
+                      actions: [
+                        IconButton(
+                          onPressed: () => Navigator.pushNamed(
+                            context, 
+                            '/edit-patient',
+                            arguments: {'patientId': patientId},
+                          ),
+                          icon: const Icon(Icons.edit),
+                        ),
+                        PopupMenuButton<String>(
+                          onSelected: _handleMenuAction,
+                          icon: const Icon(Icons.more_vert),
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'new_visit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.add_location),
+                                  SizedBox(width: 8),
+                                  Text('New Visit'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'add_family',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.group_add),
+                                  SizedBox(width: 8),
+                                  Text('Add Family Member'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'call_patient',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.phone),
+                                  SizedBox(width: 8),
+                                  Text('Call Patient'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      flexibleSpace: FlexibleSpaceBar(
+                        background: _buildHeaderContent(),
                       ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'add_family',
-                      child: Row(
-                        children: [
-                          Icon(Icons.group_add),
-                          SizedBox(width: 8),
-                          Text('Add Family Member'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'call_patient',
-                      child: Row(
-                        children: [
-                          Icon(Icons.phone),
-                          SizedBox(width: 8),
-                          Text('Call Patient'),
+                      bottom: TabBar(
+                        controller: _tabController,
+                        isScrollable: true,
+                        labelColor: Colors.white,
+                        unselectedLabelColor: Colors.white.withOpacity(0.7),
+                        indicatorColor: Colors.white,
+                        labelStyle: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                        tabs: const [
+                          Tab(text: 'Overview'),
+                          Tab(text: 'Visits'),
+                          Tab(text: 'Treatment'),
+                          Tab(text: 'Family'),
+                          Tab(text: 'Appointments'),
                         ],
                       ),
                     ),
                   ],
+                  body: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildOverviewTab(),
+                      _buildVisitsTab(),
+                      _buildTreatmentTab(),
+                      _buildFamilyTab(),
+                      _buildAppointmentsTab(),
+                    ],
+                  ),
                 ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                background: _buildHeaderContent(),
               ),
-              bottom: TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white.withOpacity(0.7),
-                indicatorColor: Colors.white,
-                labelStyle: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-                tabs: const [
-                  Tab(text: 'Overview'),
-                  Tab(text: 'Visits'),
-                  Tab(text: 'Treatment'),
-                  Tab(text: 'Family'),
-                  Tab(text: 'Appointments'),
-                ],
-              ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () => Navigator.pushNamed(
+              context, 
+              '/new-visit',
+              arguments: {'patientId': patientId},
             ),
-          ],
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildOverviewTab(),
-              _buildVisitsTab(),
-              _buildTreatmentTab(),
-              _buildFamilyTab(),
-              _buildAppointmentsTab(),
-            ],
+            backgroundColor: MadadgarTheme.secondaryColor,
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.add_location),
+            label: Text(
+              'New Visit',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, '/new-visit'),
-        backgroundColor: MadadgarTheme.secondaryColor,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_location),
-        label: Text(
-          'New Visit',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -185,7 +235,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Patient Name', // Will be dynamic
+                          patient?.name ?? 'Loading...',
                           style: GoogleFonts.poppins(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -193,35 +243,31 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'On Treatment',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(patient?.tbStatus ?? '').withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _getStatusLabel(patient?.tbStatus ?? ''),
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'ID: PT001',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                          ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'ID: ${patient?.patientId ?? 'N/A'}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
                         ),
                       ],
                     ),
@@ -234,9 +280,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
               // Quick stats
               Row(
                 children: [
-                  _buildQuickStat('Age', '35'),
-                  _buildQuickStat('Gender', 'Male'),
-                  _buildQuickStat('Last Visit', '2 days ago'),
+                  _buildQuickStat('Age', '${patient?.age ?? 0}'),
+                  _buildQuickStat('Gender', patient?.gender ?? 'N/A'),
+                  _buildQuickStat('Phone', patient?.phone ?? 'N/A'),
                 ],
               ),
             ],
@@ -281,11 +327,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
             title: 'Personal Information',
             icon: Icons.person_outline,
             children: [
-              _buildInfoRow('Full Name', 'Patient Name'),
-              _buildInfoRow('Age', '35 years'),
-              _buildInfoRow('Gender', 'Male'),
-              _buildInfoRow('Phone', '+92 300 1234567'),
-              _buildInfoRow('Address', 'House 123, Street ABC, Area XYZ'),
+              _buildInfoRow('Full Name', patient?.name ?? 'N/A'),
+              _buildInfoRow('Age', '${patient?.age ?? 0} years'),
+              _buildInfoRow('Gender', patient?.gender ?? 'N/A'),
+              _buildInfoRow('Phone', patient?.phone ?? 'N/A'),
+              _buildInfoRow('Address', patient?.address ?? 'N/A'),
             ],
           ),
           
@@ -296,11 +342,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
             title: 'Medical Information',
             icon: Icons.medical_information_outlined,
             children: [
-              _buildInfoRow('TB Status', 'On Treatment'),
-              _buildInfoRow('Diagnosis Date', '15 Aug 2025'),
-              _buildInfoRow('Treatment Facility', 'DHQ Hospital'),
-              _buildInfoRow('Treatment Start', '20 Aug 2025'),
-              _buildInfoRow('Expected End', '20 Feb 2026'),
+              _buildInfoRow('TB Status', _getStatusLabel(patient?.tbStatus ?? '')),
+              _buildInfoRow('Diagnosis Date', patient?.diagnosisDate != null ? _formatDate(patient!.diagnosisDate!) : 'N/A'),
+              _buildInfoRow('Treatment Facility', patient?.treatmentFacility ?? 'N/A'),
+              _buildInfoRow('Registration Date', patient?.createdAt != null ? _formatDate(patient!.createdAt) : 'N/A'),
+              _buildInfoRow('Consent Given', patient?.consent == true ? 'Yes' : 'No'),
             ],
           ),
           
@@ -616,7 +662,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
             child: Text(
               label,
               style: GoogleFonts.poppins(
-                fontSize: 14,
+                fontSize: 12,
                 color: Colors.black54,
                 fontWeight: FontWeight.w500,
               ),
@@ -626,7 +672,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
             child: Text(
               value,
               style: GoogleFonts.poppins(
-                fontSize: 14,
+                fontSize: 12,
                 color: Colors.black87,
               ),
             ),
@@ -739,7 +785,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
                   child: _buildActionButton(
                     icon: Icons.add_location,
                     label: 'New Visit',
-                    onTap: () => Navigator.pushNamed(context, '/new-visit'),
+                    onTap: () => Navigator.pushNamed(
+                      context, 
+                      '/new-visit',
+                      arguments: {'patientId': patientId},
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -761,7 +811,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
                   child: _buildActionButton(
                     icon: Icons.edit,
                     label: 'Edit Info',
-                    onTap: () => Navigator.pushNamed(context, '/edit-patient'),
+                    onTap: () => Navigator.pushNamed(
+                      context, 
+                      '/edit-patient',
+                      arguments: {'patientId': patientId},
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -769,7 +823,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
                   child: _buildActionButton(
                     icon: Icons.medication,
                     label: 'Log Adherence',
-                    onTap: () => Navigator.pushNamed(context, '/adherence-tracking'),
+                    onTap: () => Navigator.pushNamed(
+                      context, 
+                      '/adherence-tracking',
+                      arguments: {'patientId': patientId},
+                    ),
                   ),
                 ),
               ],
@@ -815,10 +873,18 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   void _handleMenuAction(String action) {
     switch (action) {
       case 'new_visit':
-        Navigator.pushNamed(context, '/new-visit');
+        Navigator.pushNamed(
+          context, 
+          '/new-visit',
+          arguments: {'patientId': patientId},
+        );
         break;
       case 'add_family':
-        Navigator.pushNamed(context, '/add-household-member');
+        Navigator.pushNamed(
+          context, 
+          '/add-household-member',
+          arguments: {'patientId': patientId},
+        );
         break;
       case 'call_patient':
         _callPatient();
@@ -827,13 +893,70 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   }
 
   void _callPatient() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Calling patient...',
-          style: GoogleFonts.poppins(),
+    if (patient?.phone != null && patient!.phone.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Calling ${patient!.phone}...',
+            style: GoogleFonts.poppins(),
+          ),
         ),
-      ),
-    );
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No phone number available',
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
+    }
+  }
+
+  String _getStatusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'on_treatment':
+        return 'On Treatment';
+      case 'treatment_completed':
+        return 'Treatment Completed';
+      case 'treatment_failed':
+        return 'Treatment Failed';
+      case 'lost_to_followup':
+        return 'Lost to Follow-up';
+      case 'died':
+        return 'Died';
+      case 'not_evaluated':
+        return 'Not Evaluated';
+      case 'transferred_out':
+        return 'Transferred Out';
+      default:
+        return 'Unknown Status';
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'on_treatment':
+        return Colors.blue;
+      case 'treatment_completed':
+        return Colors.green;
+      case 'treatment_failed':
+        return Colors.red;
+      case 'lost_to_followup':
+        return Colors.orange;
+      case 'died':
+        return Colors.black;
+      case 'not_evaluated':
+        return Colors.grey;
+      case 'transferred_out':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

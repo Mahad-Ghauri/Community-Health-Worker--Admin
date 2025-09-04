@@ -499,7 +499,7 @@ class _PatientListScreenState extends State<PatientListScreen>
       child: InkWell(
         onTap: () {
           // Select patient and navigate to details
-          context.read<PatientProvider>().selectPatient(patient.patientId);
+          context.read<PatientProvider>().selectPatientDirect(patient);
           Navigator.pushNamed(
             context, 
             '/patient-details',

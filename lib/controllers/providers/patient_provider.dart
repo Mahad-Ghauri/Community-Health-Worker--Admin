@@ -197,7 +197,23 @@ class PatientProvider with ChangeNotifier {
       _setLoading(true);
       _clearError();
       
-      final patient = await PatientService.getPatientById(patientId);
+      // First try to find the patient in the already loaded list
+      Patient? patient;
+      try {
+        patient = _patients.firstWhere((p) => p.patientId == patientId);
+      } catch (e) {
+        patient = null;
+      }
+      
+      // If not found in list, fetch from Firestore
+      if (patient == null) {
+        patient = await PatientService.getPatientById(patientId);
+      }
+      
+      if (patient == null) {
+        throw Exception('Patient with ID $patientId not found');
+      }
+      
       _selectedPatient = patient;
       
       _setLoading(false);
@@ -206,6 +222,12 @@ class PatientProvider with ChangeNotifier {
       _setError('Failed to load patient details: $e');
       _setLoading(false);
     }
+  }
+
+  /// Select patient directly from patient object (more efficient)
+  void selectPatientDirect(Patient patient) {
+    _selectedPatient = patient;
+    notifyListeners();
   }
 
   /// Update patient - Used by Screen 12: Edit Patient
