@@ -281,12 +281,13 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           ),
           const SizedBox(height: 16),
           
-          // Notifications list placeholder
+          // Notifications list placeholder - FIXED: Made scrollable
           Expanded(
-            child: Center(
+            child: SingleChildScrollView(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  const SizedBox(height: 40), // Add some top spacing
                   Icon(
                     _getTabIcon(tabType),
                     size: 80,
@@ -302,18 +303,23 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    _getEmptyMessage(tabType),
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      _getEmptyMessage(tabType),
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey.shade500,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
                   
                   // Sample notification examples
                   if (tabType == 'all') _buildSampleNotifications(),
+                  
+                  const SizedBox(height: 40), // Add some bottom spacing
                 ],
               ),
             ),

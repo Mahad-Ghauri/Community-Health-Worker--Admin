@@ -16,32 +16,36 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  
+
   int _currentStep = 0;
   bool _isLoading = false;
-  
+
   final List<PermissionSetupStep> _steps = [
     PermissionSetupStep(
       title: 'Location Access',
-      description: 'We need GPS access to track your visits and automatically capture location data for patient registrations.',
+      description:
+          'We need GPS access to track your visits and automatically capture location data for patient registrations.',
       icon: Icons.location_on_outlined,
       permission: Permission.location,
     ),
     PermissionSetupStep(
       title: 'Camera Access',
-      description: 'Camera permission is required to capture patient photos and visit documentation.',
+      description:
+          'Camera permission is required to capture patient photos and visit documentation.',
       icon: Icons.camera_alt_outlined,
       permission: Permission.camera,
     ),
     PermissionSetupStep(
       title: 'Storage Access',
-      description: 'Storage access is needed to save photos and offline data for sync when connected.',
+      description:
+          'Storage access is needed to save photos and offline data for sync when connected.',
       icon: Icons.storage_outlined,
       permission: Permission.storage,
     ),
     PermissionSetupStep(
       title: 'Notifications',
-      description: 'Stay updated with visit reminders, patient alerts, and important notifications.',
+      description:
+          'Stay updated with visit reminders, patient alerts, and important notifications.',
       icon: Icons.notifications_outlined,
       permission: Permission.notification,
     ),
@@ -54,9 +58,10 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
     _fadeController.forward();
   }
 
@@ -68,13 +73,13 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
 
   Future<void> _requestPermission() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final permission = _steps[_currentStep].permission;
       await permission.request();
-      
+
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       if (_currentStep < _steps.length - 1) {
         setState(() {
           _currentStep++;
@@ -122,7 +127,7 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
               ),
             ),
           ),
-          
+
           SafeArea(
             child: FadeTransition(
               opacity: _fadeAnimation,
@@ -132,17 +137,19 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
                   children: [
                     // Header
                     _buildHeader(),
-                    
+
                     const SizedBox(height: 40),
-                    
+
                     // Progress indicator
                     _buildProgressIndicator(),
-                    
+
                     const SizedBox(height: 40),
-                    
-                    // Current step content
-                    Expanded(child: _buildStepContent()),
-                    
+
+                    // Current step content - FIXED: Made it flexible
+                    Expanded(flex: 1, child: _buildStepContent()),
+
+                    const SizedBox(height: 24),
+
                     // Action buttons
                     _buildActionButtons(),
                   ],
@@ -166,7 +173,10 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [MadadgarTheme.primaryColor, MadadgarTheme.secondaryColor],
+              colors: [
+                MadadgarTheme.primaryColor,
+                MadadgarTheme.secondaryColor,
+              ],
             ),
             boxShadow: [
               BoxShadow(
@@ -194,10 +204,7 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
         const SizedBox(height: 8),
         Text(
           'Grant necessary permissions for optimal app experience',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            color: Colors.black54,
-          ),
+          style: GoogleFonts.poppins(fontSize: 16, color: Colors.black54),
           textAlign: TextAlign.center,
         ),
       ],
@@ -233,59 +240,76 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
 
   Widget _buildStepContent() {
     final step = _steps[_currentStep];
-    
-    return Center(
-      child: Card(
-        elevation: 8,
-        shadowColor: MadadgarTheme.primaryColor.withOpacity(0.2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: MadadgarTheme.primaryColor.withOpacity(0.1),
-                ),
-                child: Icon(
-                  step.icon,
-                  size: 50,
-                  color: MadadgarTheme.primaryColor,
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate available space and adjust content accordingly
+        final availableHeight = constraints.maxHeight;
+        final shouldUseCompactLayout = availableHeight < 400;
+
+        return Center(
+          child: Card(
+            elevation: 8,
+            shadowColor: MadadgarTheme.primaryColor.withOpacity(0.2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(shouldUseCompactLayout ? 24.0 : 32.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: shouldUseCompactLayout ? 80 : 100,
+                      height: shouldUseCompactLayout ? 80 : 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: MadadgarTheme.primaryColor.withOpacity(0.1),
+                      ),
+                      child: Icon(
+                        step.icon,
+                        size: shouldUseCompactLayout ? 40 : 50,
+                        color: MadadgarTheme.primaryColor,
+                      ),
+                    ),
+                    SizedBox(height: shouldUseCompactLayout ? 16 : 24),
+                    Text(
+                      step.title,
+                      style: GoogleFonts.poppins(
+                        fontSize: shouldUseCompactLayout ? 20 : 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: shouldUseCompactLayout ? 12 : 16),
+                    Text(
+                      step.description,
+                      style: GoogleFonts.poppins(
+                        fontSize: shouldUseCompactLayout ? 14 : 16,
+                        color: Colors.black54,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: shouldUseCompactLayout ? 4 : null,
+                      overflow: shouldUseCompactLayout
+                          ? TextOverflow.ellipsis
+                          : null,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
-              Text(
-                step.title,
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                step.description,
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: Colors.black54,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildActionButtons() {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
           width: double.infinity,
@@ -310,7 +334,9 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
                     ),
                   )
                 : Text(
-                    _currentStep == _steps.length - 1 ? 'Complete Setup' : 'Grant Permission',
+                    _currentStep == _steps.length - 1
+                        ? 'Complete Setup'
+                        : 'Grant Permission',
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -323,10 +349,7 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
           onPressed: _skipSetup,
           child: Text(
             'Skip for now',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.black54,
-            ),
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
           ),
         ),
       ],

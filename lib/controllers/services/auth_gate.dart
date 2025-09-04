@@ -12,25 +12,48 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  bool? _lastIsAuthed;
+  // Track last evaluated navigation state to avoid redundant redirects
+  String? _lastNavStateKey;
 
-  void _maybeRedirect(bool isAuthed) {
+  void _maybeRedirect({
+    required bool isAuthed,
+    required bool? isFirstTimeSetupComplete,
+  }) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
     final ctx = navigator.context;
     final currentRoute = ModalRoute.of(ctx)?.settings.name;
 
-    if (isAuthed) {
-      if (currentRoute != '/main-navigation') {
-        // User is authenticated, navigate to main navigation
-        navigator.pushNamedAndRemoveUntil('/main-navigation', (route) => false);
-      }
-    } else {
+    if (!isAuthed) {
+      // Not authenticated: keep on auth routes
       if (currentRoute != '/sign-in' && currentRoute != '/sign-up') {
         navigator.pushNamedAndRemoveUntil('/sign-in', (route) => false);
       }
+      return;
     }
+
+    // Authenticated
+    if (isFirstTimeSetupComplete == false) {
+      // New user: go to first-time setup
+      if (currentRoute != '/first-time-setup') {
+        navigator.pushNamedAndRemoveUntil(
+          '/first-time-setup',
+          (route) => false,
+        );
+      }
+      return;
+    }
+
+    if (isFirstTimeSetupComplete == true) {
+      // Existing or completed setup: go to main navigation
+      if (currentRoute != '/main-navigation') {
+        navigator.pushNamedAndRemoveUntil('/main-navigation', (route) => false);
+      }
+      return;
+    }
+
+    // If isFirstTimeSetupComplete is null, wait until user profile is loaded
   }
 
   @override
@@ -38,13 +61,19 @@ class _AuthGateState extends State<AuthGate> {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
         final isAuthed = auth.isAuthenticated;
+        final setupComplete = auth.chwUser?.isFirstTimeSetupComplete;
 
-        // Only navigate when auth state actually changes
-        if (_lastIsAuthed != isAuthed) {
-          _lastIsAuthed = isAuthed;
+        // Build a key from current auth + setup state to detect changes
+        final stateKey =
+            '${isAuthed.toString()}|${setupComplete?.toString() ?? 'null'}';
+        if (_lastNavStateKey != stateKey) {
+          _lastNavStateKey = stateKey;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            _maybeRedirect(isAuthed);
+            _maybeRedirect(
+              isAuthed: isAuthed,
+              isFirstTimeSetupComplete: setupComplete,
+            );
           });
         }
 
