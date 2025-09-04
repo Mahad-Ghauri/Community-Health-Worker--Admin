@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:chw_tb/config/theme.dart';
@@ -106,6 +106,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           // Header
           Container(
             height: 160,
+            width: double.infinity,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -144,13 +145,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                 
                   ],
                 ),
               ),
             ),
           ),
-          
+
           // Menu items
           Expanded(
             child: Scrollbar(
@@ -220,7 +220,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     title: 'Profile',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.pushNamed(context, '/profile');
+                      Navigator.pushNamed(context, '/profile-settings');
                     },
                   ),
                   _buildDrawerItem(
@@ -252,7 +252,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
             ),
           ),
-          
+
           // Logout
           SafeArea(
             child: Container(
@@ -263,7 +263,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   onTap: () => _showLogoutDialog(),
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
                     child: Row(
                       children: [
                         Icon(
@@ -307,11 +310,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              Icon(
-                icon,
-                color: MadadgarTheme.primaryColor,
-                size: 24,
-              ),
+              Icon(icon, color: MadadgarTheme.primaryColor, size: 24),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
@@ -361,10 +360,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               backgroundColor: MadadgarTheme.primaryColor,
               foregroundColor: Colors.white,
             ),
-            child: Text(
-              'Sync Now',
-              style: GoogleFonts.poppins(),
-            ),
+            child: Text('Sync Now', style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -402,10 +398,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               backgroundColor: MadadgarTheme.errorColor,
               foregroundColor: Colors.white,
             ),
-            child: Text(
-              'Logout',
-              style: GoogleFonts.poppins(),
-            ),
+            child: Text('Logout', style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -416,14 +409,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     // Mock sync operation
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Syncing data...',
-          style: GoogleFonts.poppins(),
-        ),
+        content: Text('Syncing data...', style: GoogleFonts.poppins()),
         backgroundColor: MadadgarTheme.primaryColor,
       ),
     );
-    
+
     // Simulate sync delay
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;

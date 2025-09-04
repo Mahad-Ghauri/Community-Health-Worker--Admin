@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_cast
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/core_models.dart';
@@ -172,7 +174,7 @@ class PatientService {
 
       if (phoneQuery != null && phoneQuery.isNotEmpty) {
         query = query.where('phone', isGreaterThanOrEqualTo: phoneQuery)
-                    .where('phone', isLessThan: phoneQuery + '\uf8ff');
+                    .where('phone', isLessThan: '$phoneQuery\uf8ff');
       }
 
       final snapshot = await query.limit(limit).get();

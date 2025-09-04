@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, prefer_final_fields, unnecessary_to_list_in_spreads
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';

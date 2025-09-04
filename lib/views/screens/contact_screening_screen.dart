@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, unnecessary_to_list_in_spreads, curly_braces_in_flow_control_structures
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -27,7 +27,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
   Map<String, dynamic> _memberInfo = {};
   
   // Symptom screening
-  Map<String, bool> _symptoms = {
+  final Map<String, bool> _symptoms = {
     'persistent_cough': false,
     'cough_with_blood': false,
     'weight_loss': false,
@@ -40,7 +40,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
   };
   
   // Risk assessment
-  Map<String, bool> _riskFactors = {
+  final Map<String, bool> _riskFactors = {
     'close_contact': false,
     'prolonged_exposure': false,
     'shared_sleeping_space': false,
@@ -54,7 +54,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
   };
   
   // Clinical examination
-  Map<String, String> _clinicalFindings = {
+  final Map<String, String> _clinicalFindings = {
     'weight': '',
     'height': '',
     'temperature': '',
@@ -68,7 +68,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
   };
   
   // Test recommendations
-  Map<String, bool> _recommendedTests = {
+  final Map<String, bool> _recommendedTests = {
     'chest_xray': false,
     'sputum_smear': false,
     'sputum_culture': false,
@@ -79,7 +79,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
   };
   
   String _overallRiskLevel = 'low';
-  List<String> _referralRecommendations = [];
+  final List<String> _referralRecommendations = [];
   
   final List<Map<String, String>> _symptomDefinitions = [
     {
@@ -1428,8 +1428,9 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
         .where((e) => ['cough_with_blood', 'persistent_cough', 'weight_loss'].contains(e.key))
         .any((e) => e.value);
     
-    if (hasHighPrioritySymptoms) riskScore += 5;
-    else if (symptomCount >= 3) riskScore += 3;
+    if (hasHighPrioritySymptoms) {
+      riskScore += 5;
+    } else if (symptomCount >= 3) riskScore += 3;
     else if (symptomCount >= 1) riskScore += 1;
     
     // Risk factor scoring

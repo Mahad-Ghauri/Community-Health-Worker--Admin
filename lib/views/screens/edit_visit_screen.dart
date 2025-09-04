@@ -41,7 +41,7 @@ class _EditVisitScreenState extends State<EditVisitScreen>
   bool _patientFound = true;
   
   // Symptoms checklist
-  Map<String, bool> _symptoms = {
+  final Map<String, bool> _symptoms = {
     'Cough': false,
     'Fever': false,
     'Night Sweats': false,
@@ -53,7 +53,7 @@ class _EditVisitScreenState extends State<EditVisitScreen>
   };
   
   // Medication adherence
-  Map<String, String> _medicationAdherence = {
+  final Map<String, String> _medicationAdherence = {
     'Rifampin': 'Good',
     'Isoniazid': 'Good',
     'Ethambutol': 'Good',

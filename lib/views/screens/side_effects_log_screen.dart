@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, unnecessary_to_list_in_spreads
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chw_tb/config/theme.dart';
@@ -21,10 +21,10 @@ class _SideEffectsLogScreenState extends State<SideEffectsLogScreen>
   bool _isLoading = false;
   
   // Current side effects
-  Map<String, Map<String, dynamic>> _currentSideEffects = {};
+  final Map<String, Map<String, dynamic>> _currentSideEffects = {};
   String _additionalNotes = '';
   bool _doctorReferralRequired = false;
-  DateTime _onsetDate = DateTime.now();
+  final DateTime _onsetDate = DateTime.now();
   
   // Side effects list with details
   final List<Map<String, dynamic>> _sideEffectsList = [

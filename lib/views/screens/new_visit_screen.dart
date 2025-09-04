@@ -25,7 +25,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
   bool _patientFound = true;
   String _selectedPatient = '';
   String _selectedVisitType = '';
-  List<String> _capturedPhotos = [];
+  final List<String> _capturedPhotos = [];
 
   final List<String> _visitTypes = [
     'home_visit',

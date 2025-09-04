@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, curly_braces_in_flow_control_structures
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -42,7 +42,7 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
   DateTime? _preferredScreeningDate;
   
   // Form validation flags
-  Map<String, bool> _fieldErrors = {};
+  final Map<String, bool> _fieldErrors = {};
   
   final List<String> _relationships = [
     'Spouse',

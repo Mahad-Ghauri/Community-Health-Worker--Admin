@@ -19,7 +19,7 @@ class _OfflineQueueScreenState extends State<OfflineQueueScreen>
   late Animation<double> _uploadAnimation;
   
   bool _isUploading = false;
-  bool _isOnline = true;
+  final bool _isOnline = true;
   String _selectedFilter = 'All';
   
   List<Map<String, dynamic>> _queueItems = [];

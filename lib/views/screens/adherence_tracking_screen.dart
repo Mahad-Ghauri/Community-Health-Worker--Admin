@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, unnecessary_to_list_in_spreads
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,16 +22,16 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
   bool _isLoading = false;
   
   // Dose tracking for current day
-  Map<String, String> _morningDoses = {};
-  Map<String, String> _eveningDoses = {};
+  final Map<String, String> _morningDoses = {};
+  final Map<String, String> _eveningDoses = {};
   
   // Side effects tracking
-  List<String> _reportedSideEffects = [];
+  final List<String> _reportedSideEffects = [];
   // ignore: unused_field
   String _sideEffectNotes = '';
   
   // Pill count
-  Map<String, int> _pillCounts = {};
+  final Map<String, int> _pillCounts = {};
   
   final List<String> _doseOptions = ['taken', 'missed', 'late', 'vomited'];
   

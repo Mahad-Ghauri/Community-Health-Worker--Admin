@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, unnecessary_to_list_in_spreads
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chw_tb/config/theme.dart';
@@ -29,7 +29,7 @@ class _ScreeningResultsScreenState extends State<ScreeningResultsScreen>
   String _testNotes = '';
   
   // Follow-up Actions
-  List<String> _followUpActions = [];
+  final List<String> _followUpActions = [];
   String _referralStatus = '';
   DateTime? _nextScreeningDate;
   String _recommendations = '';

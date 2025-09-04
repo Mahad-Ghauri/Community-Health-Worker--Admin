@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chw_tb/config/theme.dart';
@@ -18,7 +20,7 @@ class _TreatmentPlanScreenState extends State<TreatmentPlanScreen>
   late TabController _tabController;
   
   bool _isLoading = false;
-  String _treatmentPhase = 'Intensive';
+  final String _treatmentPhase = 'Intensive';
   DateTime? _treatmentStartDate;
   DateTime? _expectedCompletionDate;
 
