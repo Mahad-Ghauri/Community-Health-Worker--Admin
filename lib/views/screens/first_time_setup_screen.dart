@@ -113,7 +113,7 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
 
   Future<void> _skipSetup() async {
     // Mark setup as complete when skipping to avoid being redirected here again later
-    final ok = await context.read<AuthProvider>().completeFirstTimeSetup();
+    await context.read<AuthProvider>().completeFirstTimeSetup();
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/main-navigation');
   }
@@ -152,29 +152,28 @@ class _FirstTimeSetupScreenState extends State<FirstTimeSetupScreen>
                         constraints: BoxConstraints(
                           minHeight: constraints.maxHeight,
                         ),
-                        child: IntrinsicHeight(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Header
-                              _buildHeader(),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Header
+                            _buildHeader(),
 
-                              const SizedBox(height: 40),
+                            const SizedBox(height: 40),
 
-                              // Progress indicator
-                              _buildProgressIndicator(),
+                            // Progress indicator
+                            _buildProgressIndicator(),
 
-                              const SizedBox(height: 40),
+                            const SizedBox(height: 40),
 
-                              // Current step content
-                              Expanded(child: _buildStepContent()),
+                            // Current step content
+                            _buildStepContent(),
 
-                              const SizedBox(height: 24),
+                            const SizedBox(height: 24),
 
-                              // Action buttons
-                              _buildActionButtons(),
-                            ],
-                          ),
+                            // Action buttons
+                            _buildActionButtons(),
+                          ],
                         ),
                       ),
                     );
