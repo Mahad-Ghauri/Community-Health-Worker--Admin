@@ -1,7 +1,10 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/controllers/providers/patient_provider.dart';
+import 'package:chw_tb/models/core_models.dart';
 
 class VisitDetailsScreen extends StatefulWidget {
   final String? visitId;
@@ -18,7 +21,10 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
   late Animation<double> _fadeAnimation;
   late TabController _tabController;
   
-  bool _isLoading = false;
+  bool _isLoading = true;
+  Visit? _visit;
+  Patient? _patient;
+  String? _error;
 
   @override
   void initState() {
@@ -31,8 +37,8 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
       CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
     );
     _tabController = TabController(length: 4, vsync: this);
-    _fadeController.forward();
     
+    // Load visit data immediately
     _loadVisitData();
   }
 
@@ -43,13 +49,123 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
     super.dispose();
   }
 
-  void _loadVisitData() {
-    // Mock visit data - will be loaded from Firebase later
-    setState(() => _isLoading = false);
+  void _loadVisitData() async {
+    if (widget.visitId == null) {
+      setState(() {
+        _error = 'Visit ID not provided';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final visitProvider = Provider.of<VisitProvider>(context, listen: false);
+      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+      
+      // Load visit details
+      await visitProvider.selectVisit(widget.visitId!);
+      _visit = visitProvider.selectedVisit;
+      
+      if (_visit != null) {
+        // Load patient details
+        _patient = patientProvider.patients
+            .where((p) => p.patientId == _visit!.patientId)
+            .firstOrNull;
+      }
+      
+      setState(() => _isLoading = false);
+      
+      // Start fade animation after data is loaded
+      _fadeController.forward();
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load visit details: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Handle loading state
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: MadadgarTheme.backgroundColor,
+        appBar: AppBar(
+          title: Text('Visit Details', style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: MadadgarTheme.primaryColor,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Handle error state
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: MadadgarTheme.backgroundColor,
+        appBar: AppBar(
+          title: Text('Visit Details', style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: MadadgarTheme.primaryColor,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text(
+                'Error Loading Visit',
+                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: GoogleFonts.poppins(color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _loadVisitData,
+                child: Text('Retry', style: GoogleFonts.poppins()),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Handle missing visit data
+    if (_visit == null) {
+      return Scaffold(
+        backgroundColor: MadadgarTheme.backgroundColor,
+        appBar: AppBar(
+          title: Text('Visit Details', style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: MadadgarTheme.primaryColor,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.location_on_outlined, size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text(
+                'Visit Not Found',
+                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'The requested visit could not be found.',
+                style: GoogleFonts.poppins(color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: MadadgarTheme.backgroundColor,
       body: FadeTransition(
@@ -151,9 +267,9 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 40, 20, 40),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Visit type badge
@@ -164,7 +280,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  'Follow-up Visit',
+                  _formatVisitType(_visit!.visitType),
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: Colors.white,
@@ -177,7 +293,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
               
               // Patient name
               Text(
-                'Ahmad Khan',
+                _patient?.name ?? 'Unknown Patient',
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -193,7 +309,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
                   Icon(Icons.access_time, color: Colors.white.withOpacity(0.9), size: 16),
                   const SizedBox(width: 4),
                   Text(
-                    '2 September 2025, 10:30 AM',
+                    _formatVisitDateTime(_visit!.date),
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       color: Colors.white.withOpacity(0.9),
@@ -204,59 +320,26 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
               
               const SizedBox(height: 8),
               
-              // Location
+              // Patient found status
               Row(
                 children: [
-                  Icon(Icons.location_on, color: Colors.white.withOpacity(0.9), size: 16),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      'Model Town, Lahore',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
+                  Icon(
+                    _visit!.found ? Icons.check_circle : Icons.cancel,
+                    color: _visit!.found ? Colors.green : Colors.red,
+                    size: 16,
                   ),
-                ],
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Status and duration
-              Row(
-                children: [
-                  _buildStatusChip('Completed', Colors.green),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 4),
                   Text(
-                    'Duration: 45 minutes',
+                    _visit!.found ? 'Patient Found' : 'Patient Not Found',
                     style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
                     ),
                   ),
                 ],
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(String status, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        status,
-        style: GoogleFonts.poppins(
-          fontSize: 12,
-          color: Colors.white,
-          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -272,23 +355,18 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
           
           const SizedBox(height: 16),
           
-          // Treatment adherence card
-          _buildTreatmentAdherenceCard(),
+          // Patient information card
+          _buildPatientInfoCard(),
           
           const SizedBox(height: 16),
           
-          // Symptoms card
-          _buildSymptomsCard(),
+          // Visit notes card
+          _buildVisitNotesCard(),
           
-          const SizedBox(height: 16),
-          
-          // Medications card
-          _buildMedicationsCard(),
-          
-          const SizedBox(height: 16),
-          
-          // Next appointment card
-          _buildNextAppointmentCard(),
+          if (_visit!.photos != null && _visit!.photos!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildPhotosPreviewCard(),
+          ],
         ],
       ),
     );
@@ -323,19 +401,19 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
         children: [
           // CHW notes
           _buildNotesCard('CHW Notes', 
-            'Patient is responding well to treatment. No side effects reported. Patient maintains good adherence to medication schedule. Family support is excellent. Recommended to continue current treatment plan.'),
+            _visit!.notes.isNotEmpty ? _visit!.notes : 'No notes recorded for this visit'),
           
           const SizedBox(height: 16),
           
           // Patient feedback
           _buildNotesCard('Patient Feedback',
-            'Feeling much better than last month. No cough or fever. Appetite has improved. Taking medicines on time. Family is helping with reminders.'),
+            'No patient feedback recorded'),
           
           const SizedBox(height: 16),
           
           // Observations
           _buildNotesCard('Clinical Observations',
-            'Patient appears healthy and alert. No signs of distress. Weight stable. Good compliance with treatment regimen. Family engagement positive.'),
+            'No clinical observations recorded'),
           
           const SizedBox(height: 16),
           
@@ -391,19 +469,19 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
             ),
             const SizedBox(height: 16),
             
-            _buildSummaryRow('Visit Type', 'Follow-up Visit'),
-            _buildSummaryRow('Purpose', 'Routine medication check'),
-            _buildSummaryRow('CHW', 'Dr. Sarah Ahmed'),
-            _buildSummaryRow('Visit Number', '4th visit'),
-            _buildSummaryRow('Patient Found', 'Yes'),
-            _buildSummaryRow('Visit Duration', '45 minutes'),
+            _buildSummaryRow('Visit Type', _formatVisitType(_visit!.visitType)),
+            _buildSummaryRow('Patient Name', _patient?.name ?? 'Unknown Patient'),
+            _buildSummaryRow('Visit Date', _formatDate(_visit!.date)),
+            _buildSummaryRow('Patient Found', _visit!.found ? 'Yes' : 'No'),
+            _buildSummaryRow('GPS Location', _visit!.gpsLocation.isNotEmpty ? 'Recorded' : 'Not available'),
+            if (_visit!.notes.isNotEmpty) _buildSummaryRow('Notes', _visit!.notes),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTreatmentAdherenceCard() {
+  Widget _buildPatientInfoCard() {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -412,10 +490,10 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
           children: [
             Row(
               children: [
-                Icon(Icons.medication, color: MadadgarTheme.primaryColor),
+                Icon(Icons.person, color: MadadgarTheme.primaryColor),
                 const SizedBox(width: 8),
                 Text(
-                  'Treatment Adherence',
+                  'Patient Information',
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -426,491 +504,138 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
             ),
             const SizedBox(height: 16),
             
-            // Adherence percentage
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Medication Adherence',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: 0.95,
-                        backgroundColor: Colors.grey.shade300,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '95% (Excellent)',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.green,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 16),
-            
-            _buildSummaryRow('Missed Doses (Last 30 days)', '2'),
-            _buildSummaryRow('Side Effects', 'None reported'),
-            _buildSummaryRow('Pill Count', '28/30 taken'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSymptomsCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.healing, color: MadadgarTheme.primaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  'Symptoms Assessment',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildSymptomItem('Cough', 'Absent', Colors.green),
-            _buildSymptomItem('Fever', 'Absent', Colors.green),
-            _buildSymptomItem('Weight Loss', 'Stable', Colors.green),
-            _buildSymptomItem('Night Sweats', 'Absent', Colors.green),
-            _buildSymptomItem('Fatigue', 'Mild', Colors.orange),
-            _buildSymptomItem('Appetite', 'Good', Colors.green),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMedicationsCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.medical_services, color: MadadgarTheme.primaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  'Current Medications',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMedicationItem('Rifampin', '600mg', 'Once daily', 'Morning'),
-            _buildMedicationItem('Isoniazid', '300mg', 'Once daily', 'Morning'),
-            _buildMedicationItem('Ethambutol', '1200mg', 'Once daily', 'Morning'),
-            _buildMedicationItem('Pyrazinamide', '1500mg', 'Once daily', 'Morning'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNextAppointmentCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.event, color: MadadgarTheme.primaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  'Next Appointment',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: MadadgarTheme.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.calendar_today, color: MadadgarTheme.primaryColor),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '15 September 2025',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        Text(
-                          '10:00 AM - Follow-up Visit',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => _rescheduleAppointment(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: MadadgarTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(80, 36),
-                    ),
-                    child: Text(
-                      'Reschedule',
-                      style: GoogleFonts.poppins(fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVitalSignsGrid() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Vital Signs',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _buildVitalCard('Blood Pressure', '120/80', 'mmHg', Colors.green),
-                _buildVitalCard('Heart Rate', '72', 'bpm', Colors.green),
-                _buildVitalCard('Temperature', '98.6', '°F', Colors.green),
-                _buildVitalCard('Weight', '75', 'kg', Colors.blue),
-                _buildVitalCard('Oxygen Sat.', '98', '%', Colors.green),
-                _buildVitalCard('BMI', '24.2', '', Colors.green),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVitalCard(String title, String value, String unit, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+            if (_patient != null) ...[
+              _buildSummaryRow('Patient ID', _patient!.patientId),
+              _buildSummaryRow('Age', '${_patient!.age} years'),
+              _buildSummaryRow('Gender', _patient!.gender),
+              _buildSummaryRow('Phone', _patient!.phone),
+              _buildSummaryRow('Address', _patient!.address),
+              _buildSummaryRow('TB Status', _patient!.tbStatus.replaceAll('_', ' ').toUpperCase()),
+              _buildSummaryRow('Assigned CHW', _patient!.assignedCHW),
+              _buildSummaryRow('Assigned Facility', _patient!.assignedFacility),
+              if (_patient!.diagnosisDate != null)
+                _buildSummaryRow('Diagnosis Date', _formatDate(_patient!.diagnosisDate!)),
+            ] else
               Text(
-                value,
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+                'Patient information not available',
+                style: GoogleFonts.poppins(color: Colors.grey.shade600),
               ),
-              if (unit.isNotEmpty) ...[
-                const SizedBox(width: 4),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVisitNotesCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.note_alt, color: MadadgarTheme.primaryColor),
+                const SizedBox(width: 8),
                 Text(
-                  unit,
+                  'Visit Notes',
                   style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.black54,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
                 ),
               ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVitalSignsChart() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Vital Signs Trend',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
             ),
             const SizedBox(height: 16),
             
-            Container(
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.show_chart, size: 48, color: Colors.grey.shade400),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Chart visualization coming soon',
-                      style: GoogleFonts.poppins(color: Colors.grey.shade600),
-                    ),
-                  ],
+            if (_visit!.notes.isNotEmpty)
+              Text(
+                _visit!.notes,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  height: 1.5,
+                ),
+              )
+            else
+              Text(
+                'No notes recorded for this visit',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPreviousReadingsCard() {
+  Widget _buildPhotosPreviewCard() {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Previous Readings',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            _buildReadingComparison('Blood Pressure', '120/80', '118/78', 'Stable'),
-            _buildReadingComparison('Weight', '75 kg', '74 kg', '+1 kg'),
-            _buildReadingComparison('Heart Rate', '72 bpm', '70 bpm', '+2 bpm'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotesCard(String title, String content) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              content,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.black87,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionItemsCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Action Items',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            _buildActionItem('Continue current medication regimen', true),
-            _buildActionItem('Schedule follow-up in 2 weeks', false),
-            _buildActionItem('Monitor weight weekly', false),
-            _buildActionItem('Blood test in 1 month', false),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPhotosSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Photos',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            GridView.count(
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+            Row(
               children: [
-                _buildPhotoThumbnail('Medication', Icons.medication),
-                _buildPhotoThumbnail('Patient', Icons.person),
-                _buildPhotoThumbnail('Documents', Icons.document_scanner),
+                Icon(Icons.photo_camera, color: MadadgarTheme.primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  'Photos (${_visit!.photos?.length ?? 0})',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDocumentsSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Documents',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
             const SizedBox(height: 16),
             
-            _buildDocumentItem('Prescription', 'PDF', '2.3 MB'),
-            _buildDocumentItem('Lab Results', 'PDF', '1.8 MB'),
-            _buildDocumentItem('Patient Consent', 'PDF', '0.9 MB'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAudioRecordingsSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Audio Recordings',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+            if (_visit!.photos != null && _visit!.photos!.isNotEmpty)
+              SizedBox(
+                height: 100,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _visit!.photos!.length,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey.shade200,
+                      ),
+                      child: const Icon(
+                        Icons.photo,
+                        color: Colors.grey,
+                        size: 40,
+                      ),
+                    );
+                  },
+                ),
+              )
+            else
+              Text(
+                'No photos captured during this visit',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            
-            _buildAudioItem('Visit Summary', '03:42'),
-            _buildAudioItem('Patient Interview', '12:15'),
           ],
         ),
       ),
     );
   }
 
+  // Helper methods for building UI components
   Widget _buildSummaryRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -942,62 +667,58 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
     );
   }
 
-  Widget _buildSymptomItem(String symptom, String status, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              symptom,
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              status,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMedicationItem(String name, String dose, String frequency, String timing) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(8),
-        ),
+  Widget _buildVitalSignsGrid() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              name,
+              'Vital Signs',
               style: GoogleFonts.poppins(
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 16),
             Text(
-              '$dose • $frequency • $timing',
+              'No vital signs recorded for this visit',
+              style: GoogleFonts.poppins(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVitalSignsChart() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vital Signs Chart',
               style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.black54,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              height: 200,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  'Chart visualization coming soon',
+                  style: GoogleFonts.poppins(color: Colors.grey.shade600),
+                ),
               ),
             ),
           ],
@@ -1006,85 +727,52 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
     );
   }
 
-  Widget _buildReadingComparison(String vital, String current, String previous, String change) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              vital,
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              current,
-              style: GoogleFonts.poppins(fontSize: 12),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              previous,
-              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
-            ),
-          ),
-          Text(
-            change,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: change.contains('+') ? Colors.orange : Colors.green,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionItem(String action, bool completed) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(
-            completed ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: completed ? Colors.green : Colors.grey,
-            size: 20,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              action,
+  Widget _buildPreviousReadingsCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Previous Readings',
               style: GoogleFonts.poppins(
-                decoration: completed ? TextDecoration.lineThrough : null,
-                color: completed ? Colors.grey : Colors.black87,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              'No previous readings available',
+              style: GoogleFonts.poppins(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildPhotoThumbnail(String title, IconData icon) {
-    return GestureDetector(
-      onTap: () => _viewPhoto(title),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(8),
-        ),
+  Widget _buildNotesCard(String title, String content) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: Colors.grey.shade600),
-            const SizedBox(height: 4),
             Text(
               title,
-              style: GoogleFonts.poppins(fontSize: 10),
-              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              content,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -1092,30 +780,115 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
     );
   }
 
-  Widget _buildDocumentItem(String name, String type, String size) {
-    return ListTile(
-      leading: Icon(Icons.description, color: MadadgarTheme.primaryColor),
-      title: Text(name, style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
-      subtitle: Text('$type • $size', style: GoogleFonts.poppins(fontSize: 12)),
-      trailing: IconButton(
-        onPressed: () => _openDocument(name),
-        icon: const Icon(Icons.open_in_new),
+  Widget _buildActionItemsCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Action Items',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No action items recorded',
+              style: GoogleFonts.poppins(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
       ),
-      contentPadding: EdgeInsets.zero,
     );
   }
 
-  Widget _buildAudioItem(String name, String duration) {
-    return ListTile(
-      leading: Icon(Icons.audiotrack, color: MadadgarTheme.primaryColor),
-      title: Text(name, style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
-      subtitle: Text(duration, style: GoogleFonts.poppins(fontSize: 12)),
-      trailing: IconButton(
-        onPressed: () => _playAudio(name),
-        icon: const Icon(Icons.play_arrow),
+  Widget _buildPhotosSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Photos',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_visit!.photos != null && _visit!.photos!.isNotEmpty)
+              Text(
+                '${_visit!.photos!.length} photo(s) available',
+                style: GoogleFonts.poppins(),
+              )
+            else
+              Text(
+                'No photos captured',
+                style: GoogleFonts.poppins(color: Colors.grey.shade600),
+              ),
+          ],
+        ),
       ),
-      contentPadding: EdgeInsets.zero,
     );
+  }
+
+  Widget _buildDocumentsSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Documents',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No documents attached',
+              style: GoogleFonts.poppins(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAudioRecordingsSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Audio Recordings',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No audio recordings available',
+              style: GoogleFonts.poppins(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Action methods
+  void _editVisit() {
+    Navigator.pushNamed(context, '/edit-visit', arguments: widget.visitId);
   }
 
   void _handleMenuAction(String action) {
@@ -1132,15 +905,10 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
     }
   }
 
-  void _editVisit() {
-    Navigator.pushNamed(context, '/edit-visit', arguments: widget.visitId);
-  }
-
   void _duplicateVisit() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Visit duplicated successfully!', style: GoogleFonts.poppins()),
-        backgroundColor: Colors.green,
+        content: Text('Duplicate visit feature coming soon!', style: GoogleFonts.poppins()),
       ),
     );
   }
@@ -1148,7 +916,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
   void _exportReport() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Export feature coming soon!', style: GoogleFonts.poppins()),
+        content: Text('Export report feature coming soon!', style: GoogleFonts.poppins()),
       ),
     );
   }
@@ -1157,61 +925,77 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete Visit', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-        content: Text('Are you sure you want to delete this visit? This action cannot be undone.', style: GoogleFonts.poppins()),
+        title: Text('Delete Visit', style: GoogleFonts.poppins()),
+        content: Text('Are you sure you want to delete this visit?', style: GoogleFonts.poppins()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () {
-              Navigator.pop(context);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Visit deleted successfully!', style: GoogleFonts.poppins()),
-                  backgroundColor: Colors.red,
+                  content: Text('Delete visit feature coming soon!', style: GoogleFonts.poppins()),
                 ),
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('Delete', style: GoogleFonts.poppins(color: Colors.white)),
+            child: Text('Delete', style: GoogleFonts.poppins(color: Colors.red)),
           ),
         ],
       ),
     );
   }
 
-  void _rescheduleAppointment() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reschedule feature coming soon!', style: GoogleFonts.poppins()),
-      ),
-    );
+  // Helper method to format visit types for display
+  String _formatVisitType(String visitType) {
+    switch (visitType.toLowerCase()) {
+      case 'home_visit':
+        return 'Home Visit';
+      case 'follow_up':
+        return 'Follow-up Visit';
+      case 'tracing':
+        return 'Contact Tracing';
+      case 'medicine_delivery':
+        return 'Medicine Delivery';
+      case 'counseling':
+        return 'Counseling Session';
+      default:
+        return visitType.replaceAll('_', ' ').toUpperCase();
+    }
   }
 
-  void _viewPhoto(String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Photo viewer coming soon!', style: GoogleFonts.poppins()),
-      ),
-    );
+  // Helper method to format visit date and time
+  String _formatVisitDateTime(DateTime dateTime) {
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    final month = months[dateTime.month - 1];
+    final day = dateTime.day;
+    final year = dateTime.year;
+    final hour = dateTime.hour;
+    final minute = dateTime.minute;
+    
+    String period = hour >= 12 ? 'PM' : 'AM';
+    int displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    
+    return '$day $month $year, ${displayHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
   }
 
-  void _openDocument(String name) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Document viewer coming soon!', style: GoogleFonts.poppins()),
-      ),
-    );
-  }
-
-  void _playAudio(String name) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Audio player coming soon!', style: GoogleFonts.poppins()),
-      ),
-    );
+  // Helper method to format just the date
+  String _formatDate(DateTime dateTime) {
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    final month = months[dateTime.month - 1];
+    final day = dateTime.day;
+    final year = dateTime.year;
+    
+    return '$day $month $year';
   }
 }

@@ -104,7 +104,18 @@ class AppRouter {
       case '/visit-list':
         return ElegantRoute.build(const VisitListScreen());
       case '/visit-details':
-        return ElegantRoute.build(const VisitDetailsScreen());
+        final visitId = settings.arguments as String?;
+        if (visitId != null) {
+          return ElegantRoute.build(VisitDetailsScreen(visitId: visitId));
+        }
+        return ElegantRoute.build(
+          Scaffold(
+            appBar: AppBar(title: const Text('Error')),
+            body: const Center(
+              child: Text('Visit ID not provided'),
+            ),
+          ),
+        );
       case '/new-visit':
         return ElegantRoute.build(const NewVisitScreen());
       case '/edit-visit':
@@ -134,7 +145,7 @@ class AppRouter {
 
       // =================== PROFILE & SETTINGS ===================
      
-      case '/profile-settings':
+      case '/profile':
         return ElegantRoute.build(const ProfileSettingsScreen());
       case '/settings':
         return ElegantRoute.build(const AppSettingsScreen());

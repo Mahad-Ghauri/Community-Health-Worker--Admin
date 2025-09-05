@@ -35,7 +35,7 @@ class _EditVisitScreenState extends State<EditVisitScreen>
   final TextEditingController _oxygenSatController = TextEditingController();
   
   String _selectedVisitType = 'Follow-up';
-  String _selectedPatientStatus = 'Found';
+  String _selectedPatientStatus = 'Not at Home';
   DateTime? _selectedVisitDate;
   TimeOfDay? _selectedVisitTime;
   bool _patientFound = true;
