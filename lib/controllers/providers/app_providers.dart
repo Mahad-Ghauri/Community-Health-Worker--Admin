@@ -50,9 +50,10 @@ class AuthProvider extends ChangeNotifier {
           .get();
 
       int nextNumber = 1;
-      
+
       if (querySnapshot.docs.isNotEmpty) {
-        final lastCHWId = querySnapshot.docs.first.data()['idNumber'] as String?;
+        final lastCHWId =
+            querySnapshot.docs.first.data()['idNumber'] as String?;
         if (lastCHWId != null && lastCHWId.startsWith('CHW')) {
           // Extract number from CHW001, CHW002, etc.
           final numberPart = lastCHWId.substring(3);
@@ -75,21 +76,17 @@ class AuthProvider extends ChangeNotifier {
     try {
       _setLoading(true);
       _clearError();
-      
+
       await _authService.signIn(email, password);
-      
+
       // Load CHW user data after successful authentication
       await _loadCHWUserData();
-      
+
       // Determine navigation destination based on first-time setup status
       if (_chwUser != null) {
-        if (_chwUser!.isFirstTimeSetupComplete) {
-          return '/main-navigation'; // Existing user goes to main navigation screen
-        } else {
-          return '/first-time-setup'; // New user needs first-time setup
-        }
+        return '/main-navigation'; // Existing user goes to main navigation screen
       }
-      
+
       return '/main-navigation'; // Default fallback to main navigation
     } catch (e) {
       _setError('Login failed: $e');
@@ -125,7 +122,7 @@ class AuthProvider extends ChangeNotifier {
       if (currentUser != null) {
         // Generate unique CHW ID
         final idNumber = await _generateNextCHWId();
-        
+
         final chwUser = CHWUser(
           userId: currentUser.uid,
           name: fullName,
@@ -136,7 +133,6 @@ class AuthProvider extends ChangeNotifier {
           idNumber: idNumber, // Auto-generated CHW ID
           dateOfBirth: dateOfBirth,
           gender: gender,
-          isFirstTimeSetupComplete: false, // New users need first-time setup
           createdAt: DateTime.now(),
         );
 
@@ -181,7 +177,6 @@ class AuthProvider extends ChangeNotifier {
         idNumber: _chwUser!.idNumber,
         dateOfBirth: _chwUser!.dateOfBirth,
         gender: _chwUser!.gender,
-        isFirstTimeSetupComplete: true,
         createdAt: _chwUser!.createdAt,
       );
 
@@ -239,7 +234,7 @@ class AuthProvider extends ChangeNotifier {
 
 /// Main App Providers - Central configuration for all state management
 /// Used by: main.dart to initialize all providers for the CHW TB Tracker app
-/// 
+///
 /// This aggregates all providers according to the exact collection usage patterns
 /// defined in the JSON specification for all 31 screens
 class AppProviders {
@@ -249,22 +244,16 @@ class AppProviders {
     return [
       // Authentication Provider - Must be first
       // Used by: Welcome Screen (1), CHW Registration (2), Login (3), Forgot Password (4)
-      ChangeNotifierProvider<AuthProvider>(
-        create: (_) => AuthProvider(),
-      ),
+      ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
 
       // Patient Management Providers
       // Used by: Patient List (8), Patient Search (9), Patient Details (11),
       //         Register New Patient (10), Edit Patient (12), Home Dashboard (6)
-      ChangeNotifierProvider<PatientProvider>(
-        create: (_) => PatientProvider(),
-      ),
+      ChangeNotifierProvider<PatientProvider>(create: (_) => PatientProvider()),
 
-      // Visit Management Providers  
+      // Visit Management Providers
       // Used by: New Visit (14), Visit List (13), Visit Details (15), Home Dashboard (6)
-      ChangeNotifierProvider<VisitProvider>(
-        create: (_) => VisitProvider(),
-      ),
+      ChangeNotifierProvider<VisitProvider>(create: (_) => VisitProvider()),
 
       // Household Management Providers
       // Used by: Household Members (16), Add Household Member (17)
@@ -307,7 +296,7 @@ class AppProviders {
   /// Called after successful login to load initial data
   static Future<void> initializeProviders() async {
     print('🚀 Initializing CHW TB Tracker providers...');
-    
+
     // Note: Individual provider initialization will be handled by
     // the screens that use them, following the exact usage patterns
     // defined in the JSON specification
@@ -344,7 +333,7 @@ class AppStateProvider with ChangeNotifier {
     if (_isOnline != isOnline) {
       _isOnline = isOnline;
       notifyListeners();
-      
+
       if (isOnline && !_isSyncing) {
         // Auto-sync when connection is restored
         _performAutoSync();
@@ -355,7 +344,7 @@ class AppStateProvider with ChangeNotifier {
   /// Start sync process - Used by Sync Status Screen (Screen 25)
   Future<void> startSync() async {
     if (_isSyncing) return;
-    
+
     _isSyncing = true;
     _error = null;
     notifyListeners();
@@ -363,10 +352,10 @@ class AppStateProvider with ChangeNotifier {
     try {
       // Perform sync operations here
       await _syncPendingData();
-      
+
       _lastSyncTime = DateTime.now();
       await _saveLastSyncTime();
-      
+
       _isSyncing = false;
       notifyListeners();
     } catch (e) {

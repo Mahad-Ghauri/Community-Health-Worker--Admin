@@ -20,8 +20,7 @@ class CHWUser {
   final String? facilityId; // Null because CHWs can work at multiple facilities
   final String idNumber; // Automatically generated CHW ID (CHW001, CHW002, etc.)
   final String? dateOfBirth; // Date of birth
-  final String? gender; // Gender
-  final bool isFirstTimeSetupComplete; // Track if first-time setup is done
+  final String? gender; // Genderif first-time setup is done
   final DateTime createdAt;
 
   CHWUser({
@@ -36,7 +35,6 @@ class CHWUser {
     required this.idNumber, // Required auto-generated ID
     this.dateOfBirth,
     this.gender,
-    this.isFirstTimeSetupComplete = false,
     required this.createdAt,
   });
 
@@ -53,7 +51,6 @@ class CHWUser {
       'idNumber': idNumber, // Auto-generated CHW ID
       'dateOfBirth': dateOfBirth,
       'gender': gender,
-      'isFirstTimeSetupComplete': isFirstTimeSetupComplete,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -71,7 +68,6 @@ class CHWUser {
       idNumber: data['idNumber'] ?? '', // Auto-generated CHW ID
       dateOfBirth: data['dateOfBirth'],
       gender: data['gender'],
-      isFirstTimeSetupComplete: data['isFirstTimeSetupComplete'] ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }

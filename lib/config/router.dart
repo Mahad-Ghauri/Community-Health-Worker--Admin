@@ -6,7 +6,6 @@ import '../views/screens/splash_screen.dart';
 import '../views/screens/home_screen.dart';
 import '../views/screens/dashboard_screen.dart';
 import '../views/screens/main_navigation_screen.dart';
-import '../views/screens/first_time_setup_screen.dart';
 
 // Authentication Screens
 import '../views/interface/authentication/sign_in_screen.dart';
@@ -70,8 +69,6 @@ class AppRouter {
         return ElegantRoute.build(const DashboardScreen());
       case '/home':
         return ElegantRoute.build(const HomeScreen());
-      case '/first-time-setup':
-        return ElegantRoute.build(const FirstTimeSetupScreen());
 
       // =================== AUTHENTICATION ===================
       case '/sign-in':
