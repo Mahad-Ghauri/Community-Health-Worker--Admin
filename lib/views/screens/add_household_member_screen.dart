@@ -9,11 +9,12 @@ import 'package:chw_tb/controllers/providers/secondary_providers.dart';
 class AddHouseholdMemberScreen extends StatefulWidget {
   final String? patientId;
   final String? householdId;
-  
+
   const AddHouseholdMemberScreen({super.key, this.patientId, this.householdId});
 
   @override
-  State<AddHouseholdMemberScreen> createState() => _AddHouseholdMemberScreenState();
+  State<AddHouseholdMemberScreen> createState() =>
+      _AddHouseholdMemberScreenState();
 }
 
 class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
@@ -22,32 +23,32 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
   late Animation<double> _fadeAnimation;
   late AnimationController _formController;
   late Animation<Offset> _slideAnimation;
-  
+
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   final _phoneController = TextEditingController();
-  
+
   String _selectedGender = '';
   String _selectedRelationship = '';
   bool _wantsImmediateScreening = false;
   bool _isSaving = false;
-  
+
   // HouseholdMember collection schema aligned fields:
   // - name (required)
-  // - age (required) 
+  // - age (required)
   // - gender (required)
   // - relationship (required)
   // - phone (optional)
   // - screened (default: false)
   // - screeningStatus (default: 'not_screened')
   // - lastScreeningDate (default: null)
-  
+
   final List<String> _genderOptions = ['Male', 'Female'];
-  
+
   final List<String> _relationships = [
     'Spouse',
-    'Son', 
+    'Son',
     'Daughter',
     'Father',
     'Mother',
@@ -69,10 +70,11 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
-    );
-    
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
+
     _formController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -81,7 +83,7 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
       begin: const Offset(0, 0.3),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _formController, curve: Curves.easeOut));
-    
+
     _fadeController.forward();
     _formController.forward();
   }
@@ -128,15 +130,15 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
                       // Header Card
                       _buildHeaderCard(),
                       const SizedBox(height: 24),
-                      
+
                       // Form Fields Card
                       _buildFormCard(),
                       const SizedBox(height: 24),
-                      
+
                       // Screening Option Card
                       _buildScreeningCard(),
                       const SizedBox(height: 32),
-                      
+
                       // Save Button
                       _buildSaveButton(householdProvider),
                     ],
@@ -168,11 +170,7 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
         ),
         child: Column(
           children: [
-            Icon(
-              Icons.person_add,
-              size: 48,
-              color: MadadgarTheme.primaryColor,
-            ),
+            Icon(Icons.person_add, size: 48, color: MadadgarTheme.primaryColor),
             const SizedBox(height: 12),
             Text(
               'Add New Household Member',
@@ -186,10 +184,7 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
             const SizedBox(height: 8),
             Text(
               'Add a family member to enable TB contact screening',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -209,7 +204,7 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
           children: [
             _buildSectionHeader('Basic Information', Icons.person),
             const SizedBox(height: 20),
-            
+
             // Name Field (Required - aligns with HouseholdMember.name)
             _buildTextField(
               controller: _nameController,
@@ -227,7 +222,7 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Age and Gender Row
             Row(
               children: [
@@ -252,17 +247,18 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
                     },
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
                 // Gender Field (Required - aligns with HouseholdMember.gender)
                 Expanded(
                   flex: 1,
                   child: _buildDropdown(
                     label: 'Gender *',
-                    hint: 'Select gender',
+                    hint: 'Select',
                     value: _selectedGender.isEmpty ? null : _selectedGender,
                     items: _genderOptions,
                     icon: Icons.person,
-                    onChanged: (value) => setState(() => _selectedGender = value!),
+                    onChanged: (value) =>
+                        setState(() => _selectedGender = value!),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Gender is required';
@@ -274,15 +270,18 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Relationship Field (Required - aligns with HouseholdMember.relationship)
             _buildDropdown(
               label: 'Relationship to Patient *',
               hint: 'Select relationship',
-              value: _selectedRelationship.isEmpty ? null : _selectedRelationship,
+              value: _selectedRelationship.isEmpty
+                  ? null
+                  : _selectedRelationship,
               items: _relationships,
               icon: Icons.family_restroom,
-              onChanged: (value) => setState(() => _selectedRelationship = value!),
+              onChanged: (value) =>
+                  setState(() => _selectedRelationship = value!),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Relationship is required';
@@ -291,7 +290,7 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Phone Field (Optional - aligns with HouseholdMember.phone)
             _buildTextField(
               controller: _phoneController,
@@ -356,10 +355,14 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
               ),
               subtitle: Text(
                 'Recommended for all household members',
-                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
               ),
               value: _wantsImmediateScreening,
-              onChanged: (value) => setState(() => _wantsImmediateScreening = value ?? false),
+              onChanged: (value) =>
+                  setState(() => _wantsImmediateScreening = value ?? false),
               activeColor: MadadgarTheme.primaryColor,
               controlAffinity: ListTileControlAffinity.leading,
             ),
@@ -378,7 +381,9 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
         style: ElevatedButton.styleFrom(
           backgroundColor: MadadgarTheme.primaryColor,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 2,
         ),
         icon: _isSaving
@@ -393,10 +398,7 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
             : const Icon(Icons.save),
         label: Text(
           _isSaving ? 'Adding Member...' : 'Add Household Member',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -458,7 +460,10 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
+              borderSide: BorderSide(
+                color: MadadgarTheme.primaryColor,
+                width: 2,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -470,7 +475,10 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
             ),
             filled: true,
             fillColor: Colors.grey[50],
-            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 16,
+              horizontal: 12,
+            ),
           ),
         ),
       ],
@@ -502,6 +510,7 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
           value: value,
           onChanged: onChanged,
           validator: validator,
+          isExpanded: true,
           style: GoogleFonts.poppins(color: Colors.black),
           decoration: InputDecoration(
             hintText: hint,
@@ -517,7 +526,10 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
+              borderSide: BorderSide(
+                color: MadadgarTheme.primaryColor,
+                width: 2,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -529,12 +541,19 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
             ),
             filled: true,
             fillColor: Colors.grey[50],
-            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 16,
+              horizontal: 12,
+            ),
           ),
           items: items.map((String item) {
             return DropdownMenuItem<String>(
               value: item,
-              child: Text(item, style: GoogleFonts.poppins()),
+              child: Text(
+                item,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(),
+              ),
             );
           }).toList(),
         ),
@@ -560,11 +579,15 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
 
     try {
       // Auto-generate patient ID if not provided
-      final patientId = widget.patientId ?? 'patient_${DateTime.now().millisecondsSinceEpoch}';
-      
+      final patientId =
+          widget.patientId ??
+          'patient_${DateTime.now().millisecondsSinceEpoch}';
+
       // Auto-generate household ID if not provided
-      final householdId = widget.householdId ?? 'household_${DateTime.now().millisecondsSinceEpoch}';
-      
+      final householdId =
+          widget.householdId ??
+          'household_${DateTime.now().millisecondsSinceEpoch}';
+
       // Add member using HouseholdProvider with fields matching HouseholdMember schema
       final success = await householdProvider.addHouseholdMember(
         patientId: patientId,
@@ -572,7 +595,9 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
         age: int.parse(_ageController.text),
         gender: _selectedGender,
         relationship: _selectedRelationship,
-        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
         // Note: screened, screeningStatus, lastScreeningDate are set by default in HouseholdMember constructor
       );
 
@@ -598,7 +623,9 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
             'age': int.parse(_ageController.text),
             'gender': _selectedGender,
             'relationship': _selectedRelationship,
-            'phone': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+            'phone': _phoneController.text.trim().isEmpty
+                ? null
+                : _phoneController.text.trim(),
           };
 
           Navigator.pushReplacementNamed(
@@ -629,13 +656,10 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Error: ${e.toString()}',
-            style: GoogleFonts.poppins(),
-          ),
+          content: Text('Error: ${e.toString()}', style: GoogleFonts.poppins()),
           backgroundColor: Colors.red,
         ),
       );

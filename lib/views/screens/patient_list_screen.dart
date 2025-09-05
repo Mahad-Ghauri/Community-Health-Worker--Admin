@@ -52,6 +52,8 @@ class _PatientListScreenState extends State<PatientListScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final patientProvider = context.read<PatientProvider>();
       patientProvider.initialize();
+      // Apply initial filters
+      _applyFilters();
     });
   }
 
@@ -60,6 +62,16 @@ class _PatientListScreenState extends State<PatientListScreen>
     _fadeController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  // Helper method to apply filters consistently
+  void _applyFilters() {
+    final patientProvider = context.read<PatientProvider>();
+    patientProvider.setFilters(
+      searchQuery: _searchController.text.trim(),
+      statusFilter: _selectedFilter,
+      sortBy: _selectedSort,
+    );
   }
 
   String _getFilterDisplayName(String filter) {
@@ -139,7 +151,8 @@ class _PatientListScreenState extends State<PatientListScreen>
                             ? IconButton(
                                 onPressed: () {
                                   _searchController.clear();
-                                  setState(() {});
+                                  // Apply filters when search is cleared
+                                  _applyFilters();
                                 },
                                 icon: const Icon(Icons.clear, color: Colors.grey),
                               )
@@ -156,13 +169,12 @@ class _PatientListScreenState extends State<PatientListScreen>
                         ),
                       ),
                       onChanged: (value) {
-                        setState(() {});
-                        // Update search in provider
-                        context.read<PatientProvider>().setFilters(
-                          searchQuery: value,
-                          statusFilter: _selectedFilter,
-                          sortBy: _selectedSort,
-                        );
+                        // Add debouncing to avoid too frequent updates
+                        Future.delayed(const Duration(milliseconds: 300), () {
+                          if (_searchController.text == value) {
+                            _applyFilters();
+                          }
+                        });
                       },
                     ),
                   ),
@@ -310,7 +322,12 @@ class _PatientListScreenState extends State<PatientListScreen>
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
-                  onPressed: () => patientProvider.loadPatients(),
+                  onPressed: () {
+                    patientProvider.loadPatients().then((_) {
+                      // Reapply filters after reload
+                      _applyFilters();
+                    });
+                  },
                   icon: const Icon(Icons.refresh),
                   label: Text(
                     'Retry',
@@ -334,13 +351,14 @@ class _PatientListScreenState extends State<PatientListScreen>
         }
 
         final filteredPatients = patientProvider.filteredPatients;
+        final totalPatients = patientProvider.patients.length;
 
         if (filteredPatients.isEmpty) {
           return Container(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // Patient count header
+                // Patient count header - show total vs filtered
                 Row(
                   children: [
                     Text(
@@ -359,7 +377,7 @@ class _PatientListScreenState extends State<PatientListScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '0 patients',
+                        '0 of $totalPatients patients',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -405,6 +423,34 @@ class _PatientListScreenState extends State<PatientListScreen>
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 24),
+                        if (_searchController.text.isNotEmpty || _selectedFilter != 'all_patients')
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _searchController.clear();
+                                _selectedFilter = 'all_patients';
+                                _selectedSort = 'date';
+                              });
+                              _applyFilters();
+                            },
+                            icon: const Icon(Icons.clear_all),
+                            label: Text(
+                              'Clear Filters',
+                              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 12),
                         ElevatedButton.icon(
                           onPressed: () => Navigator.pushNamed(context, '/register-patient'),
                           icon: const Icon(Icons.person_add),
@@ -438,7 +484,7 @@ class _PatientListScreenState extends State<PatientListScreen>
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Patient count header
+              // Patient count header - show filtered vs total
               Row(
                 children: [
                   Text(
@@ -457,7 +503,9 @@ class _PatientListScreenState extends State<PatientListScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${filteredPatients.length} patients',
+                      filteredPatients.length == totalPatients 
+                          ? '${filteredPatients.length} patients'
+                          : '${filteredPatients.length} of $totalPatients patients',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -735,144 +783,149 @@ class _PatientListScreenState extends State<PatientListScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Text(
-                    'Filter & Sort',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _selectedFilter = 'all_patients';
-                        _selectedSort = 'date';
-                      });
-                      // Update provider
-                      context.read<PatientProvider>().setFilters(
-                        searchQuery: _searchController.text,
-                        statusFilter: _selectedFilter,
-                        sortBy: _selectedSort,
-                      );
-                      Navigator.pop(context);
-                    },
-                    child: Text(
-                      'Reset',
-                      style: GoogleFonts.poppins(
-                        color: MadadgarTheme.primaryColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
                   children: [
-                    // Filter section
                     Text(
-                      'Filter by Status',
+                      'Filter & Sort',
                       style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    ..._filterOptions.map((filter) => _buildFilterOption(filter)),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Sort section
-                    Text(
-                      'Sort by',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        setModalState(() {
+                          _selectedFilter = 'all_patients';
+                          _selectedSort = 'date';
+                        });
+                        setState(() {
+                          _selectedFilter = 'all_patients';
+                          _selectedSort = 'date';
+                        });
+                        _applyFilters();
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        'Reset',
+                        style: GoogleFonts.poppins(
+                          color: MadadgarTheme.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    ..._sortOptions.map((sort) => _buildSortOption(sort)),
                   ],
                 ),
               ),
-            ),
-            
-            // Apply button
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Update provider with current filters
-                    context.read<PatientProvider>().setFilters(
-                      searchQuery: _searchController.text,
-                      statusFilter: _selectedFilter,
-                      sortBy: _selectedSort,
-                    );
-                    Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: MadadgarTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Filter section
+                      Text(
+                        'Filter by Status',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ..._filterOptions.map((filter) => _buildModalFilterOption(filter, setModalState)),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Sort section
+                      Text(
+                        'Sort by',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ..._sortOptions.map((sort) => _buildModalSortOption(sort, setModalState)),
+                    ],
                   ),
-                  child: Text(
-                    'Apply Filters',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                ),
+              ),
+              
+              // Apply button
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Update main widget state and apply filters
+                      setState(() {});
+                      _applyFilters();
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MadadgarTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Apply Filters',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFilterOption(String filter) {
+  Widget _buildModalFilterOption(String filter, StateSetter setModalState) {
     final isSelected = _selectedFilter == filter;
     return GestureDetector(
-      onTap: () => setState(() => _selectedFilter = filter),
+      onTap: () {
+        setModalState(() {
+          _selectedFilter = filter;
+        });
+        setState(() {
+          _selectedFilter = filter;
+        });
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -908,10 +961,17 @@ class _PatientListScreenState extends State<PatientListScreen>
     );
   }
 
-  Widget _buildSortOption(String sort) {
+  Widget _buildModalSortOption(String sort, StateSetter setModalState) {
     final isSelected = _selectedSort == sort;
     return GestureDetector(
-      onTap: () => setState(() => _selectedSort = sort),
+      onTap: () {
+        setModalState(() {
+          _selectedSort = sort;
+        });
+        setState(() {
+          _selectedSort = sort;
+        });
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

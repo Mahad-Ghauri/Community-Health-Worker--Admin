@@ -18,10 +18,10 @@ class _NewVisitScreenState extends State<NewVisitScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _notesController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _gpsEnabled = false;
   bool _patientFound = true;
@@ -46,9 +46,10 @@ class _NewVisitScreenState extends State<NewVisitScreen>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
     _fadeController.forward();
     _loadInitialData();
   }
@@ -58,7 +59,9 @@ class _NewVisitScreenState extends State<NewVisitScreen>
     super.didChangeDependencies();
     // Get patient ID from route arguments if navigated from patient details
     final args = ModalRoute.of(context)?.settings.arguments;
-    if (args != null && args is Map<String, dynamic> && args['patientId'] != null) {
+    if (args != null &&
+        args is Map<String, dynamic> &&
+        args['patientId'] != null) {
       _selectedPatientId = args['patientId'];
       _loadSelectedPatient();
     }
@@ -66,17 +69,23 @@ class _NewVisitScreenState extends State<NewVisitScreen>
 
   Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
-    
+
     // Load patients for selection
-    final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+    final patientProvider = Provider.of<PatientProvider>(
+      context,
+      listen: false,
+    );
     await patientProvider.loadPatients();
-    
+
     setState(() => _isLoading = false);
   }
 
   Future<void> _loadSelectedPatient() async {
     if (_selectedPatientId != null) {
-      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+      final patientProvider = Provider.of<PatientProvider>(
+        context,
+        listen: false,
+      );
       await patientProvider.selectPatient(_selectedPatientId!);
       setState(() {
         _selectedPatient = patientProvider.selectedPatient;
@@ -110,7 +119,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
 
   void _submitVisit() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (_selectedPatient == null) {
       _showSnackBar('Please select a patient', isError: true);
       return;
@@ -125,7 +134,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
 
     try {
       final visitProvider = Provider.of<VisitProvider>(context, listen: false);
-      
+
       final visitId = await visitProvider.createVisit(
         patientId: _selectedPatient!.patientId,
         visitType: _selectedVisitType,
@@ -152,10 +161,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: GoogleFonts.poppins(),
-        ),
+        content: Text(message, style: GoogleFonts.poppins()),
         backgroundColor: isError ? MadadgarTheme.errorColor : Colors.green,
       ),
     );
@@ -182,7 +188,10 @@ class _NewVisitScreenState extends State<NewVisitScreen>
               margin: const EdgeInsets.only(right: 16),
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.green,
                     borderRadius: BorderRadius.circular(12),
@@ -190,7 +199,11 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.gps_fixed, color: Colors.white, size: 16),
+                      const Icon(
+                        Icons.gps_fixed,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         'GPS',
@@ -218,34 +231,34 @@ class _NewVisitScreenState extends State<NewVisitScreen>
               children: [
                 // Patient selection section
                 _buildPatientSelectionSection(),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Visit type selection
                 _buildVisitTypeSection(),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // GPS location section
                 _buildGPSSection(),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Patient found toggle
                 _buildPatientFoundSection(),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Visit notes
                 _buildNotesSection(),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Photo capture section
                 _buildPhotoSection(),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Submit button
                 _buildSubmitButton(),
               ],
@@ -272,27 +285,34 @@ class _NewVisitScreenState extends State<NewVisitScreen>
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Patient dropdown or selected patient display
             if (_selectedPatient == null) ...[
               Consumer<PatientProvider>(
                 builder: (context, patientProvider, child) {
                   final patients = patientProvider.filteredPatients;
-                  
+
                   return DropdownButtonFormField<Patient>(
                     decoration: InputDecoration(
                       labelText: 'Select Patient',
                       hintText: 'Choose a patient...',
-                      prefixIcon: Icon(Icons.person, color: MadadgarTheme.primaryColor),
+                      prefixIcon: Icon(
+                        Icons.person,
+                        color: MadadgarTheme.primaryColor,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
+                        borderSide: BorderSide(
+                          color: MadadgarTheme.primaryColor,
+                          width: 2,
+                        ),
                       ),
                     ),
                     value: _selectedPatient,
+                    isExpanded: true, // ✅ Prevents overflow
                     items: patients.map((patient) {
                       return DropdownMenuItem<Patient>(
                         value: patient,
@@ -301,6 +321,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                           children: [
                             Text(
                               patient.name,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
@@ -339,7 +360,9 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                 decoration: BoxDecoration(
                   color: MadadgarTheme.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: MadadgarTheme.primaryColor.withOpacity(0.3)),
+                  border: Border.all(
+                    color: MadadgarTheme.primaryColor.withOpacity(0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -369,10 +392,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                         ],
                       ),
                     ),
-                    Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                    ),
+                    const Icon(Icons.check_circle, color: Colors.green),
                   ],
                 ),
               ),
@@ -399,7 +419,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
               ),
             ),
             const SizedBox(height: 16),
-            
+
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -413,17 +433,18 @@ class _NewVisitScreenState extends State<NewVisitScreen>
               itemBuilder: (context, index) {
                 final type = _visitTypes[index];
                 final isSelected = _selectedVisitType == type['value'];
-                
+
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedVisitType = type['value']!),
+                  onTap: () =>
+                      setState(() => _selectedVisitType = type['value']!),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isSelected 
+                      color: isSelected
                           ? MadadgarTheme.primaryColor.withOpacity(0.1)
                           : Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isSelected 
+                        color: isSelected
                             ? MadadgarTheme.primaryColor
                             : Colors.grey.shade300,
                         width: isSelected ? 2 : 1,
@@ -434,7 +455,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                       children: [
                         Icon(
                           _getVisitTypeIcon(type['value']!),
-                          color: isSelected 
+                          color: isSelected
                               ? MadadgarTheme.primaryColor
                               : Colors.grey.shade600,
                           size: 28,
@@ -444,8 +465,10 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                           type['label']!,
                           style: GoogleFonts.poppins(
                             fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                            color: isSelected 
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                            color: isSelected
                                 ? MadadgarTheme.primaryColor
                                 : Colors.black87,
                           ),
@@ -472,10 +495,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.location_on,
-                  color: MadadgarTheme.primaryColor,
-                ),
+                Icon(Icons.location_on, color: MadadgarTheme.primaryColor),
                 const SizedBox(width: 8),
                 Text(
                   'GPS Location',
@@ -488,7 +508,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
               ],
             ),
             const SizedBox(height: 16),
-            
+
             Row(
               children: [
                 Expanded(
@@ -500,11 +520,13 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: _gpsEnabled ? Colors.green : Colors.orange.shade700,
+                          color: _gpsEnabled
+                              ? Colors.green
+                              : Colors.orange.shade700,
                         ),
                       ),
                       Text(
-                        _gpsEnabled 
+                        _gpsEnabled
                             ? 'GPS coordinates recorded for visit verification'
                             : 'Capture GPS location to verify visit',
                         style: GoogleFonts.poppins(
@@ -523,7 +545,9 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                     style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _gpsEnabled ? Colors.green : MadadgarTheme.primaryColor,
+                    backgroundColor: _gpsEnabled
+                        ? Colors.green
+                        : MadadgarTheme.primaryColor,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -554,7 +578,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
               ),
             ),
             const SizedBox(height: 16),
-            
+
             Row(
               children: [
                 Expanded(
@@ -563,12 +587,14 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: _patientFound 
+                        color: _patientFound
                             ? Colors.green.withOpacity(0.1)
                             : Colors.grey.shade50,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: _patientFound ? Colors.green : Colors.grey.shade300,
+                          color: _patientFound
+                              ? Colors.green
+                              : Colors.grey.shade300,
                           width: _patientFound ? 2 : 1,
                         ),
                       ),
@@ -583,8 +609,12 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                           Text(
                             'Patient Found',
                             style: GoogleFonts.poppins(
-                              fontWeight: _patientFound ? FontWeight.w600 : FontWeight.w400,
-                              color: _patientFound ? Colors.green : Colors.black87,
+                              fontWeight: _patientFound
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: _patientFound
+                                  ? Colors.green
+                                  : Colors.black87,
                             ),
                           ),
                         ],
@@ -592,21 +622,23 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(width: 16),
-                
+
                 Expanded(
                   child: GestureDetector(
                     onTap: () => setState(() => _patientFound = false),
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: !_patientFound 
+                        color: !_patientFound
                             ? Colors.orange.withOpacity(0.1)
                             : Colors.grey.shade50,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: !_patientFound ? Colors.orange : Colors.grey.shade300,
+                          color: !_patientFound
+                              ? Colors.orange
+                              : Colors.grey.shade300,
                           width: !_patientFound ? 2 : 1,
                         ),
                       ),
@@ -621,8 +653,12 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                           Text(
                             'Patient Not Found',
                             style: GoogleFonts.poppins(
-                              fontWeight: !_patientFound ? FontWeight.w600 : FontWeight.w400,
-                              color: !_patientFound ? Colors.orange : Colors.black87,
+                              fontWeight: !_patientFound
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: !_patientFound
+                                  ? Colors.orange
+                                  : Colors.black87,
                             ),
                           ),
                         ],
@@ -654,7 +690,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
               ),
             ),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               controller: _notesController,
               decoration: InputDecoration(
@@ -664,7 +700,10 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
+                  borderSide: BorderSide(
+                    color: MadadgarTheme.primaryColor,
+                    width: 2,
+                  ),
                 ),
               ),
               maxLines: 4,
@@ -690,10 +729,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.camera_alt,
-                  color: MadadgarTheme.primaryColor,
-                ),
+                Icon(Icons.camera_alt, color: MadadgarTheme.primaryColor),
                 const SizedBox(width: 8),
                 Text(
                   'Visit Documentation',
@@ -706,7 +742,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
               ],
             ),
             const SizedBox(height: 16),
-            
+
             if (_capturedPhotos.isNotEmpty) ...[
               SizedBox(
                 height: 100,
@@ -733,7 +769,8 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                           top: 4,
                           right: 4,
                           child: GestureDetector(
-                            onTap: () => setState(() => _capturedPhotos.removeAt(index)),
+                            onTap: () =>
+                                setState(() => _capturedPhotos.removeAt(index)),
                             child: Container(
                               decoration: const BoxDecoration(
                                 color: Colors.red,
@@ -754,14 +791,16 @@ class _NewVisitScreenState extends State<NewVisitScreen>
               ),
               const SizedBox(height: 16),
             ],
-            
+
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: _capturePhoto,
                 icon: const Icon(Icons.camera_alt),
                 label: Text(
-                  _capturedPhotos.isEmpty ? 'Capture Photo' : 'Add Another Photo',
+                  _capturedPhotos.isEmpty
+                      ? 'Capture Photo'
+                      : 'Add Another Photo',
                   style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                 ),
                 style: OutlinedButton.styleFrom(
@@ -833,10 +872,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Photo captured',
-          style: GoogleFonts.poppins(),
-        ),
+        content: Text('Photo captured', style: GoogleFonts.poppins()),
         backgroundColor: Colors.green,
       ),
     );

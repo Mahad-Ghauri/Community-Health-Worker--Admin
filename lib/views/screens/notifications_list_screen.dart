@@ -11,7 +11,8 @@ class NotificationsListScreen extends StatefulWidget {
   const NotificationsListScreen({super.key});
 
   @override
-  State<NotificationsListScreen> createState() => _NotificationsListScreenState();
+  State<NotificationsListScreen> createState() =>
+      _NotificationsListScreenState();
 }
 
 class _NotificationsListScreenState extends State<NotificationsListScreen>
@@ -22,7 +23,7 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    
+
     // Load notifications when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<NotificationProvider>().loadNotifications();
@@ -97,8 +98,12 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
       builder: (context, notificationProvider, child) {
         // Filter notifications for tabs
         final allNotifications = notificationProvider.notifications;
-        final unreadNotifications = allNotifications.where((n) => n.status == 'unread').toList();
-        final highPriorityNotifications = allNotifications.where((n) => n.priority == 'high' || n.priority == 'urgent').toList();
+        final unreadNotifications = allNotifications
+            .where((n) => n.status == 'unread')
+            .toList();
+        final highPriorityNotifications = allNotifications
+            .where((n) => n.priority == 'high' || n.priority == 'urgent')
+            .toList();
 
         return Scaffold(
           backgroundColor: MadadgarTheme.backgroundColor,
@@ -155,31 +160,51 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
               tabs: [
                 Tab(
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.notifications),
-                      const SizedBox(width: 4),
-                      Text('All (${allNotifications.length})'),
+                      const Icon(Icons.notifications, size: 18),
+                      // const SizedBox(width: 4),
+                      Expanded(
+                        // ✅ fits text inside available space
+                        child: Text(
+                          'All (${allNotifications.length})',
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Tab(
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.circle, size: 8, color: Colors.orange),
                       const SizedBox(width: 4),
-                      Text('Unread (${unreadNotifications.length})'),
+                      Expanded(
+                        child: Text(
+                          'Unread (${unreadNotifications.length})',
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Tab(
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.priority_high, color: Colors.red),
-                      const SizedBox(width: 4),
-                      Text('Priority (${highPriorityNotifications.length})'),
+                      const Icon(
+                        Icons.priority_high,
+                        size: 18,
+                        color: Colors.red,
+                      ),
+                      // const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'Priority (${highPriorityNotifications.length})',
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -189,53 +214,58 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
           body: notificationProvider.isLoading
               ? const Center(
                   child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(MadadgarTheme.primaryColor),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      MadadgarTheme.primaryColor,
+                    ),
                   ),
                 )
               : notificationProvider.error != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Error loading notifications',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.red[700],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            notificationProvider.error!,
-                            style: GoogleFonts.poppins(
-                              color: Colors.grey[600],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: () => notificationProvider.loadNotifications(),
-                            icon: const Icon(Icons.refresh),
-                            label: Text('Retry', style: GoogleFonts.poppins()),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: MadadgarTheme.primaryColor,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ],
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Colors.red[300],
                       ),
-                    )
-                  : TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildNotificationsList(allNotifications),
-                        _buildNotificationsList(unreadNotifications),
-                        _buildNotificationsList(highPriorityNotifications),
-                      ],
-                    ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading notifications',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red[700],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        notificationProvider.error!,
+                        style: GoogleFonts.poppins(color: Colors.grey[600]),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () =>
+                            notificationProvider.loadNotifications(),
+                        icon: const Icon(Icons.refresh),
+                        label: Text('Retry', style: GoogleFonts.poppins()),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: MadadgarTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildNotificationsList(allNotifications),
+                    _buildNotificationsList(unreadNotifications),
+                    _buildNotificationsList(highPriorityNotifications),
+                  ],
+                ),
         );
       },
     );
@@ -265,11 +295,7 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.notifications_none,
-            size: 64,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.notifications_none, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             'No notifications',
@@ -282,9 +308,7 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
           const SizedBox(height: 8),
           Text(
             'All caught up! Check back later for updates.',
-            style: GoogleFonts.poppins(
-              color: Colors.grey[500],
-            ),
+            style: GoogleFonts.poppins(color: Colors.grey[500]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -294,7 +318,7 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
 
   Widget _buildNotificationItem(CHWNotification notification) {
     final isUnread = notification.status == 'unread';
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: isUnread ? 3 : 1,
@@ -305,7 +329,7 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            border: isUnread 
+            border: isUnread
                 ? Border.all(color: MadadgarTheme.primaryColor.withOpacity(0.3))
                 : null,
           ),
@@ -326,7 +350,9 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
                               child: Text(
                                 notification.title,
                                 style: GoogleFonts.poppins(
-                                  fontWeight: isUnread ? FontWeight.w600 : FontWeight.w500,
+                                  fontWeight: isUnread
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
                                   fontSize: 16,
                                 ),
                               ),
@@ -496,7 +522,9 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
   void _handleNotificationTap(CHWNotification notification) {
     // Mark as read when tapped
     if (notification.status == 'unread') {
-      context.read<NotificationProvider>().markAsRead(notification.notificationId);
+      context.read<NotificationProvider>().markAsRead(
+        notification.notificationId,
+      );
     }
 
     // Handle different notification types
@@ -608,10 +636,7 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
             const SizedBox(height: 12),
             Text(
               'Received: ${_formatTimestamp(notification.sentAt)}',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
             ),
             if (notification.readAt != null) ...[
               const SizedBox(height: 4),

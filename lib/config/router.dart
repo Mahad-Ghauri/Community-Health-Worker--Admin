@@ -105,17 +105,19 @@ class AppRouter {
       case '/add-household-member':
         String? patientId;
         String? householdId;
-        
+
         if (settings.arguments != null) {
           final args = settings.arguments as Map<String, dynamic>?;
           patientId = args?['patientId'] as String?;
           householdId = args?['householdId'] as String?;
         }
-        
-        return ElegantRoute.build(AddHouseholdMemberScreen(
-          patientId: patientId,
-          householdId: householdId,
-        ));
+
+        return ElegantRoute.build(
+          AddHouseholdMemberScreen(
+            patientId: patientId,
+            householdId: householdId,
+          ),
+        );
 
       // =================== VISIT MANAGEMENT ===================
       case '/visits':
@@ -129,9 +131,7 @@ class AppRouter {
         return ElegantRoute.build(
           Scaffold(
             appBar: AppBar(title: const Text('Error')),
-            body: const Center(
-              child: Text('Visit ID not provided'),
-            ),
+            body: const Center(child: Text('Visit ID not provided')),
           ),
         );
       case '/new-visit':
@@ -144,7 +144,7 @@ class AppRouter {
         String? patientId;
         String? householdId;
         Map<String, dynamic>? memberData;
-        
+
         if (settings.arguments != null) {
           if (settings.arguments is Map<String, dynamic>) {
             final args = settings.arguments as Map<String, dynamic>;
@@ -153,19 +153,21 @@ class AppRouter {
             memberData = args['memberInfo'] as Map<String, dynamic>?;
           }
         }
-        
-        return ElegantRoute.build(ContactScreeningScreen(
-          patientId: patientId,
-          householdId: householdId,
-          memberData: memberData,
-        ));
+
+        return ElegantRoute.build(
+          ContactScreeningScreen(
+            patientId: patientId,
+            householdId: householdId,
+            memberData: memberData,
+          ),
+        );
       case '/screening-results':
         return ElegantRoute.build(const ScreeningResultsScreen());
       case '/treatment-plan':
         return ElegantRoute.build(const TreatmentPlanScreen());
       case '/adherence-tracking':
         String? patientId;
-        
+
         if (settings.arguments != null) {
           if (settings.arguments is Map<String, dynamic>) {
             final args = settings.arguments as Map<String, dynamic>;
@@ -174,8 +176,10 @@ class AppRouter {
             patientId = settings.arguments as String;
           }
         }
-        
-        return ElegantRoute.build(AdherenceTrackingScreen(patientId: patientId));
+
+        return ElegantRoute.build(
+          AdherenceTrackingScreen(patientId: patientId),
+        );
       case '/pill-count':
         return ElegantRoute.build(const PillCountScreen());
       case '/side-effects':
@@ -190,7 +194,7 @@ class AppRouter {
         return ElegantRoute.build(const NotificationsListScreen());
 
       // =================== PROFILE & SETTINGS ===================
-     
+
       case '/profile':
         return ElegantRoute.build(const ProfileSettingsScreen());
       case '/settings':
@@ -233,17 +237,18 @@ class AppRouter {
                     const SizedBox(height: 20),
                     Text(
                       '404 - Page Not Found',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'The route "${settings.name}" does not exist.',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 30),
                     ElevatedButton(

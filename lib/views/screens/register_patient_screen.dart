@@ -383,7 +383,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
                 child: _buildTextField(
                   controller: _ageController,
                   label: 'Age *',
-                  hint: 'Enter age',
+                  hint: 'Enter',
                   icon: Icons.calendar_today,
                   keyboardType: TextInputType.number,
                   validator: (value) {
