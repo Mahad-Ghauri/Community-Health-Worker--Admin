@@ -106,7 +106,19 @@ class AppRouter {
         final patientId = settings.arguments as String?;
         return ElegantRoute.build(HouseholdMembersScreen(patientId: patientId));
       case '/add-household-member':
-        return ElegantRoute.build(const AddHouseholdMemberScreen());
+        String? patientId;
+        String? householdId;
+        
+        if (settings.arguments != null) {
+          final args = settings.arguments as Map<String, dynamic>?;
+          patientId = args?['patientId'] as String?;
+          householdId = args?['householdId'] as String?;
+        }
+        
+        return ElegantRoute.build(AddHouseholdMemberScreen(
+          patientId: patientId,
+          householdId: householdId,
+        ));
 
       // =================== VISIT MANAGEMENT ===================
       case '/visits':
@@ -132,13 +144,41 @@ class AppRouter {
 
       // =================== CLINICAL WORKFLOWS ===================
       case '/contact-screening':
-        return ElegantRoute.build(const ContactScreeningScreen());
+        String? patientId;
+        String? householdId;
+        Map<String, dynamic>? memberData;
+        
+        if (settings.arguments != null) {
+          if (settings.arguments is Map<String, dynamic>) {
+            final args = settings.arguments as Map<String, dynamic>;
+            patientId = args['patientId'] as String?;
+            householdId = args['householdId'] as String?;
+            memberData = args['memberInfo'] as Map<String, dynamic>?;
+          }
+        }
+        
+        return ElegantRoute.build(ContactScreeningScreen(
+          patientId: patientId,
+          householdId: householdId,
+          memberData: memberData,
+        ));
       case '/screening-results':
         return ElegantRoute.build(const ScreeningResultsScreen());
       case '/treatment-plan':
         return ElegantRoute.build(const TreatmentPlanScreen());
       case '/adherence-tracking':
-        return ElegantRoute.build(const AdherenceTrackingScreen());
+        String? patientId;
+        
+        if (settings.arguments != null) {
+          if (settings.arguments is Map<String, dynamic>) {
+            final args = settings.arguments as Map<String, dynamic>;
+            patientId = args['patientId'] as String?;
+          } else if (settings.arguments is String) {
+            patientId = settings.arguments as String;
+          }
+        }
+        
+        return ElegantRoute.build(AdherenceTrackingScreen(patientId: patientId));
       case '/pill-count':
         return ElegantRoute.build(const PillCountScreen());
       case '/side-effects':

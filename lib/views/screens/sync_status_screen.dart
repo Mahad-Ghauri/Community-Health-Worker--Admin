@@ -1,7 +1,9 @@
 // ignore_for_file: deprecated_member_use, unnecessary_to_list_in_spreads
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/controllers/providers/app_providers.dart';
 
 class SyncStatusScreen extends StatefulWidget {
   const SyncStatusScreen({super.key});
@@ -163,105 +165,114 @@ class _SyncStatusScreenState extends State<SyncStatusScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MadadgarTheme.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Sync Status',
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: _isOnline ? MadadgarTheme.primaryColor : Colors.orange,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            onPressed: () => _showSyncSettings(),
-            icon: const Icon(Icons.settings),
-            tooltip: 'Sync Settings',
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onSelected: _handleMenuAction,
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'force_sync',
-                child: Row(
-                  children: [
-                    const Icon(Icons.sync),
-                    const SizedBox(width: 8),
-                    Text('Force Full Sync', style: GoogleFonts.poppins()),
-                  ],
-                ),
+    return Consumer<AppStateProvider>(
+      builder: (context, appStateProvider, child) {
+        // Sync local state with AppStateProvider
+        _isOnline = appStateProvider.isOnline;
+        _isSyncing = appStateProvider.isSyncing;
+        _lastSyncTime = appStateProvider.lastSyncTime ?? DateTime.now().subtract(const Duration(minutes: 15));
+        
+        return Scaffold(
+          backgroundColor: MadadgarTheme.backgroundColor,
+          appBar: AppBar(
+            title: Text(
+              'Sync Status',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
               ),
-              PopupMenuItem(
-                value: 'clear_cache',
-                child: Row(
-                  children: [
-                    const Icon(Icons.clear_all),
-                    const SizedBox(width: 8),
-                    Text('Clear Sync Cache', style: GoogleFonts.poppins()),
-                  ],
-                ),
+            ),
+            backgroundColor: _isOnline ? MadadgarTheme.primaryColor : Colors.orange,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.white),
+            actions: [
+              IconButton(
+                onPressed: () => _showSyncSettings(),
+                icon: const Icon(Icons.settings),
+                tooltip: 'Sync Settings',
               ),
-              PopupMenuItem(
-                value: 'export_logs',
-                child: Row(
-                  children: [
-                    const Icon(Icons.download),
-                    const SizedBox(width: 8),
-                    Text('Export Sync Logs', style: GoogleFonts.poppins()),
-                  ],
-                ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.white),
+                onSelected: _handleMenuAction,
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'force_sync',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.sync),
+                        const SizedBox(width: 8),
+                        Text('Force Full Sync', style: GoogleFonts.poppins()),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'clear_cache',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.clear_all),
+                        const SizedBox(width: 8),
+                        Text('Clear Sync Cache', style: GoogleFonts.poppins()),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'export_logs',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.download),
+                        const SizedBox(width: 8),
+                        Text('Export Sync Logs', style: GoogleFonts.poppins()),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: RefreshIndicator(
-          onRefresh: _refreshSyncStatus,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              children: [
-                _buildConnectionStatus(),
-                _buildSyncOverview(),
-                _buildPendingData(),
-                _buildSyncHistory(),
-                const SizedBox(height: 100), // Space for floating button
-              ],
-            ),
-          ),
-        ),
-      ),
-      floatingActionButton: _isSyncing
-          ? FloatingActionButton(
-              onPressed: null,
-              backgroundColor: Colors.grey,
-              child: RotationTransition(
-                turns: _syncAnimation,
-                child: const Icon(Icons.sync, color: Colors.white),
-              ),
-            )
-          : FloatingActionButton.extended(
-              onPressed: _isOnline ? _syncNow : null,
-              backgroundColor: _isOnline ? MadadgarTheme.primaryColor : Colors.grey,
-              icon: Icon(
-                _isOnline ? Icons.sync : Icons.sync_disabled,
-                color: Colors.white,
-              ),
-              label: Text(
-                _isOnline ? 'Sync Now' : 'Offline',
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+          body: FadeTransition(
+            opacity: _fadeAnimation,
+            child: RefreshIndicator(
+              onRefresh: _refreshSyncStatus,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    _buildConnectionStatus(),
+                    _buildSyncOverview(),
+                    _buildPendingData(),
+                    _buildSyncHistory(),
+                    const SizedBox(height: 100), // Space for floating button
+                  ],
                 ),
               ),
             ),
+          ),
+          floatingActionButton: _isSyncing
+              ? FloatingActionButton(
+                  onPressed: null,
+                  backgroundColor: Colors.grey,
+                  child: RotationTransition(
+                    turns: _syncAnimation,
+                    child: const Icon(Icons.sync, color: Colors.white),
+                  ),
+                )
+              : FloatingActionButton.extended(
+                  onPressed: _isOnline ? _syncNow : null,
+                  backgroundColor: _isOnline ? MadadgarTheme.primaryColor : Colors.grey,
+                  icon: Icon(
+                    _isOnline ? Icons.sync : Icons.sync_disabled,
+                    color: Colors.white,
+                  ),
+                  label: Text(
+                    _isOnline ? 'Sync Now' : 'Offline',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+        );
+      },
     );
   }
 
@@ -902,42 +913,44 @@ class _SyncStatusScreenState extends State<SyncStatusScreen>
   }
 
   Future<void> _refreshSyncStatus() async {
-    setState(() {
-      // Simulate network check
-      _isOnline = true;
-      _lastSyncTime = DateTime.now();
-    });
-    
-    await Future.delayed(const Duration(seconds: 1));
+    final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
+    await appStateProvider.startSync();
     _loadSyncData();
   }
 
-  void _syncNow() async {
-    if (!_isOnline) return;
+  Future<void> _syncNow() async {
+    final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
+    if (!appStateProvider.isOnline) return;
     
-    setState(() => _isSyncing = true);
     _syncController.repeat();
     
-    // Simulate sync process
-    await Future.delayed(const Duration(seconds: 3));
-    
-    setState(() {
-      _isSyncing = false;
-      _lastSyncTime = DateTime.now();
-      // Clear some pending data to simulate successful sync
-      if (_pendingData.isNotEmpty) {
-        _pendingData.removeAt(0);
-      }
-    });
-    _syncController.stop();
-    _syncController.reset();
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Sync completed successfully!', style: GoogleFonts.poppins()),
-        backgroundColor: Colors.green,
-      ),
-    );
+    try {
+      await appStateProvider.startSync();
+      
+      setState(() {
+        // Clear some pending data to simulate successful sync
+        if (_pendingData.isNotEmpty) {
+          _pendingData.removeAt(0);
+        }
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sync completed successfully!', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sync failed: $e', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      _syncController.stop();
+      _syncController.reset();
+    }
   }
 
   void _showSyncSettings() {

@@ -1,7 +1,8 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:chw_tb/controllers/providers/secondary_providers.dart';
+import 'package:chw_tb/models/core_models.dart';
 import 'package:chw_tb/config/theme.dart';
 
 class NotificationsListScreen extends StatefulWidget {
@@ -12,566 +13,247 @@ class NotificationsListScreen extends StatefulWidget {
 }
 
 class _NotificationsListScreenState extends State<NotificationsListScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
-  bool _isLoading = false;
-  String _selectedFilter = 'all';
-  
-  // Mock notifications data
-  List<Map<String, dynamic>> _notifications = [];
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
-    );
     _tabController = TabController(length: 3, vsync: this);
-    _fadeController.forward();
     
-    _loadNotifications();
-  }
-
-  @override
-  void dispose() {
-    _fadeController.dispose();
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  void _loadNotifications() {
-    setState(() => _isLoading = true);
-    
-    // Mock notifications data
-    _notifications = [
-      {
-        'id': '1',
-        'type': 'missed_followup',
-        'title': 'Missed Follow-up',
-        'message': 'Ahmad Khan missed scheduled visit',
-        'timestamp': DateTime.now().subtract(const Duration(minutes: 30)),
-        'isRead': false,
-        'priority': 'high',
-        'patientId': 'PAT001',
-        'patientName': 'Ahmad Khan',
-        'actionRequired': true,
-      },
-      {
-        'id': '2',
-        'type': 'new_assignment',
-        'title': 'New Patient Assignment',
-        'message': 'New TB patient assigned to your care',
-        'timestamp': DateTime.now().subtract(const Duration(hours: 2)),
-        'isRead': false,
-        'priority': 'medium',
-        'patientId': 'PAT005',
-        'patientName': 'Fatima Sheikh',
-        'actionRequired': true,
-      },
-      {
-        'id': '3',
-        'type': 'reminder',
-        'title': 'Medication Reminder',
-        'message': 'Time to check pill count for 3 patients',
-        'timestamp': DateTime.now().subtract(const Duration(hours: 4)),
-        'isRead': true,
-        'priority': 'medium',
-        'actionRequired': false,
-      },
-      {
-        'id': '4',
-        'type': 'system_update',
-        'title': 'App Update Available',
-        'message': 'Version 2.1.0 is now available with new features',
-        'timestamp': DateTime.now().subtract(const Duration(days: 1)),
-        'isRead': true,
-        'priority': 'low',
-        'actionRequired': false,
-      },
-      {
-        'id': '5',
-        'type': 'emergency_alert',
-        'title': 'Emergency Protocol Update',
-        'message': 'New COVID-19 safety guidelines for TB patients',
-        'timestamp': DateTime.now().subtract(const Duration(days: 2)),
-        'isRead': false,
-        'priority': 'high',
-        'actionRequired': true,
-      },
-      {
-        'id': '6',
-        'type': 'missed_followup',
-        'title': 'Multiple Missed Visits',
-        'message': 'Sarah Khan has missed 3 consecutive visits',
-        'timestamp': DateTime.now().subtract(const Duration(days: 3)),
-        'isRead': true,
-        'priority': 'high',
-        'patientId': 'PAT003',
-        'patientName': 'Sarah Khan',
-        'actionRequired': true,
-      },
-    ];
-    
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    // Load notifications when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().loadNotifications();
     });
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MadadgarTheme.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Notifications',
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: MadadgarTheme.primaryColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            onPressed: () => _markAllAsRead(),
-            icon: const Icon(Icons.done_all),
-            tooltip: 'Mark All Read',
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onSelected: _handleMenuAction,
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'settings',
-                child: Row(
-                  children: [
-                    const Icon(Icons.settings),
-                    const SizedBox(width: 8),
-                    Text('Notification Settings', style: GoogleFonts.poppins()),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'clear',
-                child: Row(
-                  children: [
-                    const Icon(Icons.clear_all),
-                    const SizedBox(width: 8),
-                    Text('Clear All', style: GoogleFonts.poppins()),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(120),
-          child: Column(
-            children: [
-              _buildNotificationsSummary(),
-              TabBar(
-                controller: _tabController,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                indicatorColor: Colors.white,
-                labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
-                tabs: const [
-                  Tab(text: 'All'),
-                  Tab(text: 'Unread'),
-                  Tab(text: 'Action Required'),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  _buildFilterChips(),
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildNotificationsList(_notifications),
-                        _buildNotificationsList(_notifications.where((n) => !n['isRead']).toList()),
-                        _buildNotificationsList(_notifications.where((n) => n['actionRequired']).toList()),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
-  Widget _buildNotificationsSummary() {
-    int unreadCount = _notifications.where((n) => !n['isRead']).length;
-    int actionRequiredCount = _notifications.where((n) => n['actionRequired']).length;
-    int highPriorityCount = _notifications.where((n) => n['priority'] == 'high').length;
-    
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildSummaryItem('Unread', unreadCount.toString(), Colors.red),
-          ),
-          Container(
-            width: 1,
-            height: 30,
-            color: Colors.white.withOpacity(0.3),
-          ),
-          Expanded(
-            child: _buildSummaryItem('Action Required', actionRequiredCount.toString(), Colors.orange),
-          ),
-          Container(
-            width: 1,
-            height: 30,
-            color: Colors.white.withOpacity(0.3),
-          ),
-          Expanded(
-            child: _buildSummaryItem('High Priority', highPriorityCount.toString(), Colors.white),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryItem(String label, String count, Color color) {
-    return Column(
-      children: [
-        Text(
-          count,
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            color: Colors.white.withOpacity(0.9),
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFilterChips() {
-    final filters = [
-      {'key': 'all', 'label': 'All', 'icon': Icons.list},
-      {'key': 'missed_followup', 'label': 'Missed Follow-up', 'icon': Icons.person_off},
-      {'key': 'new_assignment', 'label': 'New Assignment', 'icon': Icons.person_add},
-      {'key': 'reminder', 'label': 'Reminders', 'icon': Icons.alarm},
-      {'key': 'emergency_alert', 'label': 'Emergency', 'icon': Icons.emergency},
-      {'key': 'system_update', 'label': 'System', 'icon': Icons.system_update},
-    ];
-    
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: filters.map((filter) {
-            bool isSelected = _selectedFilter == filter['key'];
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
-                selected: isSelected,
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      filter['icon'] as IconData,
-                      size: 16,
-                      color: isSelected ? Colors.white : MadadgarTheme.primaryColor,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      filter['label'] as String,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: isSelected ? Colors.white : MadadgarTheme.primaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-                selectedColor: MadadgarTheme.primaryColor,
-                backgroundColor: Colors.white,
-                side: BorderSide(color: MadadgarTheme.primaryColor),
-                onSelected: (selected) {
-                  setState(() {
-                    _selectedFilter = filter['key'] as String;
-                  });
-                },
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationsList(List<Map<String, dynamic>> notifications) {
-    List<Map<String, dynamic>> filteredNotifications = notifications;
-    
-    if (_selectedFilter != 'all') {
-      filteredNotifications = notifications.where((n) => n['type'] == _selectedFilter).toList();
+  void _markAllAsRead() {
+    // Mark all unread notifications as read
+    final provider = context.read<NotificationProvider>();
+    for (final notification in provider.notifications) {
+      if (notification.status == 'unread') {
+        provider.markAsRead(notification.notificationId);
+      }
     }
-    
-    if (filteredNotifications.isEmpty) {
-      return _buildEmptyState();
-    }
-    
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: filteredNotifications.length,
-      itemBuilder: (context, index) {
-        return _buildNotificationItem(filteredNotifications[index]);
-      },
-    );
   }
 
-  Widget _buildNotificationItem(Map<String, dynamic> notification) {
-    bool isUnread = !notification['isRead'];
-    String priority = notification['priority'] ?? 'medium';
-    Color priorityColor = _getPriorityColor(priority);
-    IconData typeIcon = _getNotificationIcon(notification['type']);
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Card(
-        elevation: isUnread ? 4 : 1,
-        child: InkWell(
-          onTap: () => _openNotification(notification),
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: isUnread ? Border.all(color: priorityColor, width: 2) : null,
+  void _handleMenuAction(String action) {
+    switch (action) {
+      case 'refresh':
+        context.read<NotificationProvider>().loadNotifications();
+        break;
+      case 'settings':
+        _showNotificationSettings();
+        break;
+    }
+  }
+
+  void _showNotificationSettings() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Notification Settings', style: GoogleFonts.poppins()),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              title: Text('Patient Updates', style: GoogleFonts.poppins()),
+              value: true,
+              onChanged: (value) {},
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header row
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: priorityColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        typeIcon,
-                        color: priorityColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  notification['title'],
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                              if (isUnread)
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: priorityColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                            ],
-                          ),
-                          Text(
-                            _formatTimestamp(notification['timestamp']),
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.black54,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    PopupMenuButton<String>(
-                      onSelected: (action) => _handleNotificationAction(action, notification),
-                      itemBuilder: (context) => [
-                        if (isUnread)
-                          PopupMenuItem(
-                            value: 'mark_read',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.mark_email_read, size: 16),
-                                const SizedBox(width: 8),
-                                Text('Mark as Read', style: GoogleFonts.poppins(fontSize: 12)),
-                              ],
-                            ),
-                          ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.delete, size: 16, color: Colors.red),
-                              const SizedBox(width: 8),
-                              Text('Delete', style: GoogleFonts.poppins(fontSize: 12, color: Colors.red)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // Message
-                Text(
-                  notification['message'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                ),
-                
-                // Patient info if available
-                if (notification['patientName'] != null) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
+            SwitchListTile(
+              title: Text('Medication Reminders', style: GoogleFonts.poppins()),
+              value: true,
+              onChanged: (value) {},
+            ),
+            SwitchListTile(
+              title: Text('System Alerts', style: GoogleFonts.poppins()),
+              value: true,
+              onChanged: (value) {},
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<NotificationProvider>(
+      builder: (context, notificationProvider, child) {
+        // Filter notifications for tabs
+        final allNotifications = notificationProvider.notifications;
+        final unreadNotifications = allNotifications.where((n) => n.status == 'unread').toList();
+        final highPriorityNotifications = allNotifications.where((n) => n.priority == 'high' || n.priority == 'urgent').toList();
+
+        return Scaffold(
+          backgroundColor: MadadgarTheme.backgroundColor,
+          appBar: AppBar(
+            title: Text(
+              'Notifications',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: MadadgarTheme.primaryColor,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.white),
+            actions: [
+              IconButton(
+                onPressed: () => _markAllAsRead(),
+                icon: const Icon(Icons.done_all),
+                tooltip: 'Mark All Read',
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.white),
+                onSelected: _handleMenuAction,
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'refresh',
                     child: Row(
                       children: [
-                        Icon(Icons.person, size: 16, color: Colors.grey.shade600),
+                        const Icon(Icons.refresh),
                         const SizedBox(width: 8),
-                        Text(
-                          'Patient: ${notification['patientName']}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.grey.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        if (notification['patientId'] != null) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            '(${notification['patientId']})',
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
+                        Text('Refresh', style: GoogleFonts.poppins()),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'settings',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.settings),
+                        const SizedBox(width: 8),
+                        Text('Settings', style: GoogleFonts.poppins()),
                       ],
                     ),
                   ),
                 ],
-                
-                // Action buttons
-                if (notification['actionRequired']) ...[
-                  const SizedBox(height: 12),
-                  Row(
+              ),
+            ],
+            bottom: TabBar(
+              controller: _tabController,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: Colors.white,
+              labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+              tabs: [
+                Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _takeAction(notification),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: priorityColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                          ),
-                          child: Text(
-                            _getActionButtonText(notification['type']),
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton(
-                        onPressed: () => _dismissNotification(notification),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Colors.grey.shade400),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                        child: Text(
-                          'Dismiss',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
+                      const Icon(Icons.notifications),
+                      const SizedBox(width: 4),
+                      Text('All (${allNotifications.length})'),
                     ],
                   ),
-                ],
-                
-                // Priority indicator
-                Container(
-                  margin: const EdgeInsets.only(top: 8),
+                ),
+                Tab(
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: priorityColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          priority.toUpperCase(),
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            color: priorityColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      if (notification['type'] == 'missed_followup')
-                        Icon(Icons.schedule, size: 14, color: Colors.red),
-                      if (notification['actionRequired'])
-                        Icon(Icons.priority_high, size: 14, color: Colors.orange),
+                      const Icon(Icons.circle, size: 8, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text('Unread (${unreadNotifications.length})'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.priority_high, color: Colors.red),
+                      const SizedBox(width: 4),
+                      Text('Priority (${highPriorityNotifications.length})'),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-        ),
+          body: notificationProvider.isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(MadadgarTheme.primaryColor),
+                  ),
+                )
+              : notificationProvider.error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error loading notifications',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red[700],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            notificationProvider.error!,
+                            style: GoogleFonts.poppins(
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: () => notificationProvider.loadNotifications(),
+                            icon: const Icon(Icons.refresh),
+                            label: Text('Retry', style: GoogleFonts.poppins()),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: MadadgarTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildNotificationsList(allNotifications),
+                        _buildNotificationsList(unreadNotifications),
+                        _buildNotificationsList(highPriorityNotifications),
+                      ],
+                    ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNotificationsList(List<CHWNotification> notifications) {
+    if (notifications.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await context.read<NotificationProvider>().loadNotifications();
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: notifications.length,
+        itemBuilder: (context, index) {
+          return _buildNotificationItem(notifications[index]);
+        },
       ),
     );
   }
@@ -584,78 +266,223 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
           Icon(
             Icons.notifications_none,
             size: 64,
-            color: Colors.grey.shade400,
+            color: Colors.grey[400],
           ),
           const SizedBox(height: 16),
           Text(
-            'No notifications found',
+            'No notifications',
             style: GoogleFonts.poppins(
               fontSize: 18,
-              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
             ),
           ),
+          const SizedBox(height: 8),
           Text(
-            'You\'re all caught up!',
+            'All caught up! Check back later for updates.',
             style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.grey.shade500,
+              color: Colors.grey[500],
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Color _getPriorityColor(String priority) {
-    switch (priority) {
-      case 'high':
-        return Colors.red;
-      case 'medium':
-        return Colors.orange;
-      case 'low':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
+  Widget _buildNotificationItem(CHWNotification notification) {
+    final isUnread = notification.status == 'unread';
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: isUnread ? 3 : 1,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => _handleNotificationTap(notification),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: isUnread 
+                ? Border.all(color: MadadgarTheme.primaryColor.withOpacity(0.3))
+                : null,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _buildNotificationIcon(notification.type),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                notification.title,
+                                style: GoogleFonts.poppins(
+                                  fontWeight: isUnread ? FontWeight.w600 : FontWeight.w500,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            if (isUnread)
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: MadadgarTheme.primaryColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            _buildPriorityChip(notification.priority),
+                            const SizedBox(width: 8),
+                            Text(
+                              _formatTimestamp(notification.sentAt),
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                notification.message,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                  height: 1.4,
+                ),
+              ),
+              if (notification.relatedId != null) ...[
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => _handleNotificationAction(notification),
+                      icon: const Icon(Icons.open_in_new, size: 16),
+                      label: Text('View Details', style: GoogleFonts.poppins()),
+                      style: TextButton.styleFrom(
+                        foregroundColor: MadadgarTheme.primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  IconData _getNotificationIcon(String type) {
+  Widget _buildNotificationIcon(String type) {
+    IconData icon;
+    Color color;
+
     switch (type) {
-      case 'missed_followup':
-        return Icons.person_off;
       case 'new_assignment':
-        return Icons.person_add;
+        icon = Icons.person_add;
+        color = Colors.blue;
+        break;
       case 'reminder':
-        return Icons.alarm;
-      case 'system_update':
-        return Icons.system_update;
+        icon = Icons.alarm;
+        color = Colors.orange;
+        break;
+      case 'missed_followup':
+        icon = Icons.event_busy;
+        color = Colors.red;
+        break;
       case 'emergency_alert':
-        return Icons.emergency;
+        icon = Icons.warning;
+        color = Colors.red;
+        break;
+      case 'system_update':
+        icon = Icons.system_update;
+        color = Colors.purple;
+        break;
       default:
-        return Icons.notifications;
+        icon = Icons.notifications;
+        color = Colors.grey;
     }
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, color: color, size: 20),
+    );
   }
 
-  String _getActionButtonText(String type) {
-    switch (type) {
-      case 'missed_followup':
-        return 'Trace Patient';
-      case 'new_assignment':
-        return 'View Patient';
-      case 'emergency_alert':
-        return 'View Details';
+  Widget _buildPriorityChip(String priority) {
+    Color color;
+    String label;
+
+    switch (priority) {
+      case 'urgent':
+        color = Colors.red;
+        label = 'URGENT';
+        break;
+      case 'high':
+        color = Colors.orange;
+        label = 'HIGH';
+        break;
+      case 'medium':
+        color = Colors.blue;
+        label = 'MEDIUM';
+        break;
+      case 'low':
+        color = Colors.green;
+        label = 'LOW';
+        break;
       default:
-        return 'Take Action';
+        color = Colors.grey;
+        label = 'NORMAL';
     }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
   }
 
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-    
-    if (difference.inMinutes < 60) {
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inHours < 1) {
       return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
+    } else if (difference.inDays < 1) {
       return '${difference.inHours}h ago';
     } else if (difference.inDays < 7) {
       return '${difference.inDays}d ago';
@@ -664,203 +491,142 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
     }
   }
 
-  void _handleMenuAction(String action) {
-    switch (action) {
-      case 'settings':
-        _openNotificationSettings();
-        break;
-      case 'clear':
-        _clearAllNotifications();
-        break;
+  void _handleNotificationTap(CHWNotification notification) {
+    // Mark as read when tapped
+    if (notification.status == 'unread') {
+      context.read<NotificationProvider>().markAsRead(notification.notificationId);
     }
+
+    // Handle different notification types
+    _handleNotificationAction(notification);
   }
 
-  void _handleNotificationAction(String action, Map<String, dynamic> notification) {
-    switch (action) {
-      case 'mark_read':
-        _markAsRead(notification);
-        break;
-      case 'delete':
-        _deleteNotification(notification);
-        break;
-    }
-  }
-
-  void _openNotification(Map<String, dynamic> notification) {
-    // Mark as read when opened
-    if (!notification['isRead']) {
-      setState(() {
-        notification['isRead'] = true;
-      });
-    }
-    
-    // Navigate based on notification type
-    String type = notification['type'];
-    switch (type) {
-      case 'missed_followup':
-        Navigator.pushNamed(context, '/missed-followup-alert', arguments: notification);
-        break;
+  void _handleNotificationAction(CHWNotification notification) {
+    switch (notification.type) {
       case 'new_assignment':
-        Navigator.pushNamed(context, '/patient-details', arguments: notification['patientId']);
+        _navigateToPatientDetails(notification);
         break;
-      default:
-        _showNotificationDetails(notification);
-    }
-  }
-
-  void _takeAction(Map<String, dynamic> notification) {
-    String type = notification['type'];
-    switch (type) {
+      case 'reminder':
+        _navigateToMedicationReminder(notification);
+        break;
       case 'missed_followup':
-        Navigator.pushNamed(context, '/missed-followup-alert', arguments: notification);
-        break;
-      case 'new_assignment':
-        Navigator.pushNamed(context, '/patient-details', arguments: notification['patientId']);
+        _navigateToPatientDetails(notification);
         break;
       case 'emergency_alert':
         _showEmergencyDetails(notification);
         break;
+      case 'system_update':
+        _showSystemUpdate(notification);
+        break;
       default:
         _showNotificationDetails(notification);
     }
   }
 
-  void _markAsRead(Map<String, dynamic> notification) {
-    setState(() {
-      notification['isRead'] = true;
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Notification marked as read', style: GoogleFonts.poppins()),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  void _navigateToPatientDetails(CHWNotification notification) {
+    if (notification.relatedId != null) {
+      Navigator.pushNamed(
+        context,
+        '/patient_details',
+        arguments: {
+          'patientId': notification.relatedId,
+          'fromNotification': true,
+        },
+      );
+    }
   }
 
-  void _deleteNotification(Map<String, dynamic> notification) {
-    setState(() {
-      _notifications.removeWhere((n) => n['id'] == notification['id']);
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Notification deleted', style: GoogleFonts.poppins()),
-        duration: const Duration(seconds: 2),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            setState(() {
-              _notifications.add(notification);
-            });
-          },
-        ),
-      ),
-    );
+  void _navigateToMedicationReminder(CHWNotification notification) {
+    if (notification.relatedId != null) {
+      Navigator.pushNamed(
+        context,
+        '/adherence-tracking',
+        arguments: {
+          'patientId': notification.relatedId,
+          'fromNotification': true,
+        },
+      );
+    }
   }
 
-  void _dismissNotification(Map<String, dynamic> notification) {
-    setState(() {
-      notification['actionRequired'] = false;
-      notification['isRead'] = true;
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Notification dismissed', style: GoogleFonts.poppins()),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _markAllAsRead() {
-    setState(() {
-      for (var notification in _notifications) {
-        notification['isRead'] = true;
-      }
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('All notifications marked as read', style: GoogleFonts.poppins()),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
-
-  void _clearAllNotifications() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Clear All Notifications', style: GoogleFonts.poppins()),
-        content: Text(
-          'Are you sure you want to clear all notifications? This action cannot be undone.',
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.poppins()),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _notifications.clear();
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('All notifications cleared', style: GoogleFonts.poppins()),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('Clear All', style: GoogleFonts.poppins(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _openNotificationSettings() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Notification settings coming soon!', style: GoogleFonts.poppins())),
-    );
-  }
-
-  void _showNotificationDetails(Map<String, dynamic> notification) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(notification['title'], style: GoogleFonts.poppins()),
-        content: Text(notification['message'], style: GoogleFonts.poppins()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: GoogleFonts.poppins()),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEmergencyDetails(Map<String, dynamic> notification) {
+  void _showEmergencyDetails(CHWNotification notification) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.emergency, color: Colors.red),
+            const Icon(Icons.warning, color: Colors.red),
             const SizedBox(width: 8),
-            Text(notification['title'], style: GoogleFonts.poppins()),
+            Text('Emergency Alert', style: GoogleFonts.poppins()),
           ],
         ),
-        content: Text(notification['message'], style: GoogleFonts.poppins()),
+        content: Text(notification.message, style: GoogleFonts.poppins()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Acknowledge', style: GoogleFonts.poppins()),
+            child: Text('Understood', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSystemUpdate(CHWNotification notification) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.system_update, color: Colors.blue),
+            const SizedBox(width: 8),
+            Text('System Update', style: GoogleFonts.poppins()),
+          ],
+        ),
+        content: Text(notification.message, style: GoogleFonts.poppins()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNotificationDetails(CHWNotification notification) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(notification.title, style: GoogleFonts.poppins()),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notification.message, style: GoogleFonts.poppins()),
+            const SizedBox(height: 12),
+            Text(
+              'Received: ${_formatTimestamp(notification.sentAt)}',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            if (notification.readAt != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Read: ${_formatTimestamp(notification.readAt!)}',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: GoogleFonts.poppins()),
           ),
         ],
       ),

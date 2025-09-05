@@ -2,7 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/controllers/providers/secondary_providers.dart';
 
 class AddHouseholdMemberScreen extends StatefulWidget {
   final String? patientId;
@@ -25,28 +27,27 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _occupationController = TextEditingController();
-  final _notesController = TextEditingController();
   
   String _selectedGender = '';
   String _selectedRelationship = '';
-  String _selectedEducation = '';
-  bool _hasKnownAllergies = false;
-  bool _hasPreviousTbHistory = false;
-  bool _isCurrentlySick = false;
-  bool _isPregnant = false;
   bool _wantsImmediateScreening = false;
   bool _isSaving = false;
   
-  DateTime? _selectedDateOfBirth;
-  DateTime? _preferredScreeningDate;
+  // HouseholdMember collection schema aligned fields:
+  // - name (required)
+  // - age (required) 
+  // - gender (required)
+  // - relationship (required)
+  // - phone (optional)
+  // - screened (default: false)
+  // - screeningStatus (default: 'not_screened')
+  // - lastScreeningDate (default: null)
   
-  // Form validation flags
-  final Map<String, bool> _fieldErrors = {};
+  final List<String> _genderOptions = ['Male', 'Female'];
   
   final List<String> _relationships = [
     'Spouse',
-    'Son',
+    'Son', 
     'Daughter',
     'Father',
     'Mother',
@@ -59,16 +60,6 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
     'Cousin',
     'Other relative',
     'Non-relative',
-  ];
-  
-  final List<String> _educationLevels = [
-    'No formal education',
-    'Primary school',
-    'Secondary school',
-    'High school',
-    'College/University',
-    'Graduate degree',
-    'Postgraduate',
   ];
 
   @override
@@ -102,575 +93,339 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
     _nameController.dispose();
     _ageController.dispose();
     _phoneController.dispose();
-    _occupationController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MadadgarTheme.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Add Household Member',
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: MadadgarTheme.primaryColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          TextButton(
-            onPressed: _saveAndContinue,
-            child: Text(
-              'SAVE',
+    return Consumer<HouseholdProvider>(
+      builder: (context, householdProvider, child) {
+        return Scaffold(
+          backgroundColor: MadadgarTheme.backgroundColor,
+          appBar: AppBar(
+            title: Text(
+              'Add Household Member',
               style: GoogleFonts.poppins(
                 color: Colors.white,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: MadadgarTheme.primaryColor,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Card
+                      _buildHeaderCard(),
+                      const SizedBox(height: 24),
+                      
+                      // Form Fields Card
+                      _buildFormCard(),
+                      const SizedBox(height: 24),
+                      
+                      // Screening Option Card
+                      _buildScreeningCard(),
+                      const SizedBox(height: 32),
+                      
+                      // Save Button
+                      _buildSaveButton(householdProvider),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ],
-      ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SlideTransition(
-          position: _slideAnimation,
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                _buildProgressHeader(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildPersonalInfoSection(),
-                        const SizedBox(height: 24),
-                        _buildContactInfoSection(),
-                        const SizedBox(height: 24),
-                        _buildHealthInfoSection(),
-                        const SizedBox(height: 24),
-                        _buildScreeningPreferencesSection(),
-                        const SizedBox(height: 32),
-                        _buildActionButtons(),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildProgressHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: MadadgarTheme.primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.person_add,
-                  color: MadadgarTheme.primaryColor,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Adding New Household Member',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    Text(
-                      'Patient: ${widget.patientId ?? 'PAT001'} • Household: ${widget.householdId ?? 'HH001'}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+  Widget _buildHeaderCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [
+              MadadgarTheme.primaryColor.withOpacity(0.1),
+              MadadgarTheme.primaryColor.withOpacity(0.05),
             ],
           ),
-          
-          const SizedBox(height: 16),
-          
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info, color: Colors.blue, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Family members living with TB patients need regular screening for early detection and treatment.',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.blue.shade700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPersonalInfoSection() {
-    return _buildSection(
-      title: 'Personal Information',
-      icon: Icons.person,
-      children: [
-        _buildTextField(
-          controller: _nameController,
-          label: 'Full Name',
-          hint: 'Enter full name as per official documents',
-          isRequired: true,
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Name is required';
-            }
-            if (value.trim().length < 2) {
-              return 'Name must be at least 2 characters';
-            }
-            return null;
-          },
         ),
-        
-        const SizedBox(height: 16),
-        
-        Row(
+        child: Column(
           children: [
-            Expanded(
-              child: _buildTextField(
-                controller: _ageController,
-                label: 'Age',
-                hint: 'Years',
-                keyboardType: TextInputType.number,
-                isRequired: true,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Age is required';
-                  }
-                  final age = int.tryParse(value);
-                  if (age == null || age < 0 || age > 120) {
-                    return 'Enter valid age (0-120)';
-                  }
-                  return null;
-                },
-              ),
+            Icon(
+              Icons.person_add,
+              size: 48,
+              color: MadadgarTheme.primaryColor,
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildDropdown(
-                value: _selectedGender,
-                label: 'Gender',
-                hint: 'Select gender',
-                items: ['Male', 'Female'],
-                isRequired: true,
-                onChanged: (value) => setState(() => _selectedGender = value!),
+            const SizedBox(height: 12),
+            Text(
+              'Add New Household Member',
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: MadadgarTheme.primaryColor,
               ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add a family member to enable TB contact screening',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
-        
-        const SizedBox(height: 16),
-        
-        _buildDateField(
-          label: 'Date of Birth (Optional)',
-          selectedDate: _selectedDateOfBirth,
-          onTap: () => _selectDateOfBirth(),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        _buildDropdown(
-          value: _selectedRelationship,
-          label: 'Relationship to Patient',
-          hint: 'Select relationship',
-          items: _relationships,
-          isRequired: true,
-          onChanged: (value) => setState(() => _selectedRelationship = value!),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        _buildDropdown(
-          value: _selectedEducation,
-          label: 'Education Level',
-          hint: 'Select education level',
-          items: _educationLevels,
-          onChanged: (value) => setState(() => _selectedEducation = value!),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildContactInfoSection() {
-    return _buildSection(
-      title: 'Contact Information',
-      icon: Icons.contact_phone,
-      children: [
-        _buildTextField(
-          controller: _phoneController,
-          label: 'Phone Number',
-          hint: '+92 300 1234567',
-          keyboardType: TextInputType.phone,
-          validator: (value) {
-            if (value != null && value.isNotEmpty) {
-              if (value.length < 10) {
-                return 'Enter valid phone number';
-              }
-            }
-            return null;
-          },
-        ),
-        
-        const SizedBox(height: 16),
-        
-        _buildTextField(
-          controller: _occupationController,
-          label: 'Occupation',
-          hint: 'Current job or profession',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHealthInfoSection() {
-    return _buildSection(
-      title: 'Health Information',
-      icon: Icons.health_and_safety,
-      children: [
-        _buildSwitchTile(
-          title: 'Known Allergies',
-          subtitle: 'Has any known allergies to medications',
-          value: _hasKnownAllergies,
-          onChanged: (value) => setState(() => _hasKnownAllergies = value),
-        ),
-        
-        _buildSwitchTile(
-          title: 'Previous TB History',
-          subtitle: 'Previously diagnosed or treated for TB',
-          value: _hasPreviousTbHistory,
-          onChanged: (value) => setState(() => _hasPreviousTbHistory = value),
-        ),
-        
-        _buildSwitchTile(
-          title: 'Currently Sick',
-          subtitle: 'Experiencing any symptoms or illness',
-          value: _isCurrentlySick,
-          onChanged: (value) => setState(() => _isCurrentlySick = value),
-        ),
-        
-        if (_selectedGender == 'Female')
-          _buildSwitchTile(
-            title: 'Pregnant',
-            subtitle: 'Currently pregnant',
-            value: _isPregnant,
-            onChanged: (value) => setState(() => _isPregnant = value),
-          ),
-        
-        const SizedBox(height: 16),
-        
-        _buildTextField(
-          controller: _notesController,
-          label: 'Medical Notes',
-          hint: 'Any additional health information',
-          maxLines: 3,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildScreeningPreferencesSection() {
-    return _buildSection(
-      title: 'Screening Preferences',
-      icon: Icons.medical_services,
-      children: [
-        _buildSwitchTile(
-          title: 'Schedule Immediate Screening',
-          subtitle: 'Start TB screening process immediately',
-          value: _wantsImmediateScreening,
-          onChanged: (value) => setState(() => _wantsImmediateScreening = value),
-        ),
-        
-        if (!_wantsImmediateScreening) ...[
-          const SizedBox(height: 16),
-          
-          _buildDateField(
-            label: 'Preferred Screening Date',
-            selectedDate: _preferredScreeningDate,
-            onTap: () => _selectPreferredScreeningDate(),
-          ),
-        ],
-        
-        const SizedBox(height: 16),
-        
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.amber.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.amber.withOpacity(0.3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.schedule, color: Colors.amber.shade700, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Screening Guidelines',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.amber.shade700,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '• Household contacts should be screened within 2 weeks\n'
-                '• Children under 5 and elderly are priority groups\n'
-                '• Symptomatic contacts need immediate evaluation',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.amber.shade700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSection({
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
+  Widget _buildFormCard() {
     return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildSectionHeader('Basic Information', Icons.person),
+            const SizedBox(height: 20),
+            
+            // Name Field (Required - aligns with HouseholdMember.name)
+            _buildTextField(
+              controller: _nameController,
+              label: 'Full Name *',
+              hint: 'Enter member\'s full name',
+              icon: Icons.person_outline,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Name is required';
+                }
+                if (value.trim().length < 2) {
+                  return 'Name must be at least 2 characters';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Age and Gender Row
             Row(
               children: [
-                Icon(icon, color: MadadgarTheme.primaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                // Age Field (Required - aligns with HouseholdMember.age)
+                Expanded(
+                  flex: 1,
+                  child: _buildTextField(
+                    controller: _ageController,
+                    label: 'Age *',
+                    hint: 'Age',
+                    icon: Icons.cake,
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Age is required';
+                      }
+                      final age = int.tryParse(value);
+                      if (age == null || age < 0 || age > 120) {
+                        return 'Enter valid age (0-120)';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Gender Field (Required - aligns with HouseholdMember.gender)
+                Expanded(
+                  flex: 1,
+                  child: _buildDropdown(
+                    label: 'Gender *',
+                    hint: 'Select gender',
+                    value: _selectedGender.isEmpty ? null : _selectedGender,
+                    items: _genderOptions,
+                    icon: Icons.person,
+                    onChanged: (value) => setState(() => _selectedGender = value!),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Gender is required';
+                      }
+                      return null;
+                    },
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            ...children,
+            
+            // Relationship Field (Required - aligns with HouseholdMember.relationship)
+            _buildDropdown(
+              label: 'Relationship to Patient *',
+              hint: 'Select relationship',
+              value: _selectedRelationship.isEmpty ? null : _selectedRelationship,
+              items: _relationships,
+              icon: Icons.family_restroom,
+              onChanged: (value) => setState(() => _selectedRelationship = value!),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Relationship is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Phone Field (Optional - aligns with HouseholdMember.phone)
+            _buildTextField(
+              controller: _phoneController,
+              label: 'Phone Number (Optional)',
+              hint: 'Enter phone number',
+              icon: Icons.phone,
+              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value != null && value.trim().isNotEmpty) {
+                  if (value.trim().length < 10) {
+                    return 'Phone number must be at least 10 digits';
+                  }
+                }
+                return null;
+              },
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildScreeningCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader('TB Screening', Icons.medical_services),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange.shade700),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Household members should be screened for TB. You can screen them immediately after adding.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            CheckboxListTile(
+              title: Text(
+                'Screen for TB immediately after adding',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+              ),
+              subtitle: Text(
+                'Recommended for all household members',
+                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+              ),
+              value: _wantsImmediateScreening,
+              onChanged: (value) => setState(() => _wantsImmediateScreening = value ?? false),
+              activeColor: MadadgarTheme.primaryColor,
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSaveButton(HouseholdProvider householdProvider) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton.icon(
+        onPressed: _isSaving ? null : () => _saveMember(householdProvider),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: MadadgarTheme.primaryColor,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 2,
+        ),
+        icon: _isSaving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Icon(Icons.save),
+        label: Text(
+          _isSaving ? 'Adding Member...' : 'Add Household Member',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: MadadgarTheme.primaryColor),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: MadadgarTheme.primaryColor,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
-    String? hint,
-    TextInputType? keyboardType,
-    bool isRequired = false,
-    String? Function(String?)? validator,
-    int maxLines = 1,
-  }) {
-    bool hasError = _fieldErrors[label] ?? false;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(
-            text: label,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-            children: isRequired
-                ? [
-                    TextSpan(
-                      text: ' *',
-                      style: GoogleFonts.poppins(color: Colors.red),
-                    ),
-                  ]
-                : null,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          validator: validator,
-          style: GoogleFonts.poppins(),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: GoogleFonts.poppins(color: Colors.grey.shade500),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: hasError ? Colors.red : Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: hasError ? Colors.red : Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: hasError ? Colors.red : MadadgarTheme.primaryColor),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.red),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-          onChanged: (value) {
-            if (hasError && value.isNotEmpty) {
-              setState(() {
-                _fieldErrors[label] = false;
-              });
-            }
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDropdown({
-    required String value,
-    required String label,
     required String hint,
-    required List<String> items,
-    bool isRequired = false,
-    required void Function(String?) onChanged,
-  }) {
-    bool hasError = _fieldErrors[label] ?? false;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(
-            text: label,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-            children: isRequired
-                ? [
-                    TextSpan(
-                      text: ' *',
-                      style: GoogleFonts.poppins(color: Colors.red),
-                    ),
-                  ]
-                : null,
-          ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: value.isEmpty ? null : value,
-          hint: Text(
-            hint,
-            style: GoogleFonts.poppins(color: Colors.grey.shade500),
-          ),
-          items: items.map((item) {
-            return DropdownMenuItem(
-              value: item,
-              child: Text(item, style: GoogleFonts.poppins()),
-            );
-          }).toList(),
-          onChanged: onChanged,
-          validator: isRequired
-              ? (value) => value == null || value.isEmpty ? '$label is required' : null
-              : null,
-          style: GoogleFonts.poppins(),
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: hasError ? Colors.red : Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: hasError ? Colors.red : Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: hasError ? Colors.red : MadadgarTheme.primaryColor),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.red),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDateField({
-    required String label,
-    required DateTime? selectedDate,
-    required VoidCallback onTap,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -680,195 +435,119 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
           style: GoogleFonts.poppins(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.black87,
+            color: Colors.grey[700],
           ),
         ),
         const SizedBox(height: 8),
-        InkWell(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          validator: validator,
+          style: GoogleFonts.poppins(),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.poppins(color: Colors.grey[500]),
+            prefixIcon: Icon(icon, color: MadadgarTheme.primaryColor),
+            border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey[300]!),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today, color: Colors.grey.shade600, size: 20),
-                const SizedBox(width: 12),
-                Text(
-                  selectedDate != null
-                      ? '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'
-                      : 'Select date',
-                  style: GoogleFonts.poppins(
-                    color: selectedDate != null ? Colors.black87 : Colors.grey.shade500,
-                  ),
-                ),
-                const Spacer(),
-                Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
-              ],
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey[300]!),
             ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSwitchTile({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required void Function(bool) onChanged,
+  Widget _buildDropdown({
+    required String label,
+    required String hint,
+    required String? value,
+    required List<String> items,
+    required IconData icon,
+    required void Function(String?) onChanged,
+    String? Function(String?)? validator,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.black54,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: MadadgarTheme.primaryColor,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _isSaving ? null : _saveAndContinue,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: MadadgarTheme.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: _isSaving
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Saving...',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  )
-                : Text(
-                    _wantsImmediateScreening ? 'Save & Start Screening' : 'Save Member',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[700],
           ),
         ),
-        
-        const SizedBox(height: 12),
-        
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: _isSaving ? null : () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: value,
+          onChanged: onChanged,
+          validator: validator,
+          style: GoogleFonts.poppins(color: Colors.black),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.poppins(color: Colors.grey[500]),
+            prefixIcon: Icon(icon, color: MadadgarTheme.primaryColor),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey[300]!),
             ),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey[300]!),
             ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
           ),
+          items: items.map((String item) {
+            return DropdownMenuItem<String>(
+              value: item,
+              child: Text(item, style: GoogleFonts.poppins()),
+            );
+          }).toList(),
         ),
       ],
     );
   }
 
-  void _selectDateOfBirth() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDateOfBirth ?? DateTime.now().subtract(const Duration(days: 365 * 25)),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null && picked != _selectedDateOfBirth) {
-      setState(() {
-        _selectedDateOfBirth = picked;
-        // Calculate age from date of birth
-        final age = DateTime.now().year - picked.year;
-        _ageController.text = age.toString();
-      });
-    }
-  }
-
-  void _selectPreferredScreeningDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _preferredScreeningDate ?? DateTime.now().add(const Duration(days: 7)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null && picked != _preferredScreeningDate) {
-      setState(() {
-        _preferredScreeningDate = picked;
-      });
-    }
-  }
-
-  void _saveAndContinue() async {
+  Future<void> _saveMember(HouseholdProvider householdProvider) async {
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Please fill in all required fields',
+            'Please fill in all required fields correctly',
             style: GoogleFonts.poppins(),
           ),
           backgroundColor: Colors.red,
@@ -877,100 +556,89 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
       return;
     }
 
-    // Additional validation
-    if (_selectedGender.isEmpty) {
-      _showError('Gender is required');
-      return;
-    }
-
-    if (_selectedRelationship.isEmpty) {
-      _showError('Relationship to patient is required');
-      return;
-    }
-
     setState(() => _isSaving = true);
 
-    // Mock save operation
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      // Auto-generate patient ID if not provided
+      final patientId = widget.patientId ?? 'patient_${DateTime.now().millisecondsSinceEpoch}';
+      
+      // Auto-generate household ID if not provided
+      final householdId = widget.householdId ?? 'household_${DateTime.now().millisecondsSinceEpoch}';
+      
+      // Add member using HouseholdProvider with fields matching HouseholdMember schema
+      final success = await householdProvider.addHouseholdMember(
+        patientId: patientId,
+        name: _nameController.text.trim(),
+        age: int.parse(_ageController.text),
+        gender: _selectedGender,
+        relationship: _selectedRelationship,
+        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+        // Note: screened, screeningStatus, lastScreeningDate are set by default in HouseholdMember constructor
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
+      setState(() => _isSaving = false);
 
-    // Create member data
-    final memberData = {
-      'id': 'HM${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
-      'name': _nameController.text.trim(),
-      'age': int.parse(_ageController.text),
-      'gender': _selectedGender,
-      'relationship': _selectedRelationship,
-      'phone': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-      'occupation': _occupationController.text.trim(),
-      'education': _selectedEducation,
-      'hasKnownAllergies': _hasKnownAllergies,
-      'hasPreviousTbHistory': _hasPreviousTbHistory,
-      'isCurrentlySick': _isCurrentlySick,
-      'isPregnant': _isPregnant,
-      'notes': _notesController.text.trim(),
-      'dateOfBirth': _selectedDateOfBirth,
-      'patientId': widget.patientId,
-      'householdId': widget.householdId,
-      'registeredOn': DateTime.now(),
-      'screeningStatus': _wantsImmediateScreening ? 'scheduled' : 'pending',
-      'nextScreeningDue': _wantsImmediateScreening 
-          ? DateTime.now().add(const Duration(days: 1))
-          : _preferredScreeningDate ?? DateTime.now().add(const Duration(days: 14)),
-      'riskLevel': _calculateRiskLevel(),
-    };
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Household member added successfully!',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
 
-    setState(() => _isSaving = false);
+        // Navigate to screening if requested
+        if (_wantsImmediateScreening) {
+          // Create member data for navigation
+          final memberData = {
+            'name': _nameController.text.trim(),
+            'age': int.parse(_ageController.text),
+            'gender': _selectedGender,
+            'relationship': _selectedRelationship,
+            'phone': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+          };
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Household member added successfully!',
-          style: GoogleFonts.poppins(),
+          Navigator.pushReplacementNamed(
+            context,
+            '/contact-screening',
+            arguments: {
+              'patientId': patientId,
+              'householdId': householdId,
+              'memberInfo': memberData,
+              'fromAddMember': true,
+            },
+          );
+        } else {
+          // Go back to household members list
+          Navigator.pop(context, true);
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              householdProvider.error ?? 'Failed to add household member',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error: ${e.toString()}',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.red,
         ),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    if (_wantsImmediateScreening) {
-      // Navigate to screening
-      Navigator.pushReplacementNamed(context, '/contact-screening', arguments: memberData);
-    } else {
-      // Return to household members list
-      Navigator.pop(context, memberData);
+      );
     }
-  }
-
-  String _calculateRiskLevel() {
-    int riskScore = 0;
-    
-    // Age-based risk
-    final age = int.tryParse(_ageController.text) ?? 0;
-    if (age < 5 || age > 65) riskScore += 2;
-    else if (age < 15) riskScore += 1;
-    
-    // Health conditions
-    if (_hasPreviousTbHistory) riskScore += 3;
-    if (_isCurrentlySick) riskScore += 2;
-    if (_isPregnant) riskScore += 1;
-    if (_hasKnownAllergies) riskScore += 1;
-    
-    // Relationship risk (closer contact = higher risk)
-    if (_selectedRelationship == 'Spouse') riskScore += 2;
-    else if (['Son', 'Daughter', 'Father', 'Mother'].contains(_selectedRelationship)) riskScore += 1;
-    
-    if (riskScore >= 4) return 'high';
-    if (riskScore >= 2) return 'medium';
-    return 'low';
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GoogleFonts.poppins()),
-        backgroundColor: Colors.red,
-      ),
-    );
   }
 }

@@ -2,12 +2,21 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/controllers/providers/secondary_providers.dart';
 
 class ContactScreeningScreen extends StatefulWidget {
   final Map<String, dynamic>? memberData;
+  final String? householdId;
+  final String? patientId;
   
-  const ContactScreeningScreen({super.key, this.memberData});
+  const ContactScreeningScreen({
+    super.key, 
+    this.memberData,
+    this.householdId,
+    this.patientId,
+  });
 
   @override
   State<ContactScreeningScreen> createState() => _ContactScreeningScreenState();
@@ -173,24 +182,26 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MadadgarTheme.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Contact Screening',
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: MadadgarTheme.primaryColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          labelColor: Colors.white,
+    return Consumer<ContactTracingProvider>(
+      builder: (context, contactProvider, child) {
+        return Scaffold(
+          backgroundColor: MadadgarTheme.backgroundColor,
+          appBar: AppBar(
+            title: Text(
+              'Contact Screening',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: MadadgarTheme.primaryColor,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.white),
+            bottom: TabBar(
+              controller: _tabController,
+              indicatorColor: Colors.white,
+              indicatorWeight: 3,
+              labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
           unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
@@ -226,6 +237,8 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
           ),
         ),
       ),
+    );
+      },
     );
   }
 
@@ -1559,34 +1572,70 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
   void _submitScreening() async {
     setState(() => _isSubmitting = true);
     
-    // Mock submission delay
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (!mounted) return;
-    
-    setState(() => _isSubmitting = false);
-    
-    // Show success message
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green),
-            const SizedBox(width: 8),
-            Text('Screening Complete', style: GoogleFonts.poppins()),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Contact screening for ${_memberInfo['name']} has been completed successfully.',
-              style: GoogleFonts.poppins(),
-            ),
-            const SizedBox(height: 16),
+    try {
+      // Get the provider
+      final contactProvider = Provider.of<ContactTracingProvider>(context, listen: false);
+      
+      // Prepare screening data
+      List<String> symptoms = _symptoms.entries
+          .where((entry) => entry.value)
+          .map((entry) => entry.key)
+          .toList();
+      
+      List<String> riskFactors = _riskFactors.entries
+          .where((entry) => entry.value)
+          .map((entry) => entry.key)
+          .toList();
+      
+      // Submit the screening
+      await contactProvider.screenContact(
+        householdId: widget.householdId ?? 'unknown',
+        indexPatientId: widget.patientId ?? 'unknown',
+        contactName: _memberInfo['name'] ?? 'Unknown',
+        relationship: _memberInfo['relationship'] ?? 'Unknown',
+        age: _memberInfo['age'] ?? 0,
+        gender: _memberInfo['gender'] ?? 'Unknown',
+        symptoms: symptoms,
+        notes: 'Contact screening completed via CHW mobile app. Risk level: $_overallRiskLevel. Risk factors: ${riskFactors.join(', ')}',
+      );
+      
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save screening: $e', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+      
+      // Show success message
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              const SizedBox(width: 8),
+              Text('Screening Complete', style: GoogleFonts.poppins()),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Contact screening for ${_memberInfo['name']} has been completed successfully.',
+                style: GoogleFonts.poppins(),
+              ),
+              const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(

@@ -2,7 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/controllers/providers/secondary_providers.dart';
 
 class AdherenceTrackingScreen extends StatefulWidget {
   final String? patientId;
@@ -18,8 +20,6 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   late TabController _tabController;
-  
-  bool _isLoading = false;
   
   // Dose tracking for current day
   final Map<String, String> _morningDoses = {};
@@ -113,31 +113,33 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
   }
 
   void _loadAdherenceData() {
-    setState(() => _isLoading = true);
-    
-    // Mock data loading
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    });
+    if (widget.patientId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Provider.of<TreatmentAdherenceProvider>(context, listen: false)
+              .loadPatientAdherence(widget.patientId!);
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MadadgarTheme.backgroundColor,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            SliverAppBar(
-              expandedHeight: 200,
-              floating: false,
-              pinned: true,
-              backgroundColor: MadadgarTheme.primaryColor,
-              iconTheme: const IconThemeData(color: Colors.white),
-              actions: [
+    return Consumer<TreatmentAdherenceProvider>(
+      builder: (context, adherenceProvider, child) {
+        return Scaffold(
+          backgroundColor: MadadgarTheme.backgroundColor,
+          body: FadeTransition(
+            opacity: _fadeAnimation,
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                SliverAppBar(
+                  expandedHeight: 200,
+                  floating: false,
+                  pinned: true,
+                  backgroundColor: MadadgarTheme.primaryColor,
+                  iconTheme: const IconThemeData(color: Colors.white),
+                  actions: [
                 IconButton(
                   onPressed: () => _viewAdherenceHistory(),
                   icon: const Icon(Icons.history),
@@ -171,7 +173,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                 ),
               ],
               flexibleSpace: FlexibleSpaceBar(
-                background: _buildHeaderContent(),
+                background: _buildHeaderContent(adherenceProvider),
               ),
               bottom: TabBar(
                 controller: _tabController,
@@ -187,20 +189,40 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
               ),
             ),
           ],
-          body: _isLoading
+          body: adherenceProvider.isLoading
               ? const Center(child: CircularProgressIndicator())
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildDailyDosesTab(),
-                    _buildSideEffectsTab(),
-                    _buildPillCountTab(),
-                  ],
-                ),
+              : adherenceProvider.error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error, size: 64, color: Colors.red),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error: ${adherenceProvider.error}',
+                            style: GoogleFonts.poppins(color: Colors.red),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => _loadAdherenceData(),
+                            child: Text('Retry', style: GoogleFonts.poppins()),
+                          ),
+                        ],
+                      ),
+                    )
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildDailyDosesTab(),
+                        _buildSideEffectsTab(),
+                        _buildPillCountTab(),
+                      ],
+                    ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _saveAdherenceData(),
+        onPressed: () => _saveAdherenceData(adherenceProvider),
         backgroundColor: MadadgarTheme.secondaryColor,
         icon: const Icon(Icons.save, color: Colors.white),
         label: Text(
@@ -209,9 +231,11 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
         ),
       ),
     );
+      },
+    );
   }
 
-  Widget _buildHeaderContent() {
+  Widget _buildHeaderContent(TreatmentAdherenceProvider provider) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -253,11 +277,11 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
               
               Row(
                 children: [
-                  _buildHeaderStat('Today', '4/4 doses'),
+                  _buildHeaderStat('Today', _getTodaysDosesText()),
                   const SizedBox(width: 16),
-                  _buildHeaderStat('This Week', '95%'),
+                  _buildHeaderStat('This Week', '${provider.adherenceStats['weekly_score']?.toStringAsFixed(0) ?? '0'}%'),
                   const SizedBox(width: 16),
-                  _buildHeaderStat('Overall', '92%'),
+                  _buildHeaderStat('Overall', '${provider.adherenceStats['overall_score']?.toStringAsFixed(0) ?? '0'}%'),
                 ],
               ),
               
@@ -1192,6 +1216,21 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     );
   }
 
+  String _getTodaysDosesText() {
+    int totalDoses = _morningDoses.length + _eveningDoses.length;
+    int takenDoses = 0;
+    
+    _morningDoses.values.forEach((dose) {
+      if (dose == 'taken') takenDoses++;
+    });
+    
+    _eveningDoses.values.forEach((dose) {
+      if (dose == 'taken') takenDoses++;
+    });
+    
+    return '$takenDoses/$totalDoses doses';
+  }
+
   void _handleMenuAction(String action) {
     switch (action) {
       case 'export':
@@ -1221,15 +1260,58 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     );
   }
 
-  void _saveAdherenceData() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Today\'s adherence data saved successfully!',
-          style: GoogleFonts.poppins(),
+  Future<void> _saveAdherenceData(TreatmentAdherenceProvider provider) async {
+    if (widget.patientId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Patient ID not found', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red,
         ),
-        backgroundColor: Colors.green,
-      ),
-    );
+      );
+      return;
+    }
+
+    // Combine morning and evening doses
+    Map<String, String> allDoses = {};
+    allDoses.addAll(_morningDoses);
+    allDoses.addAll(_eveningDoses);
+
+    // Calculate total pill count remaining
+    int totalPillsRemaining = _pillCounts.values.fold(0, (sum, count) => sum + count);
+
+    try {
+      await provider.recordAdherence(
+        patientId: widget.patientId!,
+        dosesToday: allDoses,
+        sideEffects: _reportedSideEffects,
+        pillsRemaining: totalPillsRemaining,
+        counselingGiven: true, // Assuming counseling is always given
+        notes: 'Adherence recorded via CHW mobile app',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Today\'s adherence data saved successfully!',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to save adherence data: $e',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
