@@ -10,9 +10,9 @@ class ContactScreeningScreen extends StatefulWidget {
   final Map<String, dynamic>? memberData;
   final String? householdId;
   final String? patientId;
-  
+
   const ContactScreeningScreen({
-    super.key, 
+    super.key,
     this.memberData,
     this.householdId,
     this.patientId,
@@ -27,14 +27,14 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   late TabController _tabController;
-  
+
   final _formKey = GlobalKey<FormState>();
   int _currentStep = 0;
   bool _isSubmitting = false;
-  
+
   // Member info
   Map<String, dynamic> _memberInfo = {};
-  
+
   // Symptom screening
   final Map<String, bool> _symptoms = {
     'persistent_cough': false,
@@ -47,7 +47,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
     'chest_pain': false,
     'shortness_of_breath': false,
   };
-  
+
   // Risk assessment
   final Map<String, bool> _riskFactors = {
     'close_contact': false,
@@ -61,7 +61,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
     'alcohol_use': false,
     'malnutrition': false,
   };
-  
+
   // Clinical examination
   final Map<String, String> _clinicalFindings = {
     'weight': '',
@@ -75,7 +75,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
     'chest_examination': '',
     'additional_notes': '',
   };
-  
+
   // Test recommendations
   final Map<String, bool> _recommendedTests = {
     'chest_xray': false,
@@ -86,10 +86,10 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
     'hiv_test': false,
     'diabetes_screening': false,
   };
-  
+
   String _overallRiskLevel = 'low';
   final List<String> _referralRecommendations = [];
-  
+
   final List<Map<String, String>> _symptomDefinitions = [
     {
       'key': 'persistent_cough',
@@ -103,7 +103,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
     },
     {
       'key': 'weight_loss',
-      'title': 'Unexplained Weight Loss',
+      'title': 'Weight Loss',
       'description': 'Significant weight loss without trying',
     },
     {
@@ -145,17 +145,18 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
-    );
-    
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
+
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       setState(() {
         _currentStep = _tabController.index;
       });
     });
-    
+
     _fadeController.forward();
     _loadMemberInfo();
   }
@@ -168,16 +169,18 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
   }
 
   void _loadMemberInfo() {
-    _memberInfo = widget.memberData ?? {
-      'id': 'HM001',
-      'name': 'Fatima Khan',
-      'age': 32,
-      'gender': 'Female',
-      'relationship': 'Spouse',
-      'phone': '+92 300 7654321',
-      'patientId': 'PAT001',
-      'householdId': 'HH001',
-    };
+    _memberInfo =
+        widget.memberData ??
+        {
+          'id': 'HM001',
+          'name': 'Fatima Khan',
+          'age': 32,
+          'gender': 'Female',
+          'relationship': 'Spouse',
+          'phone': '+92 300 7654321',
+          'patientId': 'PAT001',
+          'householdId': 'HH001',
+        };
   }
 
   @override
@@ -202,42 +205,45 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
               indicatorColor: Colors.white,
               indicatorWeight: 3,
               labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
-          unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
-          tabs: const [
-            Tab(text: 'Symptoms'),
-            Tab(text: 'Risk Factors'),
-            Tab(text: 'Examination'),
-            Tab(text: 'Assessment'),
-          ],
-        ),
-      ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              _buildMemberHeader(),
-              _buildProgressIndicator(),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildSymptomsTab(),
-                    _buildRiskFactorsTab(),
-                    _buildExaminationTab(),
-                    _buildAssessmentTab(),
-                  ],
-                ),
+              unselectedLabelColor: Colors.white70,
+              labelStyle: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
-              _buildNavigationButtons(),
-            ],
+              unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
+              tabs: const [
+                Tab(text: 'Symptoms'),
+                Tab(text: 'Risk Factors'),
+                Tab(text: 'Examination'),
+                Tab(text: 'Assessment'),
+              ],
+            ),
           ),
-        ),
-      ),
-    );
+          body: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  _buildMemberHeader(),
+                  _buildProgressIndicator(),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildSymptomsTab(),
+                        _buildRiskFactorsTab(),
+                        _buildExaminationTab(),
+                        _buildAssessmentTab(),
+                      ],
+                    ),
+                  ),
+                  _buildNavigationButtons(),
+                ],
+              ),
+            ),
+          ),
+        );
       },
     );
   }
@@ -259,12 +265,14 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundColor: _memberInfo['gender'] == 'Male' 
-                ? Colors.blue.withOpacity(0.1) 
+            backgroundColor: _memberInfo['gender'] == 'Male'
+                ? Colors.blue.withOpacity(0.1)
                 : Colors.pink.withOpacity(0.1),
             child: Icon(
               _memberInfo['gender'] == 'Male' ? Icons.man : Icons.woman,
-              color: _memberInfo['gender'] == 'Male' ? Colors.blue : Colors.pink,
+              color: _memberInfo['gender'] == 'Male'
+                  ? Colors.blue
+                  : Colors.pink,
               size: 28,
             ),
           ),
@@ -318,14 +326,14 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
         children: List.generate(4, (index) {
           bool isCompleted = index < _currentStep;
           bool isCurrent = index == _currentStep;
-          
+
           return Expanded(
             child: Container(
               margin: EdgeInsets.only(right: index < 3 ? 8 : 0),
               height: 4,
               decoration: BoxDecoration(
-                color: isCompleted || isCurrent 
-                    ? MadadgarTheme.primaryColor 
+                color: isCompleted || isCurrent
+                    ? MadadgarTheme.primaryColor
                     : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(2),
               ),
@@ -374,15 +382,15 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           ..._symptomDefinitions.map((symptom) {
             return _buildSymptomCard(symptom);
           }).toList(),
-          
+
           const SizedBox(height: 16),
-          
+
           _buildSymptomSummary(),
         ],
       ),
@@ -391,8 +399,12 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
 
   Widget _buildSymptomCard(Map<String, String> symptom) {
     bool isSelected = _symptoms[symptom['key']] ?? false;
-    bool isHighPriority = ['cough_with_blood', 'persistent_cough', 'weight_loss'].contains(symptom['key']);
-    
+    bool isHighPriority = [
+      'cough_with_blood',
+      'persistent_cough',
+      'weight_loss',
+    ].contains(symptom['key']);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
@@ -408,13 +420,15 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected 
+                color: isSelected
                     ? (isHighPriority ? Colors.red : MadadgarTheme.primaryColor)
                     : Colors.transparent,
                 width: 2,
               ),
-              color: isSelected 
-                  ? (isHighPriority ? Colors.red.withOpacity(0.1) : MadadgarTheme.primaryColor.withOpacity(0.1))
+              color: isSelected
+                  ? (isHighPriority
+                        ? Colors.red.withOpacity(0.1)
+                        : MadadgarTheme.primaryColor.withOpacity(0.1))
                   : null,
             ),
             child: Row(
@@ -425,16 +439,20 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected 
-                          ? (isHighPriority ? Colors.red : MadadgarTheme.primaryColor)
+                      color: isSelected
+                          ? (isHighPriority
+                                ? Colors.red
+                                : MadadgarTheme.primaryColor)
                           : Colors.grey.shade400,
                       width: 2,
                     ),
-                    color: isSelected 
-                        ? (isHighPriority ? Colors.red : MadadgarTheme.primaryColor)
+                    color: isSelected
+                        ? (isHighPriority
+                              ? Colors.red
+                              : MadadgarTheme.primaryColor)
                         : Colors.transparent,
                   ),
-                  child: isSelected 
+                  child: isSelected
                       ? const Icon(Icons.check, color: Colors.white, size: 16)
                       : null,
                 ),
@@ -456,7 +474,10 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
                           if (isHighPriority) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.red.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
@@ -494,15 +515,21 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
   Widget _buildSymptomSummary() {
     int selectedCount = _symptoms.values.where((v) => v).length;
     bool hasHighPrioritySymptoms = _symptoms.entries
-        .where((e) => ['cough_with_blood', 'persistent_cough', 'weight_loss'].contains(e.key))
+        .where(
+          (e) => [
+            'cough_with_blood',
+            'persistent_cough',
+            'weight_loss',
+          ].contains(e.key),
+        )
         .any((e) => e.value);
-    
-    Color summaryColor = hasHighPrioritySymptoms 
-        ? Colors.red 
-        : selectedCount > 0 
-            ? Colors.orange 
-            : Colors.green;
-    
+
+    Color summaryColor = hasHighPrioritySymptoms
+        ? Colors.red
+        : selectedCount > 0
+        ? Colors.orange
+        : Colors.green;
+
     return Card(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -516,11 +543,11 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
             Row(
               children: [
                 Icon(
-                  hasHighPrioritySymptoms 
-                      ? Icons.warning 
-                      : selectedCount > 0 
-                          ? Icons.info 
-                          : Icons.check_circle,
+                  hasHighPrioritySymptoms
+                      ? Icons.warning
+                      : selectedCount > 0
+                      ? Icons.info
+                      : Icons.check_circle,
                   color: summaryColor,
                 ),
                 const SizedBox(width: 8),
@@ -608,50 +635,84 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
-          _buildRiskFactorSection(
-            'Exposure Factors',
-            [
-              {'key': 'close_contact', 'title': 'Close Contact', 'description': 'Regular close contact with TB patient'},
-              {'key': 'prolonged_exposure', 'title': 'Prolonged Exposure', 'description': 'Extended time spent with TB patient'},
-              {'key': 'shared_sleeping_space', 'title': 'Shared Sleeping Space', 'description': 'Sleeping in same room/bed'},
-              {'key': 'shared_meals', 'title': 'Shared Meals', 'description': 'Eating meals together regularly'},
-            ],
-          ),
-          
+
+          _buildRiskFactorSection('Exposure Factors', [
+            {
+              'key': 'close_contact',
+              'title': 'Close Contact',
+              'description': 'Regular close contact with TB patient',
+            },
+            {
+              'key': 'prolonged_exposure',
+              'title': 'Prolonged Exposure',
+              'description': 'Extended time spent with TB patient',
+            },
+            {
+              'key': 'shared_sleeping_space',
+              'title': 'Shared Sleeping Space',
+              'description': 'Sleeping in same room/bed',
+            },
+            {
+              'key': 'shared_meals',
+              'title': 'Shared Meals',
+              'description': 'Eating meals together regularly',
+            },
+          ]),
+
           const SizedBox(height: 16),
-          
-          _buildRiskFactorSection(
-            'Medical Risk Factors',
-            [
-              {'key': 'immunocompromised', 'title': 'Immunocompromised', 'description': 'Weakened immune system'},
-              {'key': 'diabetes', 'title': 'Diabetes', 'description': 'Diagnosed with diabetes mellitus'},
-              {'key': 'hiv_positive', 'title': 'HIV Positive', 'description': 'HIV infection'},
-              {'key': 'malnutrition', 'title': 'Malnutrition', 'description': 'Poor nutritional status'},
-            ],
-          ),
-          
+
+          _buildRiskFactorSection('Medical Risk Factors', [
+            {
+              'key': 'immunocompromised',
+              'title': 'Immunocompromised',
+              'description': 'Weakened immune system',
+            },
+            {
+              'key': 'diabetes',
+              'title': 'Diabetes',
+              'description': 'Diagnosed with diabetes mellitus',
+            },
+            {
+              'key': 'hiv_positive',
+              'title': 'HIV Positive',
+              'description': 'HIV infection',
+            },
+            {
+              'key': 'malnutrition',
+              'title': 'Malnutrition',
+              'description': 'Poor nutritional status',
+            },
+          ]),
+
           const SizedBox(height: 16),
-          
-          _buildRiskFactorSection(
-            'Lifestyle Risk Factors',
-            [
-              {'key': 'smoking', 'title': 'Smoking', 'description': 'Current or recent tobacco use'},
-              {'key': 'alcohol_use', 'title': 'Alcohol Use', 'description': 'Regular alcohol consumption'},
-            ],
-          ),
-          
+
+          _buildRiskFactorSection('Lifestyle Risk Factors', [
+            {
+              'key': 'smoking',
+              'title': 'Smoking',
+              'description': 'Current or recent tobacco use',
+            },
+            {
+              'key': 'alcohol_use',
+              'title': 'Alcohol Use',
+              'description': 'Regular alcohol consumption',
+            },
+          ]),
+
           const SizedBox(height: 16),
-          
+
           _buildRiskSummary(),
         ],
       ),
     );
   }
 
-  Widget _buildRiskFactorSection(String title, List<Map<String, String>> factors) {
+  Widget _buildRiskFactorSection(
+    String title,
+    List<Map<String, String>> factors,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -676,7 +737,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
 
   Widget _buildRiskFactorTile(Map<String, String> factor) {
     bool isSelected = _riskFactors[factor['key']] ?? false;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -689,10 +750,14 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isSelected ? MadadgarTheme.primaryColor.withOpacity(0.1) : Colors.grey.shade50,
+            color: isSelected
+                ? MadadgarTheme.primaryColor.withOpacity(0.1)
+                : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isSelected ? MadadgarTheme.primaryColor : Colors.grey.shade300,
+              color: isSelected
+                  ? MadadgarTheme.primaryColor
+                  : Colors.grey.shade300,
             ),
           ),
           child: Row(
@@ -702,12 +767,16 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
                 height: 20,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected ? MadadgarTheme.primaryColor : Colors.transparent,
+                  color: isSelected
+                      ? MadadgarTheme.primaryColor
+                      : Colors.transparent,
                   border: Border.all(
-                    color: isSelected ? MadadgarTheme.primaryColor : Colors.grey.shade400,
+                    color: isSelected
+                        ? MadadgarTheme.primaryColor
+                        : Colors.grey.shade400,
                   ),
                 ),
-                child: isSelected 
+                child: isSelected
                     ? const Icon(Icons.check, color: Colors.white, size: 14)
                     : null,
               ),
@@ -745,7 +814,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
     int riskCount = _riskFactors.values.where((v) => v).length;
     String riskLevel;
     Color riskColor;
-    
+
     if (riskCount >= 4) {
       riskLevel = 'HIGH';
       riskColor = Colors.red;
@@ -756,7 +825,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
       riskLevel = 'LOW';
       riskColor = Colors.green;
     }
-    
+
     return Card(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -792,10 +861,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
             ),
             Text(
               '$riskCount risk factor${riskCount != 1 ? 's' : ''} identified',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: riskColor,
-              ),
+              style: GoogleFonts.poppins(fontSize: 14, color: riskColor),
             ),
           ],
         ),
@@ -817,7 +883,10 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.medical_services, color: MadadgarTheme.primaryColor),
+                      Icon(
+                        Icons.medical_services,
+                        color: MadadgarTheme.primaryColor,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Clinical Examination',
@@ -841,9 +910,9 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -927,9 +996,9 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -1024,7 +1093,10 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: MadadgarTheme.primaryColor),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
           ),
           onChanged: (value) {
             _clinicalFindings[key] = value;
@@ -1036,7 +1108,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
 
   Widget _buildAssessmentTab() {
     _calculateOverallAssessment();
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1074,21 +1146,21 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           _buildOverallRiskCard(),
-          
+
           const SizedBox(height: 16),
-          
+
           _buildRecommendedTestsCard(),
-          
+
           const SizedBox(height: 16),
-          
+
           _buildReferralRecommendationsCard(),
-          
+
           const SizedBox(height: 16),
-          
+
           _buildScreeningSummaryCard(),
         ],
       ),
@@ -1097,7 +1169,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
 
   Widget _buildOverallRiskCard() {
     Color riskColor = _getRiskColor(_overallRiskLevel);
-    
+
     return Card(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -1175,7 +1247,9 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
               ],
             ),
             const SizedBox(height: 16),
-            ..._getRecommendedTestsList().map((test) => _buildTestCheckbox(test)).toList(),
+            ..._getRecommendedTestsList()
+                .map((test) => _buildTestCheckbox(test))
+                .toList(),
           ],
         ),
       ),
@@ -1184,7 +1258,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
 
   Widget _buildTestCheckbox(Map<String, String> test) {
     bool isRecommended = _recommendedTests[test['key']] ?? false;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -1322,11 +1396,23 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
               ],
             ),
             const SizedBox(height: 16),
-            _buildSummaryRow('Symptoms', '${_symptoms.values.where((v) => v).length}/9 reported'),
-            _buildSummaryRow('Risk Factors', '${_riskFactors.values.where((v) => v).length}/10 identified'),
-            _buildSummaryRow('Tests Recommended', '${_recommendedTests.values.where((v) => v).length} tests'),
+            _buildSummaryRow(
+              'Symptoms',
+              '${_symptoms.values.where((v) => v).length}/9 reported',
+            ),
+            _buildSummaryRow(
+              'Risk Factors',
+              '${_riskFactors.values.where((v) => v).length}/10 identified',
+            ),
+            _buildSummaryRow(
+              'Tests Recommended',
+              '${_recommendedTests.values.where((v) => v).length} tests',
+            ),
             _buildSummaryRow('Overall Risk', _overallRiskLevel.toUpperCase()),
-            _buildSummaryRow('Screening Date', '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}'),
+            _buildSummaryRow(
+              'Screening Date',
+              '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+            ),
           ],
         ),
       ),
@@ -1341,10 +1427,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
         children: [
           Text(
             label,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.black54,
-            ),
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
           ),
           Text(
             value,
@@ -1389,12 +1472,12 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
                 ),
               ),
             ),
-          
+
           if (_currentStep > 0) const SizedBox(width: 16),
-          
+
           Expanded(
             child: ElevatedButton(
-              onPressed: _currentStep < 3 
+              onPressed: _currentStep < 3
                   ? () => _tabController.animateTo(_currentStep + 1)
                   : _submitScreening,
               style: ElevatedButton.styleFrom(
@@ -1411,13 +1494,17 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Text(
                           'Submitting...',
-                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     )
@@ -1434,24 +1521,35 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
 
   void _calculateOverallAssessment() {
     int riskScore = 0;
-    
+
     // Symptom scoring
     int symptomCount = _symptoms.values.where((v) => v).length;
     bool hasHighPrioritySymptoms = _symptoms.entries
-        .where((e) => ['cough_with_blood', 'persistent_cough', 'weight_loss'].contains(e.key))
+        .where(
+          (e) => [
+            'cough_with_blood',
+            'persistent_cough',
+            'weight_loss',
+          ].contains(e.key),
+        )
         .any((e) => e.value);
-    
+
     if (hasHighPrioritySymptoms) {
       riskScore += 5;
-    } else if (symptomCount >= 3) riskScore += 3;
-    else if (symptomCount >= 1) riskScore += 1;
-    
+    } else if (symptomCount >= 3)
+      riskScore += 3;
+    else if (symptomCount >= 1)
+      riskScore += 1;
+
     // Risk factor scoring
     int riskFactorCount = _riskFactors.values.where((v) => v).length;
-    if (riskFactorCount >= 4) riskScore += 4;
-    else if (riskFactorCount >= 2) riskScore += 2;
-    else if (riskFactorCount >= 1) riskScore += 1;
-    
+    if (riskFactorCount >= 4)
+      riskScore += 4;
+    else if (riskFactorCount >= 2)
+      riskScore += 2;
+    else if (riskFactorCount >= 1)
+      riskScore += 1;
+
     // Determine overall risk level
     if (riskScore >= 6) {
       _overallRiskLevel = 'high';
@@ -1460,7 +1558,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
     } else {
       _overallRiskLevel = 'low';
     }
-    
+
     // Set referral recommendations
     _referralRecommendations.clear();
     if (_overallRiskLevel == 'high') {
@@ -1475,7 +1573,12 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
         'Schedule follow-up in 2 weeks',
       ]);
     }
-    
+
+    // Add nearest facility recommendation for medium/high risk
+    if (_overallRiskLevel != 'low') {
+      _referralRecommendations.add(_facilityReferralText());
+    }
+
     if (hasHighPrioritySymptoms) {
       _referralRecommendations.add('Emergency evaluation for TB symptoms');
     }
@@ -1483,16 +1586,17 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
 
   List<Map<String, String>> _getRecommendedTestsList() {
     List<Map<String, String>> tests = [];
-    
+
     // Always recommend basic tests
     tests.add({
       'key': 'chest_xray',
       'title': 'Chest X-ray',
       'description': 'To check for lung abnormalities',
     });
-    
+
     // Symptom-based recommendations
-    if (_symptoms['persistent_cough'] == true || _symptoms['cough_with_blood'] == true) {
+    if (_symptoms['persistent_cough'] == true ||
+        _symptoms['cough_with_blood'] == true) {
       tests.addAll([
         {
           'key': 'sputum_smear',
@@ -1506,7 +1610,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
         },
       ]);
     }
-    
+
     // Risk-based recommendations
     if (_riskFactors['hiv_positive'] != true && _overallRiskLevel != 'low') {
       tests.add({
@@ -1515,7 +1619,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
         'description': 'HIV increases TB risk',
       });
     }
-    
+
     if (_riskFactors['diabetes'] != true) {
       tests.add({
         'key': 'diabetes_screening',
@@ -1523,13 +1627,13 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
         'description': 'Diabetes increases TB risk',
       });
     }
-    
+
     tests.add({
       'key': 'tuberculin_skin_test',
       'title': 'Tuberculin Skin Test (TST)',
       'description': 'To detect latent TB infection',
     });
-    
+
     // Auto-select based on risk level
     if (_overallRiskLevel == 'high') {
       _recommendedTests['chest_xray'] = true;
@@ -1539,7 +1643,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
       _recommendedTests['chest_xray'] = true;
       _recommendedTests['tuberculin_skin_test'] = true;
     }
-    
+
     return tests;
   }
 
@@ -1569,24 +1673,62 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
     }
   }
 
+  // Basic placeholder facility suggestion based on risk level
+  // In future, replace with GPS + real facility list (Firestore/API)
+  Map<String, String> _getFacilityRecommendation() {
+    switch (_overallRiskLevel) {
+      case 'high':
+        return {
+          'name': 'District TB Hospital',
+          'distance': '5.0 km',
+          'contact': '+92 51 1234567',
+        };
+      case 'medium':
+        return {
+          'name': 'Community Health Center',
+          'distance': '2.5 km',
+          'contact': '+92 51 7654321',
+        };
+      default:
+        return {
+          'name': 'Primary Care Clinic',
+          'distance': '1.2 km',
+          'contact': '+92 51 1112223',
+        };
+    }
+  }
+
+  String _facilityReferralText() {
+    final facility = _getFacilityRecommendation();
+    return 'Refer to ${facility['name']} (${facility['distance']}) for evaluation and testing.';
+  }
+
   void _submitScreening() async {
     setState(() => _isSubmitting = true);
-    
+
     try {
       // Get the provider
-      final contactProvider = Provider.of<ContactTracingProvider>(context, listen: false);
-      
+      final contactProvider = Provider.of<ContactTracingProvider>(
+        context,
+        listen: false,
+      );
+
       // Prepare screening data
       List<String> symptoms = _symptoms.entries
           .where((entry) => entry.value)
           .map((entry) => entry.key)
           .toList();
-      
+
       List<String> riskFactors = _riskFactors.entries
           .where((entry) => entry.value)
           .map((entry) => entry.key)
           .toList();
-      
+
+      // Determine placeholder nearest facility based on risk
+      final facility = _getFacilityRecommendation();
+      final notes =
+          'Contact screening completed via CHW mobile app. Risk level: $_overallRiskLevel. Risk factors: ${riskFactors.join(', ')}. Referral: ${facility['name']} (${facility['distance']}), Contact: ${facility['contact']}.';
+
       // Submit the screening
       await contactProvider.screenContact(
         householdId: widget.householdId ?? 'unknown',
@@ -1596,46 +1738,50 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
         age: _memberInfo['age'] ?? 0,
         gender: _memberInfo['gender'] ?? 'Unknown',
         symptoms: symptoms,
-        notes: 'Contact screening completed via CHW mobile app. Risk level: $_overallRiskLevel. Risk factors: ${riskFactors.join(', ')}',
+        notes: notes,
       );
-      
+
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to save screening: $e', style: GoogleFonts.poppins()),
+            content: Text(
+              'Failed to save screening: $e',
+              style: GoogleFonts.poppins(),
+            ),
             backgroundColor: Colors.red,
           ),
         );
       }
       return;
     }
-      
-      // Show success message
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green),
-              const SizedBox(width: 8),
-              Text('Screening Complete', style: GoogleFonts.poppins()),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Contact screening for ${_memberInfo['name']} has been completed successfully.',
-                style: GoogleFonts.poppins(),
-              ),
-              const SizedBox(height: 16),
+
+    // Show success message
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text('Screening Done', style: GoogleFonts.poppins()),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Contact screening for ${_memberInfo['name']} has been completed successfully.',
+              style: GoogleFonts.poppins(),
+            ),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -1659,6 +1805,27 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
                       color: _getRiskColor(_overallRiskLevel),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.local_hospital,
+                        size: 16,
+                        color: Colors.blue,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _facilityReferralText(),
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -1672,7 +1839,10 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
                 _scheduleUrgentFollowUp();
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: Text('Schedule Urgent Follow-up', style: GoogleFonts.poppins(color: Colors.white)),
+              child: Text(
+                'Schedule Urgent Follow-up',
+                style: GoogleFonts.poppins(color: Colors.white),
+              ),
             ),
           TextButton(
             onPressed: () {
@@ -1689,7 +1859,10 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen>
   void _scheduleUrgentFollowUp() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Urgent follow-up scheduled for tomorrow', style: GoogleFonts.poppins()),
+        content: Text(
+          'Urgent follow-up scheduled for tomorrow',
+          style: GoogleFonts.poppins(),
+        ),
         backgroundColor: Colors.red,
       ),
     );

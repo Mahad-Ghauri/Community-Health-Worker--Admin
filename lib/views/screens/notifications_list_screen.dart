@@ -557,7 +557,7 @@ class _NotificationsListScreenState extends State<NotificationsListScreen>
     if (notification.relatedId != null) {
       Navigator.pushNamed(
         context,
-        '/patient_details',
+        '/patient-details',
         arguments: {
           'patientId': notification.relatedId,
           'fromNotification': true,

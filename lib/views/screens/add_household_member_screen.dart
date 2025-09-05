@@ -253,7 +253,7 @@ class _AddHouseholdMemberScreenState extends State<AddHouseholdMemberScreen>
                   flex: 1,
                   child: _buildDropdown(
                     label: 'Gender *',
-                    hint: 'Select',
+                    hint: 'Select Gender',
                     value: _selectedGender.isEmpty ? null : _selectedGender,
                     items: _genderOptions,
                     icon: Icons.person,
