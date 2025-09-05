@@ -89,13 +89,22 @@ class AppRouter {
       case '/search-patients':
         return ElegantRoute.build(const PatientSearchScreen());
       case '/patient-details':
-        return ElegantRoute.build(const PatientDetailsScreen());
+        final patientId = settings.arguments as String?;
+        return ElegantRoute.build(PatientDetailsScreen(patientId: patientId));
       case '/register-patient':
         return ElegantRoute.build(const RegisterPatientScreen());
       case '/edit-patient':
-        return ElegantRoute.build(const EditPatientScreen());
+        final args = settings.arguments;
+        String? patientId;
+        if (args is Map<String, dynamic>) {
+          patientId = args['patientId'] as String?;
+        } else if (args is String) {
+          patientId = args;
+        }
+        return ElegantRoute.build(EditPatientScreen(patientId: patientId));
       case '/household-members':
-        return ElegantRoute.build(const HouseholdMembersScreen());
+        final patientId = settings.arguments as String?;
+        return ElegantRoute.build(HouseholdMembersScreen(patientId: patientId));
       case '/add-household-member':
         return ElegantRoute.build(const AddHouseholdMemberScreen());
 

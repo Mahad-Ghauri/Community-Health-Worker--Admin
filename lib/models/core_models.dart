@@ -158,9 +158,27 @@ class Patient {
       consentSignature: data['consentSignature'],
       createdBy: data['createdBy'] ?? '',
       validatedBy: data['validatedBy'],
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      diagnosisDate: (data['diagnosisDate'] as Timestamp?)?.toDate(),
+      createdAt: _parseDateTime(data['createdAt']) ?? DateTime.now(),
+      diagnosisDate: _parseDateTime(data['diagnosisDate']),
     );
+  }
+
+  /// Helper method to parse DateTime from various formats
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        print('Warning: Failed to parse date string: $value');
+        return null;
+      }
+    }
+    
+    return null;
   }
 }
 
@@ -305,14 +323,32 @@ class HouseholdMember {
   }
 
   factory HouseholdMember.fromMap(Map<String, dynamic> data) {
+    // Extract relationship from name if present (e.g., "Khadija Ali (Wife)" -> "Wife")
+    String name = data['name'] ?? '';
+    String relationship = '';
+    if (name.contains('(') && name.contains(')')) {
+      final start = name.lastIndexOf('(');
+      final end = name.lastIndexOf(')');
+      if (start != -1 && end != -1 && end > start) {
+        relationship = name.substring(start + 1, end);
+        name = name.substring(0, start).trim();
+      }
+    }
+    
+    // Handle both 'result' and 'screeningStatus' fields for compatibility
+    String screeningStatus = data['screeningStatus'] ?? data['result'] ?? 'not_screened';
+    if (screeningStatus == 'not_tested') {
+      screeningStatus = 'not_screened';
+    }
+    
     return HouseholdMember(
-      name: data['name'] ?? '',
+      name: name,
       age: data['age'] ?? 0,
-      gender: data['gender'] ?? '',
-      relationship: data['relationship'] ?? '',
+      gender: data['gender'] ?? 'Unknown',
+      relationship: data['relationship'] ?? relationship,
       phone: data['phone'],
       screened: data['screened'] ?? false,
-      screeningStatus: data['screeningStatus'] ?? 'not_screened',
+      screeningStatus: screeningStatus,
       lastScreeningDate: (data['lastScreeningDate'] as Timestamp?)?.toDate(),
     );
   }

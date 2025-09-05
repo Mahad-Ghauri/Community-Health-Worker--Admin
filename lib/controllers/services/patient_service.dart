@@ -125,9 +125,17 @@ class PatientService {
     }
 
     return query.snapshots().map((snapshot) {
-      List<Patient> patients = snapshot.docs
-          .map((doc) => Patient.fromFirestore(doc.data() as Map<String, dynamic>))
-          .toList();
+      List<Patient> patients = [];
+      
+      for (final doc in snapshot.docs) {
+        try {
+          final patient = Patient.fromFirestore(doc.data() as Map<String, dynamic>);
+          patients.add(patient);
+        } catch (e) {
+          // Skip patients with invalid data format and log the error
+          print('Warning: Skipping patient ${doc.id} due to data format error: $e');
+        }
+      }
 
       // Apply search filter on client side for complex searches
       if (searchQuery != null && searchQuery.isNotEmpty) {
@@ -214,9 +222,17 @@ class PatientService {
           .where('assignedCHW', isEqualTo: currentUser.uid)
           .get();
 
-      final patients = snapshot.docs
-          .map((doc) => Patient.fromFirestore(doc.data() as Map<String, dynamic>))
-          .toList();
+      final patients = <Patient>[];
+      
+      for (final doc in snapshot.docs) {
+        try {
+          final patient = Patient.fromFirestore(doc.data() as Map<String, dynamic>);
+          patients.add(patient);
+        } catch (e) {
+          // Skip patients with invalid data format and log the error
+          print('Warning: Skipping patient ${doc.id} due to data format error: $e');
+        }
+      }
 
       return {
         'total': patients.length,

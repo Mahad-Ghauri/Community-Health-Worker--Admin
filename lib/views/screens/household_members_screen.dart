@@ -2,7 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/controllers/providers/patient_provider.dart';
+import 'package:chw_tb/controllers/providers/secondary_providers.dart';
+import 'package:chw_tb/models/core_models.dart';
 
 class HouseholdMembersScreen extends StatefulWidget {
   final String? patientId;
@@ -18,12 +22,14 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   
-  bool _isLoading = false;
+  bool _isLoading = true;
   String _selectedFilter = 'all';
+  String? _error;
   
   // Patient and household data
-  Map<String, dynamic> _patientData = {};
-  List<Map<String, dynamic>> _householdMembers = [];
+  Patient? _patient;
+  Household? _household;
+  List<HouseholdMember> _householdMembers = [];
   Map<String, dynamic> _householdStats = {};
 
   @override
@@ -42,131 +48,105 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
   }
 
   @override
+  void didUpdateWidget(HouseholdMembersScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    print('👥 HouseholdScreen: didUpdateWidget called');
+    print('👥 HouseholdScreen: Old patient ID: ${oldWidget.patientId}');
+    print('👥 HouseholdScreen: New patient ID: ${widget.patientId}');
+    // If the patient ID changed, reload the data
+    if (oldWidget.patientId != widget.patientId) {
+      print('👥 HouseholdScreen: Patient ID changed, reloading data...');
+      _loadHouseholdData();
+    }
+  }
+
+  @override
   void dispose() {
+    print('👥 HouseholdScreen: Disposing - clearing household data');
     _fadeController.dispose();
+    // Clear the household provider data when leaving the screen
+    final householdProvider = Provider.of<HouseholdProvider>(context, listen: false);
+    householdProvider.clearHouseholdData();
     super.dispose();
   }
 
-  void _loadHouseholdData() {
-    setState(() => _isLoading = true);
+  void _loadHouseholdData() async {
+    print('👥 HouseholdScreen: Starting to load household data for patient: ${widget.patientId}');
     
-    // Mock patient data
-    _patientData = {
-      'id': widget.patientId ?? 'PAT001',
-      'name': 'Ahmad Khan',
-      'age': 35,
-      'gender': 'Male',
-      'householdId': 'HH001',
-      'address': 'House 123, Street 5, Lahore',
-      'isIndexCase': true,
-    };
-    
-    // Mock household members
-    _householdMembers = [
-      {
-        'id': 'HM001',
-        'name': 'Fatima Khan',
-        'age': 32,
-        'gender': 'Female',
-        'relationship': 'Spouse',
-        'phone': '+92 300 7654321',
-        'screeningStatus': 'completed',
-        'screeningDate': DateTime(2025, 8, 15),
-        'riskLevel': 'high',
-        'tbStatus': 'negative',
-        'nextScreeningDue': DateTime(2025, 11, 15),
-        'isIndexCase': false,
-        'symptoms': [],
-        'testResults': {
-          'xray': 'normal',
-          'sputum': 'negative',
-          'skinTest': 'negative',
-        },
-      },
-      {
-        'id': 'HM002',
-        'name': 'Ali Khan',
-        'age': 8,
-        'gender': 'Male',
-        'relationship': 'Son',
-        'phone': null,
-        'screeningStatus': 'pending',
-        'screeningDate': null,
-        'riskLevel': 'high',
-        'tbStatus': 'unknown',
-        'nextScreeningDue': DateTime(2025, 9, 10),
-        'isIndexCase': false,
-        'symptoms': ['persistent_cough'],
-        'testResults': {},
-      },
-      {
-        'id': 'HM003',
-        'name': 'Aisha Khan',
-        'age': 12,
-        'gender': 'Female',
-        'relationship': 'Daughter',
-        'phone': null,
-        'screeningStatus': 'completed',
-        'screeningDate': DateTime(2025, 8, 20),
-        'riskLevel': 'medium',
-        'tbStatus': 'negative',
-        'nextScreeningDue': DateTime(2025, 12, 20),
-        'isIndexCase': false,
-        'symptoms': [],
-        'testResults': {
-          'xray': 'normal',
-          'skinTest': 'negative',
-        },
-      },
-      {
-        'id': 'HM004',
-        'name': 'Muhammad Khan',
-        'age': 65,
-        'gender': 'Male',
-        'relationship': 'Father',
-        'phone': '+92 301 9876543',
-        'screeningStatus': 'overdue',
-        'screeningDate': null,
-        'riskLevel': 'high',
-        'tbStatus': 'unknown',
-        'nextScreeningDue': DateTime(2025, 8, 30),
-        'isIndexCase': false,
-        'symptoms': ['weight_loss', 'fatigue'],
-        'testResults': {},
-      },
-      {
-        'id': 'HM005',
-        'name': 'Khadija Khan',
-        'age': 60,
-        'gender': 'Female',
-        'relationship': 'Mother',
-        'phone': '+92 302 1234567',
-        'screeningStatus': 'scheduled',
-        'screeningDate': DateTime(2025, 9, 8),
-        'riskLevel': 'medium',
-        'tbStatus': 'unknown',
-        'nextScreeningDue': DateTime(2025, 9, 8),
-        'isIndexCase': false,
-        'symptoms': [],
-        'testResults': {},
-      },
-    ];
-    
-    // Calculate household statistics
-    _householdStats = {
-      'totalMembers': _householdMembers.length + 1, // +1 for index case
-      'screenedMembers': _householdMembers.where((m) => m['screeningStatus'] == 'completed').length,
-      'pendingScreening': _householdMembers.where((m) => m['screeningStatus'] == 'pending' || m['screeningStatus'] == 'scheduled').length,
-      'overdueScreening': _householdMembers.where((m) => m['screeningStatus'] == 'overdue').length,
-      'highRiskMembers': _householdMembers.where((m) => m['riskLevel'] == 'high').length,
-      'symptomatic': _householdMembers.where((m) => (m['symptoms'] as List).isNotEmpty).length,
-    };
-    
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        setState(() => _isLoading = false);
+    if (widget.patientId == null) {
+      print('👥 HouseholdScreen ERROR: Patient ID is null');
+      setState(() {
+        _error = 'Patient ID not provided';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+        // Clear existing data
+        _householdMembers.clear();
+        _household = null;
+        _householdStats.clear();
+      });
+
+      print('👥 HouseholdScreen: Getting providers...');
+      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+      final householdProvider = Provider.of<HouseholdProvider>(context, listen: false);
+      
+      // Find the patient by ID
+      _patient = patientProvider.patients
+          .where((p) => p.patientId == widget.patientId)
+          .firstOrNull;
+      
+      print('👥 HouseholdScreen: Found patient: ${_patient?.name ?? 'Not found'}');
+      
+      if (_patient != null) {
+        print('👥 HouseholdScreen: Loading household data from provider...');
+        // Load real household data from Firestore for this specific patient
+        await householdProvider.loadPatientHousehold(widget.patientId!);
+        
+        // Get the household and its members
+        _household = householdProvider.selectedHousehold;
+        _householdMembers = _household?.members ?? [];
+        
+        print('👥 HouseholdScreen: Received household: ${_household?.householdId ?? 'null'}');
+        print('👥 HouseholdScreen: Household patient ID: ${_household?.patientId ?? 'null'}');
+        print('👥 HouseholdScreen: Number of members: ${_householdMembers.length}');
+        
+        for (int i = 0; i < _householdMembers.length; i++) {
+          final member = _householdMembers[i];
+          print('👥 HouseholdScreen: Member $i: ${member.name} (${member.relationship})');
+        }
+        
+        _calculateHouseholdStats();
+      } else {
+        print('👥 HouseholdScreen ERROR: Patient not found in provider');
+        _error = 'Patient not found';
       }
-    });
+      
+      setState(() => _isLoading = false);
+      print('👥 HouseholdScreen: Finished loading household data');
+    } catch (e) {
+      print('👥 HouseholdScreen ERROR: Exception occurred: $e');
+      setState(() {
+        _error = 'Failed to load household data: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _calculateHouseholdStats() {
+    _householdStats = {
+      'totalMembers': _householdMembers.length,
+      'screenedMembers': _householdMembers.where((m) => m.screened).length,
+      'pendingScreening': _householdMembers.where((m) => !m.screened).length,
+      'overdueScreening': 0, // Would need additional logic for overdue calculation
+      'highRiskMembers': _householdMembers.length, // All household members are considered high risk
+      'symptomatic': 0, // Would need symptom tracking in the model
+    };
   }
 
   @override
@@ -228,20 +208,57 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
           ),
         ],
       ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  _buildIndexCaseHeader(),
-                  _buildHouseholdStats(),
-                  _buildFilterTabs(),
-                  Expanded(
-                    child: _buildMembersList(),
-                  ),
-                ],
-              ),
+      body: Consumer<HouseholdProvider>(
+        builder: (context, householdProvider, child) {
+          print('👥 HouseholdScreen Consumer: Provider state changed');
+          print('👥 HouseholdScreen Consumer: Provider selected household: ${householdProvider.selectedHousehold?.householdId ?? 'null'}');
+          print('👥 HouseholdScreen Consumer: Provider household patient ID: ${householdProvider.selectedHousehold?.patientId ?? 'null'}');
+          print('👥 HouseholdScreen Consumer: Current widget patient ID: ${widget.patientId}');
+          
+          // Only update local state if the data belongs to the current patient
+          if (householdProvider.selectedHousehold != null && 
+              householdProvider.selectedHousehold!.patientId == widget.patientId) {
+            print('👥 HouseholdScreen Consumer: Updating local state with provider data');
+            // Update local state when provider changes
+            _household = householdProvider.selectedHousehold;
+            _householdMembers = _household?.members ?? [];
+            print('👥 HouseholdScreen Consumer: Updated local members count: ${_householdMembers.length}');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {
+                  _calculateHouseholdStats();
+                });
+              }
+            });
+          } else if (householdProvider.selectedHousehold != null) {
+            print('👥 HouseholdScreen Consumer: WARNING - Provider data is for different patient!');
+            print('👥 HouseholdScreen Consumer: Provider patient: ${householdProvider.selectedHousehold!.patientId}');
+            print('👥 HouseholdScreen Consumer: Expected patient: ${widget.patientId}');
+          }
+          
+          if (householdProvider.error != null) {
+            print('👥 HouseholdScreen Consumer: Provider has error: ${householdProvider.error}');
+            _error = householdProvider.error;
+          }
+          
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: _isLoading || householdProvider.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? _buildErrorState()
+                    : Column(
+                        children: [
+                          _buildIndexCaseHeader(),
+                          _buildHouseholdStats(),
+                          _buildFilterTabs(),
+                          Expanded(
+                            child: _buildMembersList(),
+                          ),
+                        ],
+                      ),
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addHouseholdMember(),
@@ -319,7 +336,7 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                       ],
                     ),
                     Text(
-                      _patientData['name'],
+                      _patient?.name ?? 'Unknown Patient',
                       style: GoogleFonts.poppins(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -327,7 +344,7 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                       ),
                     ),
                     Text(
-                      '${_patientData['age']} years • ${_patientData['gender']} • Patient ID: ${_patientData['id']}',
+                      'Patient ID: ${_patient?.patientId ?? 'Unknown'}',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         color: Colors.white.withOpacity(0.9),
@@ -341,6 +358,33 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
           
           const SizedBox(height: 16),
           
+          // Debug info - show current patient ID and household ID
+          if (_household != null)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, color: Colors.white, size: 14),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Household ID: ${_household!.householdId} | Patient: ${_household!.patientId}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          
+          const SizedBox(height: 8),
+          
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -353,7 +397,7 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _patientData['address'],
+                    _patient?.address ?? 'No address available',
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: Colors.white.withOpacity(0.9),
@@ -526,9 +570,14 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
   }
 
   Widget _buildMembersList() {
-    List<Map<String, dynamic>> filteredMembers = _getFilteredMembers();
+    List<HouseholdMember> filteredMembers = _getFilteredMembers();
+    
+    print('👥 HouseholdScreen: Building members list with ${filteredMembers.length} filtered members');
+    print('👥 HouseholdScreen: Total members in _householdMembers: ${_householdMembers.length}');
+    print('👥 HouseholdScreen: Selected filter: $_selectedFilter');
     
     if (filteredMembers.isEmpty) {
+      print('👥 HouseholdScreen: No filtered members found, showing empty state');
       return _buildEmptyState();
     }
     
@@ -536,32 +585,35 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
       padding: const EdgeInsets.all(16),
       itemCount: filteredMembers.length,
       itemBuilder: (context, index) {
+        print('👥 HouseholdScreen: Building member card for index $index: ${filteredMembers[index].name}');
         return _buildMemberCard(filteredMembers[index]);
       },
     );
   }
 
-  List<Map<String, dynamic>> _getFilteredMembers() {
+  List<HouseholdMember> _getFilteredMembers() {
     switch (_selectedFilter) {
       case 'pending':
-        return _householdMembers.where((m) => m['screeningStatus'] == 'pending' || m['screeningStatus'] == 'scheduled').toList();
+        return _householdMembers.where((m) => !m.screened).toList();
       case 'overdue':
-        return _householdMembers.where((m) => m['screeningStatus'] == 'overdue').toList();
+        // In a real implementation, you would check for overdue based on last screening date
+        return _householdMembers.where((m) => !m.screened).toList();
       case 'completed':
-        return _householdMembers.where((m) => m['screeningStatus'] == 'completed').toList();
+        return _householdMembers.where((m) => m.screened).toList();
       case 'high_risk':
-        return _householdMembers.where((m) => m['riskLevel'] == 'high').toList();
+        // For now, consider all members high risk (since they're household contacts)
+        return _householdMembers;
       case 'symptomatic':
-        return _householdMembers.where((m) => (m['symptoms'] as List).isNotEmpty).toList();
+        // Would need symptom tracking in the model
+        return [];
       default:
         return _householdMembers;
     }
   }
 
-  Widget _buildMemberCard(Map<String, dynamic> member) {
-    Color statusColor = _getStatusColor(member['screeningStatus']);
-    Color riskColor = _getRiskColor(member['riskLevel']);
-    bool hasSymptoms = (member['symptoms'] as List).isNotEmpty;
+  Widget _buildMemberCard(HouseholdMember member) {
+    Color statusColor = _getStatusColor(member.screeningStatus);
+    Color riskColor = Colors.orange; // Default to medium risk since we don't have risk level in model
     
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -580,10 +632,10 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: _getGenderColor(member['gender']).withOpacity(0.1),
+                      backgroundColor: _getGenderColor(member.gender).withOpacity(0.1),
                       child: Icon(
-                        member['gender'] == 'Male' ? Icons.man : Icons.woman,
-                        color: _getGenderColor(member['gender']),
+                        member.gender == 'Male' ? Icons.man : Icons.woman,
+                        color: _getGenderColor(member.gender),
                         size: 28,
                       ),
                     ),
@@ -596,7 +648,7 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                             children: [
                               Expanded(
                                 child: Text(
-                                  member['name'],
+                                  member.name,
                                   style: GoogleFonts.poppins(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -604,33 +656,10 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                                   ),
                                 ),
                               ),
-                              if (hasSymptoms)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.sick, color: Colors.red, size: 12),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        'SYMPTOMS',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 8,
-                                          color: Colors.red,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                             ],
                           ),
                           Text(
-                            '${member['age']} years • ${member['relationship']}',
+                            '${member.age} years • ${member.relationship}',
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               color: Colors.black54,
@@ -649,7 +678,7 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            member['screeningStatus'].toString().toUpperCase(),
+                            member.screeningStatus.toUpperCase(),
                             style: GoogleFonts.poppins(
                               fontSize: 10,
                               color: statusColor,
@@ -665,7 +694,7 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '${member['riskLevel']} RISK',
+                            'MEDIUM RISK', // Since we don't have risk level in the model
                             style: GoogleFonts.poppins(
                               fontSize: 8,
                               color: riskColor,
@@ -683,11 +712,11 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                 // Contact and screening info
                 Row(
                   children: [
-                    if (member['phone'] != null) ...[
+                    if (member.phone != null) ...[
                       Icon(Icons.phone, size: 16, color: Colors.grey.shade600),
                       const SizedBox(width: 4),
                       Text(
-                        member['phone'],
+                        member.phone!,
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: Colors.black54,
@@ -705,11 +734,11 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                       ),
                     ],
                     const Spacer(),
-                    if (member['screeningDate'] != null) ...[
+                    if (member.lastScreeningDate != null) ...[
                       Icon(Icons.event, size: 16, color: Colors.grey.shade600),
                       const SizedBox(width: 4),
                       Text(
-                        'Screened: ${_formatDate(member['screeningDate'])}',
+                        'Last screened: ${_formatDate(member.lastScreeningDate!)}',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: Colors.black54,
@@ -719,99 +748,13 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                   ],
                 ),
                 
-                const SizedBox(height: 8),
-                
-                // Next screening due
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.schedule, size: 16, color: statusColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Next screening: ${_formatDate(member['nextScreeningDue'])}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        _getDaysUntilDue(member['nextScreeningDue']),
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: statusColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Symptoms list
-                if (hasSymptoms) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.red.withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.warning, color: Colors.red, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Reported Symptoms:',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: Colors.red,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Wrap(
-                          spacing: 4,
-                          runSpacing: 2,
-                          children: (member['symptoms'] as List).map<Widget>((symptom) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                _getSymptomDisplayName(symptom),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  color: Colors.red,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                
+                // Action buttons
                 const SizedBox(height: 12),
                 
                 // Action buttons
                 Row(
                   children: [
-                    if (member['screeningStatus'] == 'pending' || member['screeningStatus'] == 'overdue') ...[
+                    if (!member.screened) ...[
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () => _startScreening(member),
@@ -828,26 +771,9 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                         ),
                       ),
                       const SizedBox(width: 8),
-                    ] else if (member['screeningStatus'] == 'scheduled') ...[
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _viewSchedule(member),
-                          icon: Icon(Icons.schedule, size: 16),
-                          label: Text(
-                            'View Schedule',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                     ],
                     
-                    if (member['phone'] != null)
+                    if (member.phone != null)
                       OutlinedButton.icon(
                         onPressed: () => _callMember(member),
                         icon: Icon(Icons.phone, size: 16),
@@ -885,7 +811,7 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
                             ],
                           ),
                         ),
-                        if (member['screeningStatus'] != 'overdue')
+                        if (member.screened)
                           PopupMenuItem(
                             value: 'reschedule',
                             child: Row(
@@ -962,6 +888,51 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
     );
   }
 
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Error Loading Household Data',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              color: Colors.red.shade600,
+            ),
+          ),
+          Text(
+            _error ?? 'Unknown error occurred',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => _loadHouseholdData(),
+            icon: const Icon(Icons.refresh),
+            label: Text(
+              'Retry',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: MadadgarTheme.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Color _getStatusColor(String status) {
     switch (status) {
       case 'completed':
@@ -977,89 +948,37 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
     }
   }
 
-  Color _getRiskColor(String risk) {
-    switch (risk) {
-      case 'high':
-        return Colors.red;
-      case 'medium':
-        return Colors.orange;
-      case 'low':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
   Color _getGenderColor(String gender) {
     return gender == 'Male' ? Colors.blue : Colors.pink;
-  }
-
-  String _getSymptomDisplayName(String symptom) {
-    switch (symptom) {
-      case 'persistent_cough':
-        return 'Persistent Cough';
-      case 'weight_loss':
-        return 'Weight Loss';
-      case 'night_sweats':
-        return 'Night Sweats';
-      case 'fever':
-        return 'Fever';
-      case 'fatigue':
-        return 'Fatigue';
-      case 'loss_of_appetite':
-        return 'Loss of Appetite';
-      default:
-        return symptom;
-    }
   }
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  String _getDaysUntilDue(DateTime dueDate) {
-    final now = DateTime.now();
-    final difference = dueDate.difference(now).inDays;
-    
-    if (difference < 0) {
-      return '${difference.abs()} days overdue';
-    } else if (difference == 0) {
-      return 'Due today';
-    } else if (difference == 1) {
-      return 'Due tomorrow';
-    } else {
-      return 'Due in $difference days';
-    }
-  }
-
   void _addHouseholdMember() {
     Navigator.pushNamed(context, '/add-household-member', arguments: {
       'patientId': widget.patientId,
-      'householdId': _patientData['householdId'],
+      'householdId': _household?.householdId,
     });
   }
 
-  void _viewMemberDetails(Map<String, dynamic> member) {
+  void _viewMemberDetails(HouseholdMember member) {
     Navigator.pushNamed(context, '/household-member-details', arguments: member);
   }
 
-  void _startScreening(Map<String, dynamic> member) {
+  void _startScreening(HouseholdMember member) {
     Navigator.pushNamed(context, '/contact-screening', arguments: member);
   }
 
-  void _viewSchedule(Map<String, dynamic> member) {
+
+  void _callMember(HouseholdMember member) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('View schedule feature coming soon!', style: GoogleFonts.poppins())),
+      SnackBar(content: Text('Calling ${member.name}...', style: GoogleFonts.poppins())),
     );
   }
 
-  void _callMember(Map<String, dynamic> member) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Calling ${member['name']}...', style: GoogleFonts.poppins())),
-    );
-  }
-
-  void _handleMemberAction(String action, Map<String, dynamic> member) {
+  void _handleMemberAction(String action, HouseholdMember member) {
     switch (action) {
       case 'edit':
         _editMember(member);
@@ -1076,29 +995,29 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
     }
   }
 
-  void _editMember(Map<String, dynamic> member) {
+  void _editMember(HouseholdMember member) {
     Navigator.pushNamed(context, '/edit-household-member', arguments: member);
   }
 
-  void _viewHistory(Map<String, dynamic> member) {
+  void _viewHistory(HouseholdMember member) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Screening history feature coming soon!', style: GoogleFonts.poppins())),
     );
   }
 
-  void _rescheduleScreening(Map<String, dynamic> member) {
+  void _rescheduleScreening(HouseholdMember member) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Reschedule screening feature coming soon!', style: GoogleFonts.poppins())),
     );
   }
 
-  void _removeMember(Map<String, dynamic> member) {
+  void _removeMember(HouseholdMember member) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Remove Member', style: GoogleFonts.poppins()),
         content: Text(
-          'Are you sure you want to remove ${member['name']} from the household?',
+          'Are you sure you want to remove ${member.name} from the household?',
           style: GoogleFonts.poppins(),
         ),
         actions: [
@@ -1110,7 +1029,7 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
             onPressed: () {
               Navigator.pop(context);
               setState(() {
-                _householdMembers.removeWhere((m) => m['id'] == member['id']);
+                _householdMembers.removeWhere((m) => m.name == member.name);
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Member removed', style: GoogleFonts.poppins())),

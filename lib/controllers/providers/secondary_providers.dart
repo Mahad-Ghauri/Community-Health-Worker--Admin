@@ -21,13 +21,22 @@ class HouseholdProvider with ChangeNotifier {
   /// Load households for a patient - Used by Screen 16: Household Members
   Future<void> loadPatientHousehold(String patientId) async {
     try {
+      print('🏠 HouseholdProvider: Loading household for patient: $patientId');
       _setLoading(true);
       _clearError();
+      
+      // Clear existing data first
+      _households.clear();
+      _selectedHousehold = null;
+      print('🏠 HouseholdProvider: Cleared existing household data');
+      notifyListeners();
 
       final snapshot = await FirebaseFirestore.instance
           .collection('households')
           .where('patientId', isEqualTo: patientId)
           .get();
+
+      print('🏠 HouseholdProvider: Firestore query returned ${snapshot.docs.length} documents');
 
       _households = snapshot.docs
           .map((doc) => Household.fromFirestore(doc.data()))
@@ -35,9 +44,22 @@ class HouseholdProvider with ChangeNotifier {
 
       _selectedHousehold = _households.isNotEmpty ? _households.first : null;
 
+      if (_selectedHousehold != null) {
+        print('🏠 HouseholdProvider: Selected household ID: ${_selectedHousehold!.householdId}');
+        print('🏠 HouseholdProvider: Household patient ID: ${_selectedHousehold!.patientId}');
+        print('🏠 HouseholdProvider: Household has ${_selectedHousehold!.members.length} members');
+        for (int i = 0; i < _selectedHousehold!.members.length; i++) {
+          final member = _selectedHousehold!.members[i];
+          print('🏠 HouseholdProvider: Member $i: ${member.name} (${member.relationship})');
+        }
+      } else {
+        print('🏠 HouseholdProvider: No household found for patient $patientId');
+      }
+
       _setLoading(false);
       notifyListeners();
     } catch (e) {
+      print('🏠 HouseholdProvider ERROR: Failed to load household: $e');
       _setError('Failed to load household: $e');
       _setLoading(false);
     }
@@ -134,6 +156,16 @@ class HouseholdProvider with ChangeNotifier {
 
   void _clearError() {
     _error = null;
+  }
+
+  /// Clear household data - useful when switching patients
+  void clearHouseholdData() {
+    print('🏠 HouseholdProvider: Clearing household data');
+    _households.clear();
+    _selectedHousehold = null;
+    _error = null;
+    notifyListeners();
+    print('🏠 HouseholdProvider: Household data cleared and listeners notified');
   }
 }
 

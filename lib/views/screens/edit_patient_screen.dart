@@ -2,7 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/controllers/providers/patient_provider.dart';
+import 'package:chw_tb/models/core_models.dart';
 
 class EditPatientScreen extends StatefulWidget {
   final String? patientId;
@@ -20,23 +24,17 @@ class _EditPatientScreenState extends State<EditPatientScreen>
   late TabController _tabController;
   
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
+  bool _isLoading = true;
   bool _isEditing = false;
+  Patient? _patient;
+  String? _error;
   
   // Form controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _cnicController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _emergencyContactController = TextEditingController();
-  final TextEditingController _emergencyPhoneController = TextEditingController();
-  final TextEditingController _medicalHistoryController = TextEditingController();
-  final TextEditingController _allergiesController = TextEditingController();
-  final TextEditingController _currentMedicationsController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
   
   String _selectedGender = 'Male';
-  String _selectedBloodGroup = 'O+';
   String _selectedTreatmentStatus = 'Active';
   DateTime? _selectedDateOfBirth;
   DateTime? _selectedDiagnosisDate;
@@ -53,8 +51,14 @@ class _EditPatientScreenState extends State<EditPatientScreen>
     );
     _tabController = TabController(length: 3, vsync: this);
     _fadeController.forward();
-    
-    _loadPatientData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_patient == null) {
+      _loadPatientData();
+    }
   }
 
   @override
@@ -63,31 +67,89 @@ class _EditPatientScreenState extends State<EditPatientScreen>
     _tabController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
-    _cnicController.dispose();
     _addressController.dispose();
-    _emergencyContactController.dispose();
-    _emergencyPhoneController.dispose();
-    _medicalHistoryController.dispose();
-    _allergiesController.dispose();
-    _currentMedicationsController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 
-  void _loadPatientData() {
-    // Mock patient data - will be loaded from Firebase later
-    _nameController.text = 'Ahmad Khan';
-    _phoneController.text = '+92 300 1234567';
-    _cnicController.text = '42101-1234567-1';
-    _addressController.text = 'House 123, Street 45, Model Town, Lahore';
-    _emergencyContactController.text = 'Fatima Khan (Wife)';
-    _emergencyPhoneController.text = '+92 301 7654321';
-    _medicalHistoryController.text = 'Diabetes Type 2, Hypertension';
-    _allergiesController.text = 'Penicillin';
-    _currentMedicationsController.text = 'Metformin 500mg, Amlodipine 5mg';
-    _notesController.text = 'Patient is compliant with treatment. Lives with family.';
-    _selectedDateOfBirth = DateTime(1985, 3, 15);
-    _selectedDiagnosisDate = DateTime(2025, 1, 10);
+  void _loadPatientData() async {
+    // Get patientId from widget parameter or route arguments
+    String? patientId = widget.patientId;
+    
+    if (patientId == null) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      
+      if (args is Map<String, dynamic>) {
+        patientId = args['patientId'] as String?;
+      } else if (args is String) {
+        patientId = args;
+      }
+    }
+    
+    try {
+      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+      
+      if (patientId == null) {
+        setState(() {
+          _error = 'No patient ID provided';
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      // Find the patient by ID
+      _patient = patientProvider.patients
+          .where((p) => p.patientId == patientId)
+          .firstOrNull;
+      
+      if (_patient != null) {
+        // Populate form fields with real patient data
+        _nameController.text = _patient!.name;
+        _phoneController.text = _patient!.phone;
+        _addressController.text = _patient!.address;
+        
+        _selectedGender = _patient!.gender;
+        
+        // Map patient tbStatus to dropdown values
+        switch (_patient!.tbStatus.toLowerCase()) {
+          case 'newly_diagnosed':
+          case 'active':
+          case 'ongoing':
+            _selectedTreatmentStatus = 'Active';
+            break;
+          case 'completed':
+          case 'cured':
+            _selectedTreatmentStatus = 'Completed';
+            break;
+          case 'interrupted':
+          case 'defaulted':
+            _selectedTreatmentStatus = 'Interrupted';
+            break;
+          case 'on_hold':
+          case 'paused':
+            _selectedTreatmentStatus = 'On Hold';
+            break;
+          default:
+            _selectedTreatmentStatus = 'Active'; // Default fallback
+        }
+        
+        // Calculate approximate birth year from age
+        final currentYear = DateTime.now().year;
+        _selectedDateOfBirth = DateTime(currentYear - _patient!.age, 1, 1);
+        
+        if (_patient!.diagnosisDate != null) {
+          _selectedDiagnosisDate = _patient!.diagnosisDate;
+        }
+      } else {
+        _error = 'Patient not found';
+      }
+      
+      setState(() => _isLoading = false);
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load patient data: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   void _toggleEditMode() {
@@ -105,29 +167,164 @@ class _EditPatientScreenState extends State<EditPatientScreen>
     
     setState(() => _isLoading = true);
     
-    // Simulate save operation
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (!mounted) return;
-    
-    setState(() {
-      _isLoading = false;
-      _isEditing = false;
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Patient updated successfully!',
-          style: GoogleFonts.poppins(),
+    try {
+      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+      
+      // Create updates map
+      final updates = <String, dynamic>{
+        'name': _nameController.text.trim(),
+        'age': _selectedDateOfBirth != null 
+            ? DateTime.now().year - _selectedDateOfBirth!.year
+            : _patient!.age,
+        'phone': _phoneController.text.trim(),
+        'address': _addressController.text.trim(),
+        'gender': _selectedGender,
+        'tbStatus': _selectedTreatmentStatus.toLowerCase().replaceAll(' ', '_'),
+        'diagnosisDate': _selectedDiagnosisDate != null ? Timestamp.fromDate(_selectedDiagnosisDate!) : null,
+      };
+      
+      // Update patient in provider
+      await patientProvider.updatePatient(
+        patientId: _patient!.patientId,
+        updates: updates,
+        reasonForChanges: 'Patient information updated via CHW mobile app',
+      );
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _isLoading = false;
+        _isEditing = false;
+      });
+      
+      // Reload patient data to get updated information
+      _loadPatientData();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Patient updated successfully!',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.green,
         ),
-        backgroundColor: Colors.green,
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      
+      setState(() => _isLoading = false);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to update patient: $e',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Handle loading state
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: MadadgarTheme.backgroundColor,
+        appBar: AppBar(
+          title: Text(
+            'Edit Patient',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: MadadgarTheme.primaryColor,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Handle error state
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: MadadgarTheme.backgroundColor,
+        appBar: AppBar(
+          title: Text(
+            'Edit Patient',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: MadadgarTheme.primaryColor,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text(
+                'Error Loading Patient',
+                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: GoogleFonts.poppins(color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _loadPatientData,
+                child: Text('Retry', style: GoogleFonts.poppins()),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Handle missing patient data
+    if (_patient == null) {
+      return Scaffold(
+        backgroundColor: MadadgarTheme.backgroundColor,
+        appBar: AppBar(
+          title: Text(
+            'Edit Patient',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: MadadgarTheme.primaryColor,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.person_off, size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text(
+                'Patient Not Found',
+                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'The requested patient could not be found.',
+                style: GoogleFonts.poppins(color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: MadadgarTheme.backgroundColor,
       appBar: AppBar(
@@ -241,21 +438,6 @@ class _EditPatientScreenState extends State<EditPatientScreen>
           
           const SizedBox(height: 16),
           
-          _buildTextField(
-            controller: _cnicController,
-            label: 'CNIC Number',
-            icon: Icons.credit_card,
-            enabled: _isEditing,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'CNIC is required';
-              }
-              return null;
-            },
-          ),
-          
-          const SizedBox(height: 16),
-          
           // Date of Birth
           _buildDateField(
             label: 'Date of Birth',
@@ -279,16 +461,6 @@ class _EditPatientScreenState extends State<EditPatientScreen>
           
           const SizedBox(height: 16),
           
-          // Blood Group dropdown
-          _buildDropdownField(
-            label: 'Blood Group',
-            icon: Icons.bloodtype,
-            value: _selectedBloodGroup,
-            items: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-            enabled: _isEditing,
-            onChanged: (value) => setState(() => _selectedBloodGroup = value!),
-          ),
-          
           const SizedBox(height: 16),
           
           _buildTextField(
@@ -303,25 +475,6 @@ class _EditPatientScreenState extends State<EditPatientScreen>
               }
               return null;
             },
-          ),
-          
-          const SizedBox(height: 16),
-          
-          _buildTextField(
-            controller: _emergencyContactController,
-            label: 'Emergency Contact Name',
-            icon: Icons.emergency,
-            enabled: _isEditing,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          _buildTextField(
-            controller: _emergencyPhoneController,
-            label: 'Emergency Contact Phone',
-            icon: Icons.phone_in_talk,
-            enabled: _isEditing,
-            keyboardType: TextInputType.phone,
           ),
         ],
       ),
@@ -354,36 +507,6 @@ class _EditPatientScreenState extends State<EditPatientScreen>
             onTap: () => _selectDate(context, false),
           ),
           
-          const SizedBox(height: 16),
-          
-          _buildTextField(
-            controller: _medicalHistoryController,
-            label: 'Medical History',
-            icon: Icons.history,
-            enabled: _isEditing,
-            maxLines: 4,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          _buildTextField(
-            controller: _allergiesController,
-            label: 'Known Allergies',
-            icon: Icons.warning,
-            enabled: _isEditing,
-            maxLines: 2,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          _buildTextField(
-            controller: _currentMedicationsController,
-            label: 'Current Medications',
-            icon: Icons.medication,
-            enabled: _isEditing,
-            maxLines: 4,
-          ),
-          
           const SizedBox(height: 24),
           
           // Medical records section
@@ -398,12 +521,40 @@ class _EditPatientScreenState extends State<EditPatientScreen>
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildTextField(
-            controller: _notesController,
-            label: 'Additional Notes',
-            icon: Icons.note,
-            enabled: _isEditing,
-            maxLines: 10,
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 48,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Notes Feature Coming Soon',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Additional notes and comments will be available in future updates.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
           
           const SizedBox(height: 24),

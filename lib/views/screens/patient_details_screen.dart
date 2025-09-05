@@ -6,10 +6,13 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chw_tb/config/theme.dart';
 import 'package:chw_tb/controllers/providers/patient_provider.dart';
+import 'package:chw_tb/controllers/providers/secondary_providers.dart';
 import 'package:chw_tb/models/core_models.dart';
 
 class PatientDetailsScreen extends StatefulWidget {
-  const PatientDetailsScreen({super.key});
+  final String? patientId;
+  
+  const PatientDetailsScreen({super.key, this.patientId});
 
   @override
   State<PatientDetailsScreen> createState() => _PatientDetailsScreenState();
@@ -42,17 +45,23 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (patientId == null) {
-      // Get patient ID from route arguments
-      final args = ModalRoute.of(context)?.settings.arguments;
-      if (args != null) {
-        if (args is String) {
-          patientId = args;
-        } else if (args is Map<String, dynamic> && args['patientId'] != null) {
-          patientId = args['patientId'];
+      // First try to get patient ID from constructor parameter
+      if (widget.patientId != null) {
+        patientId = widget.patientId;
+      } else {
+        // Fallback to route arguments
+        final args = ModalRoute.of(context)?.settings.arguments;
+        if (args != null) {
+          if (args is String) {
+            patientId = args;
+          } else if (args is Map<String, dynamic>) {
+            patientId = args['patientId'];
+          }
         }
-        if (patientId != null) {
-          _loadPatientData();
-        }
+      }
+      
+      if (patientId != null) {
+        _loadPatientData();
       }
     }
   }
@@ -60,15 +69,17 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   Future<void> _loadPatientData() async {
     if (patientId != null) {
       final patientProvider = Provider.of<PatientProvider>(context, listen: false);
-      await patientProvider.selectPatient(patientId!);
-      setState(() {
-        patient = patientProvider.selectedPatient;
-      });
+      patient = patientProvider.patients
+          .where((p) => p.patientId == patientId)
+          .firstOrNull;
       
-      // Load facility name if patient has a treatment facility
       if (patient?.treatmentFacility != null && patient!.treatmentFacility.isNotEmpty) {
         await _loadFacilityName(patient!.treatmentFacility);
       }
+
+      // Load household data for family members
+      final householdProvider = Provider.of<HouseholdProvider>(context, listen: false);
+      await householdProvider.loadPatientHousehold(patientId!);
     }
   }
 
@@ -131,11 +142,13 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
                       iconTheme: const IconThemeData(color: Colors.white),
                       actions: [
                         IconButton(
-                          onPressed: () => Navigator.pushNamed(
-                            context, 
-                            '/edit-patient',
-                            arguments: {'patientId': patientId},
-                          ),
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context, 
+                              '/edit-patient',
+                              arguments: {'patientId': patientId},
+                            );
+                          },
                           icon: const Icon(Icons.edit),
                         ),
                         PopupMenuButton<String>(
@@ -550,7 +563,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
               ),
               const Spacer(),
               ElevatedButton.icon(
-                onPressed: () => Navigator.pushNamed(context, '/add-household-member'),
+                onPressed: () => Navigator.pushNamed(
+                  context, 
+                  '/add-household-member',
+                  arguments: {'patientId': patientId},
+                ),
                 icon: const Icon(Icons.group_add, size: 16),
                 label: Text(
                   'Add Member',
@@ -567,38 +584,222 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
           const SizedBox(height: 16),
           
           Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.family_restroom,
-                    size: 80,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Family Members Added',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Add family members for contact tracing and screening',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
+            child: _buildFamilyMembersList(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFamilyMembersList() {
+    return Consumer<HouseholdProvider>(
+      builder: (context, householdProvider, child) {
+        if (householdProvider.isLoading) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        if (householdProvider.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 80,
+                  color: Colors.red.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error Loading Family Data',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red.shade600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  householdProvider.error!,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.red.shade500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        final household = householdProvider.selectedHousehold;
+        final familyMembers = household?.members ?? [];
+
+        // Show debug info if no members but household exists
+        if (familyMembers.isEmpty && household != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.family_restroom,
+                  size: 80,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Household Found but No Members',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Household ID: ${household.householdId}\nPatient ID: ${household.patientId}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (familyMembers.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.family_restroom,
+                  size: 80,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No Family Members Added',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Add family members for contact tracing and screening',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: familyMembers.length,
+          itemBuilder: (context, index) {
+            final member = familyMembers[index];
+            return _buildFamilyMemberCard(member);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFamilyMemberCard(HouseholdMember member) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        elevation: 2,
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: member.gender == 'Male' ? Colors.blue.shade100 : Colors.pink.shade100,
+            child: Icon(
+              member.gender == 'Male' ? Icons.man : Icons.woman,
+              color: member.gender == 'Male' ? Colors.blue : Colors.pink,
+            ),
+          ),
+          title: Text(
+            member.name,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${member.age} years • ${member.relationship}',
+                style: GoogleFonts.poppins(fontSize: 14),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: member.screened ? Colors.green.shade100 : Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  member.screened ? 'Screened' : 'Pending Screening',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: member.screened ? Colors.green.shade700 : Colors.orange.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          trailing: IconButton(
+            onPressed: () => Navigator.pushNamed(
+              context,
+              '/household-member-details',
+              arguments: member,
+            ),
+            icon: const Icon(Icons.arrow_forward_ios, size: 16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -608,51 +809,55 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          Text(
-            'Upcoming Appointments',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 80,
-                    color: Colors.grey.shade400,
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  size: 80,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No Appointments Scheduled',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade600,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Appointments Scheduled',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Upcoming appointments will appear here',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Hospital appointments will appear here when scheduled',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _handleFamilyMemberAction(String action, Map<String, dynamic> member) {
+    switch (action) {
+      case 'call':
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Calling ${member['name']}...', style: GoogleFonts.poppins())),
+        );
+        break;
+      case 'screen':
+        Navigator.pushNamed(context, '/contact-screening', arguments: member);
+        break;
+      case 'edit':
+        Navigator.pushNamed(context, '/edit-household-member', arguments: member);
+        break;
+    }
   }
 
   Widget _buildInfoCard({
