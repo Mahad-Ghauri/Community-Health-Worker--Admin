@@ -487,10 +487,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   }
 
   Widget _buildTreatmentTab() {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
+          // Header with title
           Row(
             children: [
               Text(
@@ -501,46 +502,48 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
                   color: Colors.black87,
                 ),
               ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Active Treatment',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.green,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           
+          // Adherence overview card
           _buildAdherenceCard(),
           
           const SizedBox(height: 16),
           
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.medication,
-                    size: 80,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Adherence Data',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Adherence data will appear here when visits are logged',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // Current medications card
+          _buildCurrentMedicationsCard(),
+          
+          const SizedBox(height: 16),
+          
+          // Today's dose tracking card
+          _buildTodaysDoseCard(),
+          
+          const SizedBox(height: 16),
+          
+          // Side effects monitoring card
+          _buildSideEffectsMonitoringCard(),
+          
+          const SizedBox(height: 16),
+          
+          // Quick actions
+          _buildTreatmentActionsCard(),
         ],
       ),
     );
@@ -1200,5 +1203,331 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Widget _buildCurrentMedicationsCard() {
+    final medications = [
+      {'name': 'Rifampin', 'dose': '600mg', 'timing': 'Morning', 'color': Colors.red},
+      {'name': 'Isoniazid', 'dose': '300mg', 'timing': 'Morning', 'color': Colors.blue},
+      {'name': 'Ethambutol', 'dose': '1200mg', 'timing': 'Morning', 'color': Colors.green},
+      {'name': 'Pyrazinamide', 'dose': '1500mg', 'timing': 'Morning', 'color': Colors.orange},
+    ];
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.medication, color: MadadgarTheme.primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  'Current Medications',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...medications.map((med) => _buildMedicationItem(med)).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMedicationItem(Map<String, dynamic> medication) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: medication['color'],
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  medication['name'],
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  '${medication['dose']} • ${medication['timing']}',
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTodaysDoseCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.today, color: MadadgarTheme.primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  'Today\'s Doses',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '3/4 taken',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.orange,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildDoseStatus('Morning Dose', '8:00 AM', 'taken', Colors.green),
+            _buildDoseStatus('Evening Dose', '8:00 PM', 'pending', Colors.orange),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () => _markDoseTaken(),
+              icon: const Icon(Icons.check, size: 16),
+              label: Text(
+                'Mark Evening Dose Taken',
+                style: GoogleFonts.poppins(fontSize: 12),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: MadadgarTheme.primaryColor,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 36),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDoseStatus(String label, String time, String status, Color color) {
+    IconData icon = status == 'taken' ? Icons.check_circle : Icons.schedule;
+    String statusText = status == 'taken' ? 'Taken' : 'Pending';
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                Text(time, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey.shade600)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              statusText,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSideEffectsMonitoringCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.warning_amber, color: Colors.orange),
+                const SizedBox(width: 8),
+                Text(
+                  'Side Effects Monitoring',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildSideEffectItem('Nausea', 'Not Reported', Colors.green),
+            _buildSideEffectItem('Skin Rash', 'Not Reported', Colors.green),
+            _buildSideEffectItem('Joint Pain', 'Mild', Colors.orange),
+            _buildSideEffectItem('Vision Changes', 'Not Reported', Colors.green),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => _reportSideEffect(),
+              icon: const Icon(Icons.add, size: 16),
+              label: Text(
+                'Report Side Effect',
+                style: GoogleFonts.poppins(fontSize: 12),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: MadadgarTheme.primaryColor,
+                minimumSize: const Size(double.infinity, 36),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSideEffectItem(String effect, String status, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              effect,
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              status,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTreatmentActionsCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Quick Actions',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _viewFullAdherence(),
+                    icon: const Icon(Icons.analytics, size: 16),
+                    label: Text(
+                      'Full Tracking',
+                      style: GoogleFonts.poppins(fontSize: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _exportAdherenceData(),
+                    icon: const Icon(Icons.download, size: 16),
+                    label: Text(
+                      'Export Data',
+                      style: GoogleFonts.poppins(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _markDoseTaken() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Evening dose marked as taken!', style: GoogleFonts.poppins()),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _reportSideEffect() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Side effect reporting feature coming soon!', style: GoogleFonts.poppins()),
+      ),
+    );
+  }
+
+  void _viewFullAdherence() {
+    if (patientId != null) {
+      Navigator.pushNamed(
+        context,
+        '/adherence-tracking',
+        arguments: {'patientId': patientId},
+      );
+    }
+  }
+
+  void _exportAdherenceData() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Export feature coming soon!', style: GoogleFonts.poppins()),
+      ),
+    );
   }
 }

@@ -391,9 +391,10 @@ class TreatmentAdherenceProvider with ChangeNotifier {
     String? visitId,
     required Map<String, String> dosesToday,
     required List<String> sideEffects,
-    required int pillsRemaining,
+    required Map<String, int> pillsRemaining,
     required bool counselingGiven,
     required String notes,
+    DateTime? recordDate, // Optional custom date
   }) async {
     try {
       _setLoading(true);
@@ -413,7 +414,7 @@ class TreatmentAdherenceProvider with ChangeNotifier {
         adherenceId: adherenceId,
         patientId: patientId,
         visitId: visitId,
-        date: DateTime.now(),
+        date: recordDate ?? DateTime.now(), // Use custom date or current date
         reportedBy: currentUser.uid,
         dosesToday: dosesToday,
         sideEffects: sideEffects,

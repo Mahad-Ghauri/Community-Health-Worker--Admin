@@ -10,10 +10,7 @@ import 'firebase_options.dart'; // run `flutterfire configure`
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // Create dummy data (call only once for testing)
-  
-
+  // Create dummy data (call
   runApp(const MyApp());
 }
 

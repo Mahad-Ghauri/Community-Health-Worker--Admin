@@ -361,7 +361,7 @@ class TreatmentAdherence {
   final String reportedBy; // CHW ID
   final Map<String, String> dosesToday; // 'morning': 'taken', 'evening': 'missed', etc.
   final List<String> sideEffects; // From predefined list
-  final int pillsRemaining;
+  final Map<String, int> pillsRemaining; // Map of medication name to remaining pills
   final double adherenceScore; // Calculated percentage
   final bool counselingGiven;
   final String notes;
@@ -405,7 +405,9 @@ class TreatmentAdherence {
       reportedBy: data['reportedBy'] ?? '',
       dosesToday: Map<String, String>.from(data['dosesToday'] ?? {}),
       sideEffects: List<String>.from(data['sideEffects'] ?? []),
-      pillsRemaining: data['pillsRemaining'] ?? 0,
+      pillsRemaining: data['pillsRemaining'] is Map 
+          ? Map<String, int>.from(data['pillsRemaining']) 
+          : <String, int>{}, // Handle legacy int format
       adherenceScore: (data['adherenceScore'] ?? 0).toDouble(),
       counselingGiven: data['counselingGiven'] ?? false,
       notes: data['notes'] ?? '',
