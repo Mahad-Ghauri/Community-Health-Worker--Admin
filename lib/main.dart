@@ -2,6 +2,7 @@ import 'package:chw_tb/config/router.dart';
 import 'package:chw_tb/controllers/providers/app_providers.dart';
 import 'package:chw_tb/controllers/services/auth_gate.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:chw_tb/models/storemockMedicationData.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -10,6 +11,7 @@ import 'firebase_options.dart'; // run `flutterfire configure`
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await storeMockMedicationData(); // Call the function to store mock data
   // Create dummy data (call
   runApp(const MyApp());
 }

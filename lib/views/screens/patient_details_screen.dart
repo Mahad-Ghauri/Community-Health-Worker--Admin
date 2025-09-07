@@ -509,12 +509,14 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
                   color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  'Active Treatment',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.green,
-                    fontWeight: FontWeight.w500,
+                child: Flexible(
+                  child: Text(
+                    'Active Treatment',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.green,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),

@@ -42,16 +42,16 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
 
   List<Medication> _medications = [];
   bool _isLoadingMedications = true;
-  
+
   // Patient data
   Patient? _patient;
   bool _isLoadingPatient = true;
-  
+
   // Adherence history for calculations
   List<TreatmentAdherence> _adherenceHistory = [];
   bool _isLoadingAdherence = true;
   bool _hasRecordedToday = false;
-  
+
   // Date selection for backdated entries
   DateTime _selectedDate = DateTime.now();
   bool _isBackdatedEntry = false;
@@ -85,23 +85,23 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
 
   Future<void> _loadAllData() async {
     if (widget.patientId == null) return;
-    
+
     // Load patient, medications, and adherence history first
     await Future.wait([
       _loadPatient(),
       _loadMedications(),
       _loadAdherenceHistory(),
     ]);
-    
+
     // After all data is loaded, initialize dose tracking with today's data
     _initializeDoseTracking();
-    
+
     _loadAdherenceData();
   }
 
   Future<void> _loadPatient() async {
     if (widget.patientId == null) return;
-    
+
     try {
       setState(() {
         _isLoadingPatient = true;
@@ -132,7 +132,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
 
   Future<void> _loadAdherenceHistory() async {
     if (widget.patientId == null) return;
-    
+
     try {
       setState(() {
         _isLoadingAdherence = true;
@@ -146,7 +146,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
           .get();
 
       List<TreatmentAdherence> adherenceHistory = [];
-      
+
       for (var doc in querySnapshot.docs) {
         try {
           var adherenceRecord = TreatmentAdherence.fromFirestore(doc.data());
@@ -174,22 +174,30 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     return _adherenceHistory.any((record) {
       final recordDate = record.date;
       return recordDate.year == today.year &&
-             recordDate.month == today.month &&
-             recordDate.day == today.day;
+          recordDate.month == today.month &&
+          recordDate.day == today.day;
     });
   }
 
   bool _checkIfRecordedForSelectedDate() {
-    final selectedDateOnly = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final selectedDateOnly = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
     return _adherenceHistory.any((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
+      final recordDate = DateTime(
+        record.date.year,
+        record.date.month,
+        record.date.day,
+      );
       return recordDate.isAtSameMomentAs(selectedDateOnly);
     });
   }
 
   Future<void> _loadMedications() async {
     if (widget.patientId == null) return;
-    
+
     try {
       setState(() {
         _isLoadingMedications = true;
@@ -201,9 +209,45 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
           .where('isActive', isEqualTo: true)
           .get();
 
-      final medications = querySnapshot.docs.map((doc) {
-        return Medication.fromFirestore(doc.data(), docId: doc.id);
-      }).toList();
+      final List<Medication> medications = [];
+      for (var doc in querySnapshot.docs) {
+        final data = Map<String, dynamic>.from(doc.data());
+        bool needsUpdate = false;
+
+        // Normalize startDate
+        final sd = data['startDate'];
+        if (sd is String) {
+          final parsed = DateTime.tryParse(sd);
+          if (parsed != null) {
+            data['startDate'] = Timestamp.fromDate(parsed);
+            needsUpdate = true;
+          }
+        }
+
+        // Normalize endDate
+        final ed = data['endDate'];
+        if (ed is String) {
+          final parsed = DateTime.tryParse(ed);
+          if (parsed != null) {
+            data['endDate'] = Timestamp.fromDate(parsed);
+            needsUpdate = true;
+          }
+        }
+
+        if (needsUpdate) {
+          try {
+            await doc.reference.update({
+              'startDate': data['startDate'],
+              'endDate': data['endDate'],
+            });
+          } catch (e) {
+            // Log but continue
+            print('Failed to normalize medication dates for ${doc.id}: $e');
+          }
+        }
+
+        medications.add(Medication.fromFirestore(data, docId: doc.id));
+      }
 
       setState(() {
         _medications = medications;
@@ -246,63 +290,127 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     }
   }
 
+  // Medication/date helpers
+  bool _isMedicationActiveOnDate(Medication med, DateTime date) {
+    final d = DateTime(date.year, date.month, date.day);
+    final start = DateTime(
+      med.startDate.year,
+      med.startDate.month,
+      med.startDate.day,
+    );
+    final end = med.endDate != null
+        ? DateTime(med.endDate!.year, med.endDate!.month, med.endDate!.day)
+        : null;
+    if (d.isBefore(start)) return false;
+    if (end != null && d.isAfter(end)) return false;
+    if (!med.isActive && (end == null || d.isAfter(end))) return false;
+    return true;
+  }
+
+  // Normalize med names to match dose keys variations
+  String _normalizeMedName(String name) {
+    return name
+        .toLowerCase()
+        .replaceAll(' (r)', '')
+        .replaceAll(' (h)', '')
+        .replaceAll(' (e)', '')
+        .replaceAll(' (z)', '')
+        .replaceAll('(r)', '')
+        .replaceAll('(h)', '')
+        .replaceAll('(e)', '')
+        .replaceAll('(z)', '')
+        .replaceAll('rifampin', 'rifampicin')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  Medication? _findMedicationByName(String name) {
+    final normalized = _normalizeMedName(name);
+    try {
+      return _medications.firstWhere(
+        (m) => _normalizeMedName(m.name) == normalized,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   // Dynamic calculation methods
   Map<String, dynamic> _calculateAdherenceStats() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final weekAgo = today.subtract(const Duration(days: 7));
-    
+
     // Get today's adherence record if it exists
-    TreatmentAdherence? todayRecord = _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return recordDate.isAtSameMomentAs(today);
-    }).isNotEmpty ? _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return recordDate.isAtSameMomentAs(today);
-    }).first : null;
-    
+    TreatmentAdherence? todayRecord =
+        _adherenceHistory.where((record) {
+          final recordDate = DateTime(
+            record.date.year,
+            record.date.month,
+            record.date.day,
+          );
+          return recordDate.isAtSameMomentAs(today);
+        }).isNotEmpty
+        ? _adherenceHistory.where((record) {
+            final recordDate = DateTime(
+              record.date.year,
+              record.date.month,
+              record.date.day,
+            );
+            return recordDate.isAtSameMomentAs(today);
+          }).first
+        : null;
+
     // Weekly adherence calculation
     Map<DateTime, TreatmentAdherence> weeklyRecordsMap = {};
-    
+
     // Add historical weekly records
     for (var record in _adherenceHistory) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      if (recordDate.isAfter(weekAgo.subtract(const Duration(days: 1))) && 
+      final recordDate = DateTime(
+        record.date.year,
+        record.date.month,
+        record.date.day,
+      );
+      if (recordDate.isAfter(weekAgo.subtract(const Duration(days: 1))) &&
           recordDate.isBefore(today.add(const Duration(days: 1)))) {
         weeklyRecordsMap[recordDate] = record;
       }
     }
-    
+
     // If today hasn't been recorded yet, use current tracking data
     if (todayRecord == null && !_hasRecordedToday) {
       Map<String, String> todaysDoses = {};
-      
+
       // Add morning doses with timing suffix
       for (var entry in _morningDoses.entries) {
         if (entry.value.isNotEmpty) {
           todaysDoses['${entry.key}_morning'] = entry.value;
         }
       }
-      
+
       // Add evening doses with timing suffix
       for (var entry in _eveningDoses.entries) {
         if (entry.value.isNotEmpty) {
           todaysDoses['${entry.key}_evening'] = entry.value;
         }
       }
-      
+
       // Add night doses with timing suffix
       for (var entry in _nightDoses.entries) {
         if (entry.value.isNotEmpty) {
           todaysDoses['${entry.key}_night'] = entry.value;
         }
       }
-      
+
       if (todaysDoses.isNotEmpty) {
         // Create a temporary record for today's tracking
-        int takenCount = todaysDoses.values.where((dose) => dose == 'taken').length;
-        double todayScore = todaysDoses.isNotEmpty ? (takenCount / todaysDoses.length) * 100 : 0;
-        
+        int takenCount = todaysDoses.values
+            .where((dose) => dose == 'taken')
+            .length;
+        double todayScore = todaysDoses.isNotEmpty
+            ? (takenCount / todaysDoses.length) * 100
+            : 0;
+
         weeklyRecordsMap[today] = TreatmentAdherence(
           adherenceId: 'temp_${today.millisecondsSinceEpoch}',
           patientId: widget.patientId!,
@@ -317,59 +425,88 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
         );
       }
     }
-    
+
     // Calculate weekly statistics
     int weeklyTotalDoses = 0;
     int weeklyTakenDoses = 0;
-    
+
     for (var record in weeklyRecordsMap.values) {
-      weeklyTotalDoses += record.dosesToday.length;
-      weeklyTakenDoses += record.dosesToday.values.where((dose) => dose == 'taken').length;
+      // Only count doses for medications active on that record date
+      final recordDateOnly = DateTime(
+        record.date.year,
+        record.date.month,
+        record.date.day,
+      );
+      int dayTotal = 0;
+      int dayTaken = 0;
+      record.dosesToday.forEach((key, dose) {
+        final medName = key
+            .replaceAll('_morning', '')
+            .replaceAll('_evening', '')
+            .replaceAll('_night', '');
+        final med = _findMedicationByName(medName);
+        if (med != null && _isMedicationActiveOnDate(med, recordDateOnly)) {
+          dayTotal += 1;
+          if (dose == 'taken') dayTaken += 1;
+        }
+      });
+      weeklyTotalDoses += dayTotal;
+      weeklyTakenDoses += dayTaken;
     }
-    
-    double weeklyScore = weeklyTotalDoses > 0 ? (weeklyTakenDoses / weeklyTotalDoses) * 100 : 0;
-    
+
+    double weeklyScore = weeklyTotalDoses > 0
+        ? (weeklyTakenDoses / weeklyTotalDoses) * 100
+        : 0;
+
     // Overall adherence calculation - all historical data plus today if not recorded
     int overallTotalDoses = 0;
     int overallTakenDoses = 0;
-    
+
     // Group all records by date to avoid duplicates
     Map<DateTime, TreatmentAdherence> allRecordsMap = {};
-    
+
     for (var record in _adherenceHistory) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
+      final recordDate = DateTime(
+        record.date.year,
+        record.date.month,
+        record.date.day,
+      );
       allRecordsMap[recordDate] = record;
     }
-    
+
     // Add today's data if not already recorded
     if (todayRecord == null && !_hasRecordedToday) {
       Map<String, String> todaysDoses = {};
-      
+
       // Add morning doses with timing suffix
       for (var entry in _morningDoses.entries) {
         if (entry.value.isNotEmpty) {
           todaysDoses['${entry.key}_morning'] = entry.value;
         }
       }
-      
+
       // Add evening doses with timing suffix
       for (var entry in _eveningDoses.entries) {
         if (entry.value.isNotEmpty) {
           todaysDoses['${entry.key}_evening'] = entry.value;
         }
       }
-      
+
       // Add night doses with timing suffix
       for (var entry in _nightDoses.entries) {
         if (entry.value.isNotEmpty) {
           todaysDoses['${entry.key}_night'] = entry.value;
         }
       }
-      
+
       if (todaysDoses.isNotEmpty) {
-        int takenCount = todaysDoses.values.where((dose) => dose == 'taken').length;
-        double todayScore = todaysDoses.isNotEmpty ? (takenCount / todaysDoses.length) * 100 : 0;
-        
+        int takenCount = todaysDoses.values
+            .where((dose) => dose == 'taken')
+            .length;
+        double todayScore = todaysDoses.isNotEmpty
+            ? (takenCount / todaysDoses.length) * 100
+            : 0;
+
         allRecordsMap[today] = TreatmentAdherence(
           adherenceId: 'temp_${today.millisecondsSinceEpoch}',
           patientId: widget.patientId!,
@@ -384,15 +521,35 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
         );
       }
     }
-    
+
     // Calculate overall statistics
     for (var record in allRecordsMap.values) {
-      overallTotalDoses += record.dosesToday.length;
-      overallTakenDoses += record.dosesToday.values.where((dose) => dose == 'taken').length;
+      final recordDateOnly = DateTime(
+        record.date.year,
+        record.date.month,
+        record.date.day,
+      );
+      int dayTotal = 0;
+      int dayTaken = 0;
+      record.dosesToday.forEach((key, dose) {
+        final medName = key
+            .replaceAll('_morning', '')
+            .replaceAll('_evening', '')
+            .replaceAll('_night', '');
+        final med = _findMedicationByName(medName);
+        if (med != null && _isMedicationActiveOnDate(med, recordDateOnly)) {
+          dayTotal += 1;
+          if (dose == 'taken') dayTaken += 1;
+        }
+      });
+      overallTotalDoses += dayTotal;
+      overallTakenDoses += dayTaken;
     }
-    
-    double overallScore = overallTotalDoses > 0 ? (overallTakenDoses / overallTotalDoses) * 100 : 0;
-    
+
+    double overallScore = overallTotalDoses > 0
+        ? (overallTakenDoses / overallTotalDoses) * 100
+        : 0;
+
     return {
       'weekly_score': weeklyScore,
       'overall_score': overallScore,
@@ -405,12 +562,14 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
 
   List<Map<String, dynamic>> _getRecentSideEffects() {
     if (_adherenceHistory.isEmpty) return [];
-    
+
     return _adherenceHistory.take(7).map((record) {
       return {
         'date': _formatDate(record.date),
         'effects': record.sideEffects,
-        'severity': record.sideEffects.isEmpty ? 'None' : 'Mild', // You can enhance this logic
+        'severity': record.sideEffects.isEmpty
+            ? 'None'
+            : 'Mild', // You can enhance this logic
       };
     }).toList();
   }
@@ -419,21 +578,37 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     List<Map<String, dynamic>> pillHistory = [];
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-    
+
     // Add today's data if available (either from current tracking or recorded)
-    TreatmentAdherence? todayRecord = _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return recordDate.isAtSameMomentAs(todayDate);
-    }).isNotEmpty ? _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return recordDate.isAtSameMomentAs(todayDate);
-    }).first : null;
-    
+    TreatmentAdherence? todayRecord =
+        _adherenceHistory.where((record) {
+          final recordDate = DateTime(
+            record.date.year,
+            record.date.month,
+            record.date.day,
+          );
+          return recordDate.isAtSameMomentAs(todayDate);
+        }).isNotEmpty
+        ? _adherenceHistory.where((record) {
+            final recordDate = DateTime(
+              record.date.year,
+              record.date.month,
+              record.date.day,
+            );
+            return recordDate.isAtSameMomentAs(todayDate);
+          }).first
+        : null;
+
     if (todayRecord != null) {
       // Use recorded data for today
-      int totalPills = todayRecord.pillsRemaining.values.fold(0, (sum, count) => sum + count);
-      bool needsRefill = todayRecord.pillsRemaining.values.any((count) => count <= 10);
-      
+      int totalPills = todayRecord.pillsRemaining.values.fold(
+        0,
+        (sum, count) => sum + count,
+      );
+      bool needsRefill = todayRecord.pillsRemaining.values.any(
+        (count) => count <= 10,
+      );
+
       pillHistory.add({
         'date': 'Today',
         'count': '$totalPills pills total',
@@ -444,7 +619,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
       // Use current tracking data for today
       int totalPills = _pillCounts.values.fold(0, (sum, count) => sum + count);
       bool needsRefill = _pillCounts.values.any((count) => count <= 10);
-      
+
       pillHistory.add({
         'date': 'Today (Current)',
         'count': '$totalPills pills total',
@@ -452,17 +627,29 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
         'details': Map<String, int>.from(_pillCounts),
       });
     }
-    
+
     // Add historical data (excluding today if already added)
-    final historicalRecords = _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return !recordDate.isAtSameMomentAs(todayDate);
-    }).take(6).toList(); // Take 6 more to make 7 total
-    
+    final historicalRecords = _adherenceHistory
+        .where((record) {
+          final recordDate = DateTime(
+            record.date.year,
+            record.date.month,
+            record.date.day,
+          );
+          return !recordDate.isAtSameMomentAs(todayDate);
+        })
+        .take(6)
+        .toList(); // Take 6 more to make 7 total
+
     for (var record in historicalRecords) {
-      int totalPills = record.pillsRemaining.values.fold(0, (sum, count) => sum + count);
-      bool needsRefill = record.pillsRemaining.values.any((count) => count <= 10);
-      
+      int totalPills = record.pillsRemaining.values.fold(
+        0,
+        (sum, count) => sum + count,
+      );
+      bool needsRefill = record.pillsRemaining.values.any(
+        (count) => count <= 10,
+      );
+
       pillHistory.add({
         'date': _formatDate(record.date),
         'count': '$totalPills pills total',
@@ -470,7 +657,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
         'details': record.pillsRemaining,
       });
     }
-    
+
     return pillHistory;
   }
 
@@ -479,7 +666,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     final today = DateTime(now.year, now.month, now.day);
     final dateOnly = DateTime(date.year, date.month, date.day);
     final difference = today.difference(dateOnly).inDays;
-    
+
     if (difference == 0) return 'Today';
     if (difference == 1) return 'Yesterday';
     if (difference > 0 && difference < 7) return '$difference days ago';
@@ -489,7 +676,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
       if (futureDays == 1) return 'Tomorrow';
       if (futureDays < 7) return 'In $futureDays days';
     }
-    
+
     return '${date.day}/${date.month}/${date.year}';
   }
 
@@ -505,35 +692,48 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     // Calculate treatment date range based on patient's medications
     DateTime? treatmentStartDate;
     DateTime? treatmentEndDate;
-    
+
     if (_medications.isNotEmpty) {
       // Find the earliest start date and latest end date from all medications
       treatmentStartDate = _medications
           .map((med) => med.startDate)
-          .reduce((earliest, current) => current.isBefore(earliest) ? current : earliest);
-      
+          .reduce(
+            (earliest, current) =>
+                current.isBefore(earliest) ? current : earliest,
+          );
+
       // Find the latest end date (if any medication has no end date, allow current date)
       var endDates = _medications
           .where((med) => med.endDate != null)
           .map((med) => med.endDate!)
           .toList();
-      
+
       if (endDates.isNotEmpty) {
-        treatmentEndDate = endDates
-            .reduce((latest, current) => current.isAfter(latest) ? current : latest);
+        treatmentEndDate = endDates.reduce(
+          (latest, current) => current.isAfter(latest) ? current : latest,
+        );
       }
     }
-    
-    // Default fallback dates if no medication data
-    final defaultStartDate = treatmentStartDate ?? DateTime.now().subtract(const Duration(days: 30));
-    
-    // Ensure we don't allow future dates beyond today
-    final maxAllowedDate = DateTime.now();
-    final actualEndDate = treatmentEndDate != null && treatmentEndDate.isBefore(maxAllowedDate) 
-        ? treatmentEndDate 
-        : maxAllowedDate;
-    
-    final initialDate = _selectedDate.isAfter(actualEndDate) ? actualEndDate : _selectedDate;
+
+    // Helper to strip time components to date-only values
+    DateTime _d(DateTime d) => DateTime(d.year, d.month, d.day);
+
+    // Default fallback dates if no medication data (date-only)
+    final today = _d(DateTime.now());
+    final defaultStartDate = treatmentStartDate != null
+        ? _d(treatmentStartDate)
+        : today.subtract(const Duration(days: 30));
+
+    // Ensure we don't allow future dates beyond today; use date-only values
+    final endCandidate = treatmentEndDate != null
+        ? _d(treatmentEndDate)
+        : today;
+    final actualEndDate = endCandidate.isAfter(today) ? today : endCandidate;
+
+    // Clamp initial date within [defaultStartDate, actualEndDate]
+    DateTime initialDate = _d(_selectedDate);
+    if (initialDate.isBefore(defaultStartDate)) initialDate = defaultStartDate;
+    if (initialDate.isAfter(actualEndDate)) initialDate = actualEndDate;
 
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -545,12 +745,14 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
       errorInvalidText: 'Date must be within treatment period',
       fieldLabelText: 'Enter date',
       fieldHintText: 'mm/dd/yyyy',
+      selectableDayPredicate: (d) {
+        final dd = _d(d);
+        return !dd.isBefore(defaultStartDate) && !dd.isAfter(actualEndDate);
+      },
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: MadadgarTheme.primaryColor,
-            ),
+            colorScheme: ColorScheme.light(primary: MadadgarTheme.primaryColor),
           ),
           child: child!,
         );
@@ -564,7 +766,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
           _selectedDate = picked;
           _isBackdatedEntry = !_isSameDay(picked, DateTime.now());
         });
-        
+
         // Reload data for the selected date
         _loadSelectedDateData();
       } else {
@@ -587,89 +789,123 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
 
   bool _isValidTreatmentDate(DateTime selectedDate) {
     if (_medications.isEmpty) {
-      // If no medications, allow dates within the last 30 days
-      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-      bool isValid = selectedDate.isAfter(thirtyDaysAgo.subtract(const Duration(days: 1))) &&
-             selectedDate.isBefore(DateTime.now().add(const Duration(days: 1)));
-      return isValid;
+      // No medications loaded: disallow backdated entries
+      final today = DateTime.now();
+      final sel = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+      );
+      final tOnly = DateTime(today.year, today.month, today.day);
+      return sel.isAtSameMomentAs(tOnly);
     }
-    
+
     // Find the earliest start date and latest end date from all medications
     DateTime earliestStart = _medications
         .map((med) => med.startDate)
-        .reduce((earliest, current) => current.isBefore(earliest) ? current : earliest);
-    
-    DateTime latestEnd = DateTime.now(); // Default to today
+        .reduce(
+          (earliest, current) =>
+              current.isBefore(earliest) ? current : earliest,
+        );
+
+    // Latest end is either the latest med endDate or today if some are ongoing
+    DateTime latestEnd = DateTime.now();
     var endDates = _medications
         .where((med) => med.endDate != null)
         .map((med) => med.endDate!)
         .toList();
-    
     if (endDates.isNotEmpty) {
-      DateTime calculatedEnd = endDates
-          .reduce((latest, current) => current.isAfter(latest) ? current : latest);
-      
-      // Don't allow dates beyond today even if treatment end date is in future
-      latestEnd = calculatedEnd.isBefore(DateTime.now()) ? calculatedEnd : DateTime.now();
+      final calculatedEnd = endDates.reduce(
+        (latest, current) => current.isAfter(latest) ? current : latest,
+      );
+      latestEnd = calculatedEnd.isBefore(DateTime.now())
+          ? calculatedEnd
+          : DateTime.now();
     }
-    
-    // Check if selected date is within treatment period
-    DateTime startBuffer = earliestStart.subtract(const Duration(days: 1));
-    DateTime endBuffer = latestEnd.add(const Duration(days: 1));
-    
-    bool isAfterStart = selectedDate.isAfter(startBuffer);
-    bool isBeforeEnd = selectedDate.isBefore(endBuffer);
-    
-    bool isValid = isAfterStart && isBeforeEnd;
-    
-    return isValid;
+
+    // Inclusive day-level comparison
+    final sel = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
+    final startOnly = DateTime(
+      earliestStart.year,
+      earliestStart.month,
+      earliestStart.day,
+    );
+    final endOnly = DateTime(latestEnd.year, latestEnd.month, latestEnd.day);
+
+    final isAfterOrOnStart = !sel.isBefore(startOnly);
+    final isBeforeOrOnEnd = !sel.isAfter(endOnly);
+    return isAfterOrOnStart && isBeforeOrOnEnd;
   }
 
   String _getTreatmentPeriodInfo() {
     if (_medications.isEmpty) {
       return 'No medication data available';
     }
-    
+
     DateTime earliestStart = _medications
         .map((med) => med.startDate)
-        .reduce((earliest, current) => current.isBefore(earliest) ? current : earliest);
-    
+        .reduce(
+          (earliest, current) =>
+              current.isBefore(earliest) ? current : earliest,
+        );
+
     var endDates = _medications
         .where((med) => med.endDate != null)
         .map((med) => med.endDate!)
         .toList();
-    
+
     String result;
     if (endDates.isNotEmpty) {
-      DateTime latestEnd = endDates
-          .reduce((latest, current) => current.isAfter(latest) ? current : latest);
-      result = 'Treatment period: ${_formatDate(earliestStart)} to ${_formatDate(latestEnd)}';
+      DateTime latestEnd = endDates.reduce(
+        (latest, current) => current.isAfter(latest) ? current : latest,
+      );
+      result =
+          'Treatment period: ${_formatDate(earliestStart)} to ${_formatDate(latestEnd)}';
     } else {
       result = 'Treatment started: ${_formatDate(earliestStart)} (ongoing)';
     }
-    
+
     return result;
   }
 
   bool _isSameDay(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&
-           date1.month == date2.month &&
-           date1.day == date2.day;
+        date1.month == date2.month &&
+        date1.day == date2.day;
   }
 
   void _loadSelectedDateData() {
-    final selectedDateOnly = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
-    
+    final selectedDateOnly = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
+
     // Check if selected date's data has been recorded in Firestore
-    TreatmentAdherence? selectedDateRecord = _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      bool matches = recordDate.isAtSameMomentAs(selectedDateOnly);
-      return matches;
-    }).isNotEmpty ? _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return recordDate.isAtSameMomentAs(selectedDateOnly);
-    }).first : null;
-    
+    TreatmentAdherence? selectedDateRecord =
+        _adherenceHistory.where((record) {
+          final recordDate = DateTime(
+            record.date.year,
+            record.date.month,
+            record.date.day,
+          );
+          bool matches = recordDate.isAtSameMomentAs(selectedDateOnly);
+          return matches;
+        }).isNotEmpty
+        ? _adherenceHistory.where((record) {
+            final recordDate = DateTime(
+              record.date.year,
+              record.date.month,
+              record.date.day,
+            );
+            return recordDate.isAtSameMomentAs(selectedDateOnly);
+          }).first
+        : null;
+
     if (selectedDateRecord != null) {
       // Load the saved data from Firestore into the tracking maps
       setState(() {
@@ -678,12 +914,12 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
         _eveningDoses.clear();
         _nightDoses.clear();
         _reportedSideEffects.clear();
-        
+
         // Load doses from saved record
         for (var entry in selectedDateRecord.dosesToday.entries) {
           String doseKey = entry.key;
           String doseStatus = entry.value;
-          
+
           // Check if the dose key contains timing information
           if (doseKey.contains('_morning')) {
             String medicationName = doseKey.replaceAll('_morning', '');
@@ -700,7 +936,9 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
             for (var medication in _medications) {
               if (medication.name == medicationName) {
                 String frequency = medication.frequency.toLowerCase();
-                if (frequency.contains('once') || frequency.contains('daily') || frequency == '1') {
+                if (frequency.contains('once') ||
+                    frequency.contains('daily') ||
+                    frequency == '1') {
                   _morningDoses[medicationName] = doseStatus;
                 } else {
                   _morningDoses[medicationName] = doseStatus;
@@ -710,10 +948,10 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
             }
           }
         }
-        
+
         // Load side effects
         _reportedSideEffects.addAll(selectedDateRecord.sideEffects);
-        
+
         // Load pill counts
         for (var entry in selectedDateRecord.pillsRemaining.entries) {
           _pillCounts[entry.key] = entry.value;
@@ -726,7 +964,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
         _eveningDoses.clear();
         _nightDoses.clear();
         _reportedSideEffects.clear();
-        
+
         // Reinitialize for selected date
         _initializeDoseTracking();
       });
@@ -742,17 +980,26 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
 
   void _initializeDoseTracking() {
     for (var medication in _medications) {
+      // Only initialize doses for medications active on the selected date
+      if (!_isMedicationActiveOnDate(medication, _selectedDate)) {
+        continue;
+      }
+
       // Initialize based on frequency
       String frequency = medication.frequency.toLowerCase();
-      
-      if (frequency.contains('once') || frequency.contains('daily') || frequency == '1') {
+
+      if (frequency.contains('once') ||
+          frequency.contains('daily') ||
+          frequency == '1') {
         // Once daily - morning only
         _morningDoses[medication.name] = '';
       } else if (frequency.contains('twice') || frequency.contains('2')) {
         // Twice daily - morning and evening
         _morningDoses[medication.name] = '';
         _eveningDoses[medication.name] = '';
-      } else if (frequency.contains('thrice') || frequency.contains('three') || frequency.contains('3')) {
+      } else if (frequency.contains('thrice') ||
+          frequency.contains('three') ||
+          frequency.contains('3')) {
         // Three times daily - morning, evening, and night
         _morningDoses[medication.name] = '';
         _eveningDoses[medication.name] = '';
@@ -761,7 +1008,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
         // Default to once daily if frequency is unclear
         _morningDoses[medication.name] = '';
       }
-      
+
       // Initialize pill count based on recent adherence records
       if (_adherenceHistory.isNotEmpty) {
         // Find the most recent adherence record that has this medication
@@ -780,13 +1027,15 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
             notes: '',
           ),
         );
-        _pillCounts[medication.name] = recentRecord.pillsRemaining[medication.name] ?? medication.pillCount;
+        _pillCounts[medication.name] =
+            recentRecord.pillsRemaining[medication.name] ??
+            medication.pillCount;
       } else {
         // Use medication's default pill count
         _pillCounts[medication.name] = medication.pillCount;
       }
     }
-    
+
     // Load today's tracking data if it exists and hasn't been saved yet
     _loadTodaysTrackingData();
   }
@@ -794,16 +1043,27 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
   void _loadTodaysTrackingData() {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-    
+
     // Check if today's data has been recorded in Firestore
-    TreatmentAdherence? todayRecord = _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return recordDate.isAtSameMomentAs(todayDate);
-    }).isNotEmpty ? _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return recordDate.isAtSameMomentAs(todayDate);
-    }).first : null;
-    
+    TreatmentAdherence? todayRecord =
+        _adherenceHistory.where((record) {
+          final recordDate = DateTime(
+            record.date.year,
+            record.date.month,
+            record.date.day,
+          );
+          return recordDate.isAtSameMomentAs(todayDate);
+        }).isNotEmpty
+        ? _adherenceHistory.where((record) {
+            final recordDate = DateTime(
+              record.date.year,
+              record.date.month,
+              record.date.day,
+            );
+            return recordDate.isAtSameMomentAs(todayDate);
+          }).first
+        : null;
+
     if (todayRecord != null) {
       // Load the saved data from Firestore into the tracking maps
       setState(() {
@@ -812,12 +1072,12 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
         _eveningDoses.clear();
         _nightDoses.clear();
         _reportedSideEffects.clear();
-        
+
         // Load doses from saved record
         for (var entry in todayRecord.dosesToday.entries) {
           String doseKey = entry.key;
           String doseStatus = entry.value;
-          
+
           // Check if the dose key contains timing information (e.g., "Rifampin_morning")
           if (doseKey.contains('_morning')) {
             String medicationName = doseKey.replaceAll('_morning', '');
@@ -835,7 +1095,9 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
             for (var medication in _medications) {
               if (medication.name == medicationName) {
                 String frequency = medication.frequency.toLowerCase();
-                if (frequency.contains('once') || frequency.contains('daily') || frequency == '1') {
+                if (frequency.contains('once') ||
+                    frequency.contains('daily') ||
+                    frequency == '1') {
                   _morningDoses[medicationName] = doseStatus;
                 } else {
                   // For multiple doses, load as morning by default
@@ -846,10 +1108,10 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
             }
           }
         }
-        
+
         // Load side effects
         _reportedSideEffects.addAll(todayRecord.sideEffects);
-        
+
         // Load pill counts
         for (var entry in todayRecord.pillsRemaining.entries) {
           _pillCounts[entry.key] = entry.value;
@@ -895,7 +1157,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
             ),
           );
         }
-        
+
         return Scaffold(
           backgroundColor: MadadgarTheme.backgroundColor,
           body: FadeTransition(
@@ -903,7 +1165,8 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
             child: NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) => [
                 SliverAppBar(
-                  expandedHeight: 270, // Reduced since content is now more compact
+                  expandedHeight:
+                      270, // Reduced since content is now more compact
                   floating: false,
                   pinned: true,
                   backgroundColor: MadadgarTheme.primaryColor,
@@ -948,7 +1211,9 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                     background: _buildHeaderContent(adherenceProvider),
                   ),
                   bottom: PreferredSize(
-                    preferredSize: const Size.fromHeight(48), // Reduced height for tabs only
+                    preferredSize: const Size.fromHeight(
+                      48,
+                    ), // Reduced height for tabs only
                     child: Container(
                       color: MadadgarTheme.primaryColor,
                       child: TabBar(
@@ -1005,32 +1270,32 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
             ),
           ),
           floatingActionButton: _checkIfRecordedForSelectedDate()
-            ? FloatingActionButton.extended(
-                onPressed: null, // Disabled when already recorded
-                backgroundColor: Colors.grey,
-                icon: const Icon(Icons.check_circle, color: Colors.white),
-                label: Text(
-                  'Already Saved',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+              ? FloatingActionButton.extended(
+                  onPressed: null, // Disabled when already recorded
+                  backgroundColor: Colors.grey,
+                  icon: const Icon(Icons.check_circle, color: Colors.white),
+                  label: Text(
+                    'Already Saved',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              : FloatingActionButton.extended(
+                  onPressed: () => _saveAdherenceData(adherenceProvider),
+                  backgroundColor: MadadgarTheme.secondaryColor,
+                  icon: const Icon(Icons.save, color: Colors.white),
+                  label: Text(
+                    _isSameDay(_selectedDate, DateTime.now())
+                        ? 'Save Today'
+                        : 'Save for ${_formatSelectedDate()}',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              )
-            : FloatingActionButton.extended(
-                onPressed: () => _saveAdherenceData(adherenceProvider),
-                backgroundColor: MadadgarTheme.secondaryColor,
-                icon: const Icon(Icons.save, color: Colors.white),
-                label: Text(
-                  _isSameDay(_selectedDate, DateTime.now()) 
-                    ? 'Save Today' 
-                    : 'Save for ${_formatSelectedDate()}',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
         );
       },
     );
@@ -1050,22 +1315,27 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 40, 16, 20), // Reduced top padding
+          padding: const EdgeInsets.fromLTRB(
+            16,
+            40,
+            16,
+            20,
+          ), // Reduced top padding
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 12),// Patient info row - make it more compact
+              const SizedBox(
+                height: 12,
+              ), // Patient info row - make it more compact
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     flex: 2,
                     child: Column(
-                      
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        
                         Text(
                           _patient?.name ?? 'Loading...',
                           style: GoogleFonts.poppins(
@@ -1092,19 +1362,30 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                     child: GestureDetector(
                       onTap: _selectDate,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.white.withOpacity(0.3)),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.calendar_today, color: Colors.white, size: 12),
+                            Icon(
+                              Icons.calendar_today,
+                              color: Colors.white,
+                              size: 12,
+                            ),
                             const SizedBox(width: 4),
                             Text(
-                              _isBackdatedEntry ? _formatSelectedDate() : 'Today',
+                              _isBackdatedEntry
+                                  ? _formatSelectedDate()
+                                  : 'Today',
                               style: GoogleFonts.poppins(
                                 fontSize: 10,
                                 color: Colors.white,
@@ -1112,7 +1393,11 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                               ),
                             ),
                             const SizedBox(width: 2),
-                            Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 12),
+                            Icon(
+                              Icons.keyboard_arrow_down,
+                              color: Colors.white,
+                              size: 12,
+                            ),
                           ],
                         ),
                       ),
@@ -1122,7 +1407,6 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
               ),
 
               const SizedBox(height: 12), // Compact spacing
-
               // Stats row
               Row(
                 children: [
@@ -1146,7 +1430,10 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
               if (_medications.isNotEmpty)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
@@ -1188,9 +1475,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
               LinearProgressIndicator(
                 value: _getTodayProgress() / 100,
                 backgroundColor: Colors.white.withOpacity(0.3),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  Colors.white,
-                ),
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                 minHeight: 3,
               ),
             ],
@@ -1203,7 +1488,10 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
   Widget _buildHeaderStat(String label, String value) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4), // Reduced padding
+        padding: const EdgeInsets.symmetric(
+          horizontal: 6,
+          vertical: 4,
+        ), // Reduced padding
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.2),
           borderRadius: BorderRadius.circular(6), // Reduced from 8
@@ -1244,15 +1532,15 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
           // Morning Doses Card - for all medications that have morning doses
           if (_morningDoses.isNotEmpty) _buildMorningDosesCard(),
           if (_morningDoses.isNotEmpty) const SizedBox(height: 16),
-          
+
           // Evening Doses Card - only for twice and thrice daily medications
           if (_eveningDoses.isNotEmpty) _buildEveningDosesCard(),
           if (_eveningDoses.isNotEmpty) const SizedBox(height: 16),
-          
+
           // Night Doses Card - only for thrice daily medications
           if (_nightDoses.isNotEmpty) _buildNightDosesCard(),
           if (_nightDoses.isNotEmpty) const SizedBox(height: 16),
-          
+
           _buildDoseInstructionsCard(),
         ],
       ),
@@ -1293,10 +1581,14 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     // Filter medications that should be taken in the morning
     List<Medication> morningMedications = _medications.where((medication) {
       String frequency = medication.frequency.toLowerCase();
-      return frequency.contains('once') || frequency.contains('daily') || 
-             frequency.contains('twice') || frequency.contains('thrice') ||
-             frequency.contains('three') || frequency == '1' || 
-             frequency == '2' || frequency == '3';
+      return frequency.contains('once') ||
+          frequency.contains('daily') ||
+          frequency.contains('twice') ||
+          frequency.contains('thrice') ||
+          frequency.contains('three') ||
+          frequency == '1' ||
+          frequency == '2' ||
+          frequency == '3';
     }).toList();
 
     if (morningMedications.isEmpty) {
@@ -1346,8 +1638,11 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     // Filter medications that should be taken in the evening (twice or thrice daily)
     List<Medication> eveningMedications = _medications.where((medication) {
       String frequency = medication.frequency.toLowerCase();
-      return frequency.contains('twice') || frequency.contains('thrice') ||
-             frequency.contains('three') || frequency == '2' || frequency == '3';
+      return frequency.contains('twice') ||
+          frequency.contains('thrice') ||
+          frequency.contains('three') ||
+          frequency == '2' ||
+          frequency == '3';
     }).toList();
 
     if (eveningMedications.isEmpty) {
@@ -1397,7 +1692,9 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     // Filter medications that should be taken at night (thrice daily only)
     List<Medication> nightMedications = _medications.where((medication) {
       String frequency = medication.frequency.toLowerCase();
-      return frequency.contains('thrice') || frequency.contains('three') || frequency == '3';
+      return frequency.contains('thrice') ||
+          frequency.contains('three') ||
+          frequency == '3';
     }).toList();
 
     if (nightMedications.isEmpty) {
@@ -1448,43 +1745,49 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     List<Map<String, dynamic>> combinedHistory = [];
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-    
+
     // Check if today's data is already recorded
     bool todayRecorded = _adherenceHistory.any((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
+      final recordDate = DateTime(
+        record.date.year,
+        record.date.month,
+        record.date.day,
+      );
       return recordDate.isAtSameMomentAs(todayDate);
     });
-    
+
     // Add today's data (either recorded or current tracking)
     if (!todayRecorded) {
       // Add current tracking data for today
       Map<String, String> todaysDoses = {};
-      
+
       // Add morning doses with timing suffix
       for (var entry in _morningDoses.entries) {
         if (entry.value.isNotEmpty) {
           todaysDoses['${entry.key}_morning'] = entry.value;
         }
       }
-      
+
       // Add evening doses with timing suffix
       for (var entry in _eveningDoses.entries) {
         if (entry.value.isNotEmpty) {
           todaysDoses['${entry.key}_evening'] = entry.value;
         }
       }
-      
+
       // Add night doses with timing suffix
       for (var entry in _nightDoses.entries) {
         if (entry.value.isNotEmpty) {
           todaysDoses['${entry.key}_night'] = entry.value;
         }
       }
-      
+
       if (todaysDoses.isNotEmpty) {
-        int takenCount = todaysDoses.values.where((dose) => dose == 'taken').length;
+        int takenCount = todaysDoses.values
+            .where((dose) => dose == 'taken')
+            .length;
         double todayScore = (takenCount / todaysDoses.length) * 100;
-        
+
         combinedHistory.add({
           'date': 'Today (Live)',
           'score': todayScore,
@@ -1494,12 +1797,18 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
         });
       }
     }
-    
+
     // Add historical records
     for (var record in _adherenceHistory) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      String dateLabel = recordDate.isAtSameMomentAs(todayDate) ? 'Today (Saved)' : _formatDate(record.date);
-      
+      final recordDate = DateTime(
+        record.date.year,
+        record.date.month,
+        record.date.day,
+      );
+      String dateLabel = recordDate.isAtSameMomentAs(todayDate)
+          ? 'Today (Saved)'
+          : _formatDate(record.date);
+
       combinedHistory.add({
         'date': dateLabel,
         'score': record.adherenceScore,
@@ -1563,10 +1872,15 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                                   children: [
                                     if (historyItem['isLive'] == true)
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: Colors.blue,
-                                          borderRadius: BorderRadius.circular(10),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
                                         ),
                                         child: Text(
                                           'LIVE',
@@ -1579,13 +1893,13 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                                       ),
                                     const SizedBox(width: 4),
                                     Icon(
-                                      historyItem['score'] >= 80 
-                                          ? Icons.check_circle 
+                                      historyItem['score'] >= 80
+                                          ? Icons.check_circle
                                           : historyItem['score'] >= 60
                                           ? Icons.warning
                                           : Icons.error,
-                                      color: historyItem['score'] >= 80 
-                                          ? Colors.green 
+                                      color: historyItem['score'] >= 80
+                                          ? Colors.green
                                           : historyItem['score'] >= 60
                                           ? Colors.orange
                                           : Colors.red,
@@ -1594,7 +1908,9 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                                 ),
                                 title: Text(
                                   'Date: ${historyItem['date']}',
-                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                                 subtitle: Text(
                                   'Adherence Score: ${historyItem['score'].toStringAsFixed(0)}%\n'
@@ -1605,7 +1921,8 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                                   Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         // Dose Details
                                         Text(
@@ -1616,16 +1933,22 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                                           ),
                                         ),
                                         const SizedBox(height: 8),
-                                        ...historyItem['doses'].entries.map<Widget>((entry) {
+                                        ...historyItem['doses'].entries.map<
+                                          Widget
+                                        >((entry) {
                                           return Padding(
-                                            padding: const EdgeInsets.symmetric(vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 2,
+                                            ),
                                             child: Row(
                                               children: [
                                                 Container(
                                                   width: 8,
                                                   height: 8,
                                                   decoration: BoxDecoration(
-                                                    color: _getDoseStatusColor(entry.value),
+                                                    color: _getDoseStatusColor(
+                                                      entry.value,
+                                                    ),
                                                     shape: BoxShape.circle,
                                                   ),
                                                 ),
@@ -1633,16 +1956,19 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                                                 Expanded(
                                                   child: Text(
                                                     '${entry.key}: ${entry.value}',
-                                                    style: GoogleFonts.poppins(fontSize: 12),
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 12,
+                                                    ),
                                                   ),
                                                 ),
                                               ],
                                             ),
                                           );
                                         }).toList(),
-                                        
+
                                         // Side Effects
-                                        if (historyItem['sideEffects'].isNotEmpty) ...[
+                                        if (historyItem['sideEffects']
+                                            .isNotEmpty) ...[
                                           const SizedBox(height: 12),
                                           Text(
                                             'Side Effects:',
@@ -1653,14 +1979,21 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
-                                            historyItem['sideEffects'].map(_formatSideEffect).join(', '),
-                                            style: GoogleFonts.poppins(fontSize: 12),
+                                            historyItem['sideEffects']
+                                                .map(_formatSideEffect)
+                                                .join(', '),
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 12,
+                                            ),
                                           ),
                                         ] else ...[
                                           const SizedBox(height: 12),
                                           Text(
                                             'Side Effects: None reported',
-                                            style: GoogleFonts.poppins(fontSize: 12, fontStyle: FontStyle.italic),
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                            ),
                                           ),
                                         ],
                                       ],
@@ -1687,7 +2020,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
   ) {
     // Assign colors based on medication name for visual distinction
     Color medicationColor = _getMedicationColor(medication.name);
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(12),
@@ -1958,7 +2291,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                 effect['severity'],
               );
             }).toList(),
-            
+
             if (_getRecentSideEffects().isEmpty)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -2042,34 +2375,37 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
             const SizedBox(height: 12),
 
             // Show low stock medications without refill option
-            ..._medications.where((med) => (_pillCounts[med.name] ?? 0) <= 10).map((medication) {
-              int currentCount = _pillCounts[medication.name] ?? 0;
-              return Container(
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning, color: Colors.orange),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${medication.name}: $currentCount pills remaining',
-                        style: GoogleFonts.poppins(
-                          color: Colors.orange.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+            ..._medications
+                .where((med) => (_pillCounts[med.name] ?? 0) <= 10)
+                .map((medication) {
+                  int currentCount = _pillCounts[medication.name] ?? 0;
+                  return Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
                     ),
-                  ],
-                ),
-              );
-            }).toList(),
-            
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning, color: Colors.orange),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${medication.name}: $currentCount pills remaining',
+                            style: GoogleFonts.poppins(
+                              color: Colors.orange.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                })
+                .toList(),
+
             // Show message if all medications have sufficient supply
             if (_medications.every((med) => (_pillCounts[med.name] ?? 0) > 10))
               Container(
@@ -2125,7 +2461,7 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
                 history['status'],
               );
             }).toList(),
-            
+
             if (_getPillCountHistory().isEmpty)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -2370,8 +2706,18 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
   String _getCurrentDate() {
     final now = DateTime.now();
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${now.day} ${months[now.month - 1]} ${now.year}';
   }
@@ -2379,16 +2725,27 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
   double _getTodayProgress() {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-    
+
     // Check if today's adherence has been recorded
-    TreatmentAdherence? todayRecord = _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return recordDate.isAtSameMomentAs(todayDate);
-    }).isNotEmpty ? _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return recordDate.isAtSameMomentAs(todayDate);
-    }).first : null;
-    
+    TreatmentAdherence? todayRecord =
+        _adherenceHistory.where((record) {
+          final recordDate = DateTime(
+            record.date.year,
+            record.date.month,
+            record.date.day,
+          );
+          return recordDate.isAtSameMomentAs(todayDate);
+        }).isNotEmpty
+        ? _adherenceHistory.where((record) {
+            final recordDate = DateTime(
+              record.date.year,
+              record.date.month,
+              record.date.day,
+            );
+            return recordDate.isAtSameMomentAs(todayDate);
+          }).first
+        : null;
+
     if (todayRecord != null) {
       // Use recorded data for today
       int totalDoses = todayRecord.dosesToday.length;
@@ -2399,28 +2756,28 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     } else {
       // Use current tracking data for today
       Map<String, String> allTodaysDoses = {};
-      
+
       // Add morning doses with timing suffix
       for (var entry in _morningDoses.entries) {
         if (entry.value.isNotEmpty) {
           allTodaysDoses['${entry.key}_morning'] = entry.value;
         }
       }
-      
+
       // Add evening doses with timing suffix
       for (var entry in _eveningDoses.entries) {
         if (entry.value.isNotEmpty) {
           allTodaysDoses['${entry.key}_evening'] = entry.value;
         }
       }
-      
+
       // Add night doses with timing suffix
       for (var entry in _nightDoses.entries) {
         if (entry.value.isNotEmpty) {
           allTodaysDoses['${entry.key}_night'] = entry.value;
         }
       }
-      
+
       int totalDoses = allTodaysDoses.length;
       int completedDoses = allTodaysDoses.values
           .where((status) => status == 'taken')
@@ -2536,16 +2893,27 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
   String _getTodaysDosesText() {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-    
+
     // Check if today's adherence has been recorded
-    TreatmentAdherence? todayRecord = _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return recordDate.isAtSameMomentAs(todayDate);
-    }).isNotEmpty ? _adherenceHistory.where((record) {
-      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
-      return recordDate.isAtSameMomentAs(todayDate);
-    }).first : null;
-    
+    TreatmentAdherence? todayRecord =
+        _adherenceHistory.where((record) {
+          final recordDate = DateTime(
+            record.date.year,
+            record.date.month,
+            record.date.day,
+          );
+          return recordDate.isAtSameMomentAs(todayDate);
+        }).isNotEmpty
+        ? _adherenceHistory.where((record) {
+            final recordDate = DateTime(
+              record.date.year,
+              record.date.month,
+              record.date.day,
+            );
+            return recordDate.isAtSameMomentAs(todayDate);
+          }).first
+        : null;
+
     if (todayRecord != null) {
       // Use recorded data
       int totalDoses = todayRecord.dosesToday.length;
@@ -2556,33 +2924,33 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
     } else {
       // Use current tracking data
       Map<String, String> allTodaysDoses = {};
-      
+
       // Add morning doses with timing suffix
       for (var entry in _morningDoses.entries) {
         if (entry.value.isNotEmpty) {
           allTodaysDoses['${entry.key}_morning'] = entry.value;
         }
       }
-      
+
       // Add evening doses with timing suffix
       for (var entry in _eveningDoses.entries) {
         if (entry.value.isNotEmpty) {
           allTodaysDoses['${entry.key}_evening'] = entry.value;
         }
       }
-      
+
       // Add night doses with timing suffix
       for (var entry in _nightDoses.entries) {
         if (entry.value.isNotEmpty) {
           allTodaysDoses['${entry.key}_night'] = entry.value;
         }
       }
-      
+
       int totalDoses = allTodaysDoses.length;
       int takenDoses = allTodaysDoses.values
           .where((status) => status == 'taken')
           .length;
-      
+
       return totalDoses > 0 ? '$takenDoses/$totalDoses' : '0/0';
     }
   }
@@ -2694,21 +3062,21 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
 
     // Combine all dose tracking data with timing information
     Map<String, String> allDoses = {};
-    
+
     // Add morning doses with suffix
     for (var entry in _morningDoses.entries) {
       if (entry.value.isNotEmpty) {
         allDoses['${entry.key}_morning'] = entry.value;
       }
     }
-    
+
     // Add evening doses with suffix
     for (var entry in _eveningDoses.entries) {
       if (entry.value.isNotEmpty) {
         allDoses['${entry.key}_evening'] = entry.value;
       }
     }
-    
+
     // Add night doses with suffix
     for (var entry in _nightDoses.entries) {
       if (entry.value.isNotEmpty) {
@@ -2737,7 +3105,9 @@ class _AdherenceTrackingScreenState extends State<AdherenceTrackingScreen>
         patientId: widget.patientId!,
         dosesToday: allDoses,
         sideEffects: _reportedSideEffects,
-        pillsRemaining: Map<String, int>.from(_pillCounts), // Convert to Map<String, int>
+        pillsRemaining: Map<String, int>.from(
+          _pillCounts,
+        ), // Convert to Map<String, int>
         counselingGiven: true, // Assuming counseling is always given
         notes: 'Adherence recorded via CHW mobile app',
         recordDate: _selectedDate, // Pass the selected date to the provider
