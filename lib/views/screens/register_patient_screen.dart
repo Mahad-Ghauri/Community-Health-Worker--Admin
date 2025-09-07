@@ -17,21 +17,21 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final PageController _pageController = PageController();
-  
+
   int _currentStep = 0;
   bool _isLoading = false;
   bool _gpsEnabled = false;
   bool _consentGiven = false;
-  
+
   // Form controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  
+
   String _selectedGender = '';
   String _selectedTbStatus = '';
   String _selectedFacility = '';
@@ -60,7 +60,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
       end: 1.0,
     ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
     _fadeController.forward();
-    
+
     _loadFacilities();
     _getCurrentLocation();
   }
@@ -82,10 +82,22 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
       // For now using mock data
       setState(() {
         _facilities = [
-          {'id': 'fac_001', 'name': 'Civil Hospital Karachi', 'type': 'public'},
-          {'id': 'fac_002', 'name': 'Aga Khan University Hospital', 'type': 'private'},
-          {'id': 'fac_003', 'name': 'Jinnah Postgraduate Medical Centre', 'type': 'public'},
-          {'id': 'fac_004', 'name': 'National Institute of Child Health', 'type': 'public'},
+          {'id': 'fac001', 'name': 'Civil Hospital Karachi', 'type': 'public'},
+          {
+            'id': 'fac002',
+            'name': 'Aga Khan University Hospital',
+            'type': 'private',
+          },
+          {
+            'id': 'fac003',
+            'name': 'Jinnah Postgraduate Medical Centre',
+            'type': 'public',
+          },
+          {
+            'id': 'fac004',
+            'name': 'National Institute of Child Health',
+            'type': 'public',
+          },
         ];
       });
     } catch (e) {
@@ -139,7 +151,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
 
     try {
       final patientProvider = context.read<PatientProvider>();
-      
+
       final patientId = await patientProvider.registerPatient(
         name: _nameController.text.trim(),
         age: int.parse(_ageController.text.trim()),
@@ -152,7 +164,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
         consentSignature: 'Digital consent given during registration',
         diagnosisDate: _diagnosisDate,
       );
-      
+
       if (mounted && patientId != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -160,7 +172,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Navigate back to patient list
         Navigator.pushReplacementNamed(context, '/patients');
       }
@@ -240,20 +252,21 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
           children: [
             // Progress indicator
             _buildProgressIndicator(),
-            
+
             // Form content
             Expanded(
               child: Form(
                 key: _formKey,
                 child: PageView.builder(
                   controller: _pageController,
-                  onPageChanged: (index) => setState(() => _currentStep = index),
+                  onPageChanged: (index) =>
+                      setState(() => _currentStep = index),
                   itemCount: _formSteps.length,
                   itemBuilder: (context, index) => _buildStepContent(index),
                 ),
               ),
             ),
-            
+
             // Navigation buttons
             _buildNavigationButtons(),
           ],
@@ -272,7 +285,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
             children: List.generate(_formSteps.length, (index) {
               final isActive = index == _currentStep;
               final isCompleted = index < _currentStep;
-              
+
               return Expanded(
                 child: Container(
                   margin: EdgeInsets.only(
@@ -289,9 +302,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Icon(
-                          isCompleted
-                              ? Icons.check
-                              : _formSteps[index].icon,
+                          isCompleted ? Icons.check : _formSteps[index].icon,
                           color: isCompleted || isActive
                               ? MadadgarTheme.primaryColor
                               : Colors.white,
@@ -303,8 +314,12 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
                         _formSteps[index].title,
                         style: GoogleFonts.poppins(
                           fontSize: 10,
-                          color: isActive ? Colors.white : Colors.white.withOpacity(0.7),
-                          fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                          color: isActive
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.7),
+                          fontWeight: isActive
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -355,13 +370,10 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
           const SizedBox(height: 8),
           Text(
             'Enter basic patient information',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.black54,
-            ),
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
           ),
           const SizedBox(height: 32),
-          
+
           _buildTextField(
             controller: _nameController,
             label: 'Full Name *',
@@ -375,7 +387,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
             },
           ),
           const SizedBox(height: 20),
-          
+
           Row(
             children: [
               Expanded(
@@ -405,14 +417,15 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
                   label: 'Gender *',
                   value: _selectedGender,
                   items: _genderOptions,
-                  onChanged: (value) => setState(() => _selectedGender = value!),
+                  onChanged: (value) =>
+                      setState(() => _selectedGender = value!),
                   icon: Icons.person,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          
+
           _buildTextField(
             controller: _phoneController,
             label: 'Phone Number',
@@ -421,7 +434,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
             keyboardType: TextInputType.phone,
           ),
           const SizedBox(height: 20),
-          
+
           _buildTextField(
             controller: _addressController,
             label: 'Address *',
@@ -457,13 +470,10 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
           const SizedBox(height: 8),
           Text(
             'TB status and treatment details',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.black54,
-            ),
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
           ),
           const SizedBox(height: 32),
-          
+
           _buildDropdownField(
             label: 'TB Status *',
             value: _selectedTbStatus,
@@ -472,7 +482,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
             icon: Icons.medical_information,
           ),
           const SizedBox(height: 20),
-          
+
           _buildDateField(
             label: 'Diagnosis Date',
             value: _diagnosisDate,
@@ -480,9 +490,9 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
             icon: Icons.calendar_today,
           ),
           const SizedBox(height: 20),
-          
+
           _buildFacilityDropdown(),
-          
+
           const SizedBox(height: 16),
           Card(
             color: Colors.blue.shade50,
@@ -527,13 +537,10 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
           const SizedBox(height: 8),
           Text(
             'GPS location and patient consent',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.black54,
-            ),
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
           ),
           const SizedBox(height: 32),
-          
+
           // GPS Location Card
           Card(
             child: Padding(
@@ -559,7 +566,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    _gpsEnabled 
+                    _gpsEnabled
                         ? 'Location captured successfully'
                         : 'GPS location not captured',
                     style: GoogleFonts.poppins(
@@ -574,7 +581,9 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
                       onPressed: _captureGPS,
                       icon: Icon(_gpsEnabled ? Icons.refresh : Icons.gps_fixed),
                       label: Text(
-                        _gpsEnabled ? 'Refresh Location' : 'Capture GPS Location',
+                        _gpsEnabled
+                            ? 'Refresh Location'
+                            : 'Capture GPS Location',
                         style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -591,9 +600,9 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
               ),
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Consent Section
           Card(
             child: Padding(
@@ -620,7 +629,8 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
                   const SizedBox(height: 16),
                   CheckboxListTile(
                     value: _consentGiven,
-                    onChanged: (value) => setState(() => _consentGiven = value!),
+                    onChanged: (value) =>
+                        setState(() => _consentGiven = value!),
                     title: Text(
                       'Patient provides consent',
                       style: GoogleFonts.poppins(
@@ -663,9 +673,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
         labelText: label,
         hintText: hint,
         prefixIcon: Icon(icon, color: MadadgarTheme.primaryColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
@@ -682,15 +690,19 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
       value: _selectedFacility.isEmpty ? null : _selectedFacility,
       decoration: InputDecoration(
         labelText: 'Treatment Facility *',
-        prefixIcon: Icon(Icons.local_hospital, color: MadadgarTheme.primaryColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        prefixIcon: Icon(
+          Icons.local_hospital,
+          color: MadadgarTheme.primaryColor,
         ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 16,
+        ),
       ),
       hint: Text(
         'Select facility',
@@ -698,14 +710,18 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
         overflow: TextOverflow.ellipsis,
       ),
       isExpanded: true,
-      items: _facilities.map((facility) => DropdownMenuItem(
-        value: facility['id'] as String,
-        child: Text(
-          '${facility['name']} (${facility['type']})',
-          style: GoogleFonts.poppins(fontSize: 14),
-          overflow: TextOverflow.ellipsis,
-        ),
-      )).toList(),
+      items: _facilities
+          .map(
+            (facility) => DropdownMenuItem(
+              value: facility['id'] as String,
+              child: Text(
+                '${facility['name']} (${facility['type']})',
+                style: GoogleFonts.poppins(fontSize: 14),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
+          .toList(),
       onChanged: (value) => setState(() => _selectedFacility = value!),
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -729,14 +745,15 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: MadadgarTheme.primaryColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 16,
+        ),
       ),
       hint: Text(
         placeholder ?? 'Select $label',
@@ -744,14 +761,18 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
         overflow: TextOverflow.ellipsis,
       ),
       isExpanded: true,
-      items: items.map((item) => DropdownMenuItem(
-        value: item,
-        child: Text(
-          item,
-          style: GoogleFonts.poppins(fontSize: 14),
-          overflow: TextOverflow.ellipsis,
-        ),
-      )).toList(),
+      items: items
+          .map(
+            (item) => DropdownMenuItem(
+              value: item,
+              child: Text(
+                item,
+                style: GoogleFonts.poppins(fontSize: 14),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
+          .toList(),
       onChanged: onChanged,
       validator: (value) {
         if (label.contains('*') && (value == null || value.isEmpty)) {
@@ -786,16 +807,17 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
             labelText: label,
             hintText: 'Select date',
             prefixIcon: Icon(icon, color: MadadgarTheme.primaryColor),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
+              borderSide: BorderSide(
+                color: MadadgarTheme.primaryColor,
+                width: 2,
+              ),
             ),
           ),
           controller: TextEditingController(
-            text: value != null 
+            text: value != null
                 ? '${value.day}/${value.month}/${value.year}'
                 : '',
           ),
@@ -829,14 +851,16 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
                 ),
               ),
             ),
-          
+
           if (_currentStep > 0) const SizedBox(width: 16),
-          
+
           Expanded(
             child: ElevatedButton(
-              onPressed: _isLoading 
-                  ? null 
-                  : (_currentStep == _formSteps.length - 1 ? _registerPatient : _nextStep),
+              onPressed: _isLoading
+                  ? null
+                  : (_currentStep == _formSteps.length - 1
+                        ? _registerPatient
+                        : _nextStep),
               style: ElevatedButton.styleFrom(
                 backgroundColor: MadadgarTheme.primaryColor,
                 foregroundColor: Colors.white,
@@ -855,7 +879,9 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen>
                       ),
                     )
                   : Text(
-                      _currentStep == _formSteps.length - 1 ? 'Register Patient' : 'Next',
+                      _currentStep == _formSteps.length - 1
+                          ? 'Register Patient'
+                          : 'Next',
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,

@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chw_tb/config/theme.dart';
+import 'package:provider/provider.dart';
+import 'package:chw_tb/controllers/providers/app_providers.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
   const ProfileSettingsScreen({super.key});
@@ -14,11 +16,11 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _isEditing = false;
   bool _isLoading = false;
-  
+
   // Form controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -32,11 +34,12 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
     _fadeController.forward();
-    
+
     // Initialize with current user data (will be from Firebase later)
     _loadUserData();
   }
@@ -52,11 +55,14 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
   }
 
   void _loadUserData() {
-    // Mock user data - will be loaded from Firebase later
-    _nameController.text = 'Ahmad Khan';
-    _emailController.text = 'ahmad.khan@chw.org';
-    _phoneController.text = '+92 300 1234567';
-    _workingAreaController.text = 'Model Town, Lahore';
+    // Load from AuthProvider when available
+    final auth = context.read<AuthProvider>();
+    final user = auth.chwUser;
+
+    _nameController.text = user?.name ?? '';
+    _emailController.text = user?.email ?? '';
+    _phoneController.text = user?.phone ?? '';
+    _workingAreaController.text = user?.workingArea ?? '';
   }
 
   void _toggleEdit() {
@@ -71,19 +77,19 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
 
   void _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _isLoading = true);
-    
+
     // Simulate save operation
     await Future.delayed(const Duration(seconds: 2));
-    
+
     if (!mounted) return;
-    
+
     setState(() {
       _isLoading = false;
       _isEditing = false;
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -122,7 +128,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                   ),
                   IconButton(
                     onPressed: _isLoading ? null : _saveProfile,
-                    icon: _isLoading 
+                    icon: _isLoading
                         ? const SizedBox(
                             width: 20,
                             height: 20,
@@ -205,32 +211,48 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                     ),
                 ],
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // User name and role
-              Text(
-                _nameController.text,
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  final name = auth.chwUser?.name;
+                  return Text(
+                    (name == null || name.isEmpty) ? '—' : name,
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  );
+                },
               ),
-           
+
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text(
-                  'Active • CHW ID: CHW001',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: Consumer<AuthProvider>(
+                  builder: (context, auth, _) {
+                    final id = auth.chwUser?.idNumber;
+                    final status = auth.chwUser?.status ?? 'active';
+                    final label =
+                        '${status[0].toUpperCase()}${status.substring(1)} • CHW ID: ${id ?? '—'}';
+                    return Text(
+                      label,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -250,24 +272,24 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
           children: [
             // Personal Information Card
             _buildPersonalInfoCard(),
-            
+
             const SizedBox(height: 16),
-            
+
             // Work Information Card
             _buildWorkInfoCard(),
-            
+
             const SizedBox(height: 16),
-            
+
             // Account Settings Card
             _buildAccountSettingsCard(),
-            
+
             const SizedBox(height: 16),
-            
+
             // Statistics Card
             _buildStatisticsCard(),
-            
+
             const SizedBox(height: 32),
-            
+
             // Action buttons (only show when not editing)
             if (!_isEditing) _buildActionButtons(),
           ],
@@ -298,7 +320,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
               ],
             ),
             const SizedBox(height: 20),
-            
+
             _buildTextField(
               controller: _nameController,
               label: 'Full Name',
@@ -311,9 +333,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             _buildTextField(
               controller: _emailController,
               label: 'Email Address',
@@ -330,9 +352,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             _buildTextField(
               controller: _phoneController,
               label: 'Phone Number',
@@ -374,7 +396,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
               ],
             ),
             const SizedBox(height: 20),
-            
+
             _buildTextField(
               controller: _workingAreaController,
               label: 'Working Area',
@@ -387,13 +409,27 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 16),
-            
-            _buildInfoRow('Employee ID', 'CHW001'),
-            _buildInfoRow('Department', 'Community Health'),
-            _buildInfoRow('Supervisor', 'Dr. Sarah Ahmed'),
-            _buildInfoRow('Join Date', '15 Jan 2025'),
+
+            Consumer<AuthProvider>(
+              builder: (context, auth, _) => Column(
+                children: [
+                  _buildInfoRow('Employee ID', auth.chwUser?.idNumber ?? '—'),
+                  _buildInfoRow('Department', '—'),
+                  _buildInfoRow('Supervisor', '—'),
+                  _buildInfoRow(
+                    'Join Date',
+                    auth.chwUser?.createdAt
+                            .toLocal()
+                            .toString()
+                            .split(' ')
+                            .first ??
+                        '—',
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -409,7 +445,10 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
           children: [
             Row(
               children: [
-                Icon(Icons.settings_outlined, color: MadadgarTheme.primaryColor),
+                Icon(
+                  Icons.settings_outlined,
+                  color: MadadgarTheme.primaryColor,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Account Settings',
@@ -422,21 +461,22 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
               ],
             ),
             const SizedBox(height: 16),
-            
+
             _buildSettingsTile(
               icon: Icons.lock_outline,
               title: 'Change Password',
               subtitle: 'Update your account password',
               onTap: () => _changePassword(),
             ),
-            
+
             _buildSettingsTile(
               icon: Icons.notifications_outlined,
               title: 'Notification Preferences',
               subtitle: 'Manage notification settings',
-              onTap: () => Navigator.pushNamed(context, '/notification-settings'),
+              onTap: () =>
+                  Navigator.pushNamed(context, '/notification-settings'),
             ),
-            
+
             _buildSettingsTile(
               icon: Icons.language,
               title: 'Language',
@@ -458,7 +498,10 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
           children: [
             Row(
               children: [
-                Icon(Icons.analytics_outlined, color: MadadgarTheme.primaryColor),
+                Icon(
+                  Icons.analytics_outlined,
+                  color: MadadgarTheme.primaryColor,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Your Performance',
@@ -471,7 +514,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
               ],
             ),
             const SizedBox(height: 16),
-            
+
             Row(
               children: [
                 _buildStatItem('Patients', '24'),
@@ -479,9 +522,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                 _buildStatItem('This Month', '12'),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             Row(
               children: [
                 _buildStatItem('Adherence Rate', '94%'),
@@ -509,9 +552,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: MadadgarTheme.primaryColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: MadadgarTheme.primaryColor, width: 2),
@@ -548,10 +589,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
           Expanded(
             child: Text(
               value,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.black87,
-              ),
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
             ),
           ),
         ],
@@ -576,10 +614,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
       ),
       subtitle: Text(
         subtitle,
-        style: GoogleFonts.poppins(
-          fontSize: 12,
-          color: Colors.black54,
-        ),
+        style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
       ),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: onTap,
@@ -601,10 +636,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
           ),
           Text(
             label,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: Colors.black54,
-            ),
+            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
           ),
         ],
       ),
@@ -633,9 +665,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
             ),
           ),
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -699,10 +731,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
               backgroundColor: MadadgarTheme.primaryColor,
               foregroundColor: Colors.white,
             ),
-            child: Text(
-              'Continue',
-              style: GoogleFonts.poppins(),
-            ),
+            child: Text('Continue', style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -722,12 +751,20 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
           children: [
             ListTile(
               title: const Text('English'),
-              leading: Radio(value: 'en', groupValue: 'en', onChanged: (value) {}),
+              leading: Radio(
+                value: 'en',
+                groupValue: 'en',
+                onChanged: (value) {},
+              ),
               onTap: () => Navigator.pop(context),
             ),
             ListTile(
               title: const Text('اردو (Urdu)'),
-              leading: Radio(value: 'ur', groupValue: 'en', onChanged: (value) {}),
+              leading: Radio(
+                value: 'ur',
+                groupValue: 'en',
+                onChanged: (value) {},
+              ),
               onTap: () {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(

@@ -8,6 +8,8 @@ import 'package:chw_tb/views/screens/visit_list_screen.dart';
 import 'package:chw_tb/views/screens/notifications_list_screen.dart';
 import 'package:chw_tb/controllers/services/auth_service.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:chw_tb/controllers/providers/app_providers.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -100,6 +102,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Widget _buildNavigationDrawer() {
+    final authProvider = context.watch<AuthProvider>();
     return Drawer(
       child: Column(
         children: [
@@ -136,7 +139,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Ahmad Khan', // Will be dynamic
+                      authProvider.chwUser?.name ?? 'CHW User',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -220,7 +223,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     title: 'Profile',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.pushNamed(context, '/profile-settings');
+                      Navigator.pushNamed(context, '/profile');
                     },
                   ),
                   _buildDrawerItem(
