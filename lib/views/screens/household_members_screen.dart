@@ -115,6 +115,14 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
         print('👥 HouseholdScreen: Received household: ${_household?.householdId ?? 'null'}');
         print('👥 HouseholdScreen: Household patient ID: ${_household?.patientId ?? 'null'}');
         print('👥 HouseholdScreen: Number of members: ${_householdMembers.length}');
+        print('🏠 Full Household Debug:');
+        if (_household != null) {
+          print('   - householdId: "${_household!.householdId}"');
+          print('   - patientId: "${_household!.patientId}"');
+          print('   - address: "${_household!.address}"');
+        } else {
+          print('   - _household is null!');
+        }
         
         for (int i = 0; i < _householdMembers.length; i++) {
           final member = _householdMembers[i];
@@ -964,7 +972,24 @@ class _HouseholdMembersScreenState extends State<HouseholdMembersScreen>
   }
 
   void _viewMemberDetails(HouseholdMember member) {
-    Navigator.pushNamed(context, '/household-member-details', arguments: member);
+    print('🏠 Navigation Debug - _viewMemberDetails called');
+    print('   - Member: ${member.name}');
+    print('   - _household?.householdId: ${_household?.householdId}');
+    print('   - widget.patientId: ${widget.patientId}');
+    
+    final args = {
+      'member': member,
+      'householdId': _household?.householdId,
+      'patientId': widget.patientId,
+    };
+    
+    print('🏠 Navigation Debug - Arguments being passed:');
+    print('   - args: $args');
+    print('   - args type: ${args.runtimeType}');
+    print('   - householdId in args: ${args['householdId']}');
+    print('   - patientId in args: ${args['patientId']}');
+    
+    Navigator.pushNamed(context, '/household-member-details', arguments: args);
   }
 
   void _startScreening(HouseholdMember member) {

@@ -1,4 +1,5 @@
 import 'package:chw_tb/components/elegeant_route.dart';
+import 'package:chw_tb/models/core_models.dart';
 import 'package:flutter/material.dart';
 
 // Core Screens
@@ -20,6 +21,7 @@ import '../views/screens/register_patient_screen.dart';
 import '../views/screens/edit_patient_screen.dart';
 import '../views/screens/household_members_screen.dart';
 import '../views/screens/add_household_member_screen.dart';
+import '../views/screens/household_member_details_screen.dart';
 
 // Visit Management Screens
 import '../views/screens/visit_list_screen.dart';
@@ -116,6 +118,34 @@ class AppRouter {
           AddHouseholdMemberScreen(
             patientId: patientId,
             householdId: householdId,
+          ),
+        );
+      case '/household-member-details':
+        final args = settings.arguments;
+        
+        if (args is HouseholdMember) {
+          return ElegantRoute.build(
+            HouseholdMemberDetailsScreen(member: args),
+          );
+        } else if (args is Map<String, dynamic>) {
+          final member = args['member'] as HouseholdMember?;
+          final householdId = args['householdId'] as String?;
+          final patientId = args['patientId'] as String?;
+          
+          if (member != null) {
+            return ElegantRoute.build(
+              HouseholdMemberDetailsScreen(
+                member: member,
+                householdId: householdId,
+                patientId: patientId,
+              ),
+            );
+          }
+        }
+        return ElegantRoute.build(
+          Scaffold(
+            appBar: AppBar(title: const Text('Error')),
+            body: const Center(child: Text('Member data not provided')),
           ),
         );
 

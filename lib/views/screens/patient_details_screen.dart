@@ -695,14 +695,18 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
           itemCount: familyMembers.length,
           itemBuilder: (context, index) {
             final member = familyMembers[index];
-            return _buildFamilyMemberCard(member);
+            return _buildFamilyMemberCard(
+              member, 
+              household?.householdId,
+              household?.patientId,
+            );
           },
         );
       },
     );
   }
 
-  Widget _buildFamilyMemberCard(HouseholdMember member) {
+  Widget _buildFamilyMemberCard(HouseholdMember member, String? householdId, String? patientId) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
@@ -748,11 +752,17 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
             ],
           ),
           trailing: IconButton(
-            onPressed: () => Navigator.pushNamed(
-              context,
-              '/household-member-details',
-              arguments: member,
-            ),
+            onPressed: () {
+              Navigator.pushNamed(
+                context,
+                '/household-member-details',
+                arguments: {
+                  'member': member,
+                  'householdId': householdId,
+                  'patientId': patientId,
+                },
+              );
+            },
             icon: const Icon(Icons.arrow_forward_ios, size: 16),
           ),
         ),
