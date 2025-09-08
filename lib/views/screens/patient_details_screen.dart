@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chw_tb/config/theme.dart';
 import 'package:chw_tb/controllers/providers/patient_provider.dart';
 import 'package:chw_tb/controllers/providers/secondary_providers.dart';
+import 'package:chw_tb/controllers/providers/app_providers.dart';
 import 'package:chw_tb/models/core_models.dart';
 
 class PatientDetailsScreen extends StatefulWidget {
@@ -26,6 +27,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   String? patientId;
   Patient? patient;
   String? facilityName;
+  List<Followup> _tempFollowups = []; // Temporary storage for direct-loaded followups
 
   @override
   void initState() {
@@ -44,6 +46,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    
     if (patientId == null) {
       // First try to get patient ID from constructor parameter
       if (widget.patientId != null) {
@@ -51,6 +54,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
       } else {
         // Fallback to route arguments
         final args = ModalRoute.of(context)?.settings.arguments;
+        
         if (args != null) {
           if (args is String) {
             patientId = args;
@@ -80,6 +84,22 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
       // Load household data for family members
       final householdProvider = Provider.of<HouseholdProvider>(context, listen: false);
       await householdProvider.loadPatientHousehold(patientId!);
+      
+      // Load follow-ups for this patient
+      final readOnlyProvider = Provider.of<ReadOnlyDataProvider>(context, listen: false);
+      
+      try {
+        // First load assignments to get patient IDs for CHW
+        await readOnlyProvider.loadAssignments();
+        
+        // Then load follow-ups
+        await readOnlyProvider.loadFollowups();
+        
+        // Also try direct loading for this specific patient (for debugging)
+        await _loadFollowupsDirectly(patientId!);
+      } catch (e) {
+        // Handle error silently or log appropriately
+      }
     }
   }
 
@@ -771,43 +791,590 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
   
 
   Widget _buildAppointmentsTab() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Center(
+    return Consumer<ReadOnlyDataProvider>(
+      builder: (context, readOnlyProvider, child) {
+        // Filter follow-ups for this patient
+        final patientFollowups = readOnlyProvider.followups
+            .where((followup) => followup.patientId == patientId)
+            .toList();
+
+        // If no followups from provider, use temp followups
+        final finalFollowups = patientFollowups.isEmpty ? _tempFollowups : patientFollowups;
+        
+        // Sort by scheduled date (newest first)
+        finalFollowups.sort((a, b) => b.scheduledDate.compareTo(a.scheduledDate));
+
+        if (readOnlyProvider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (readOnlyProvider.error != null) {
+          return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.calendar_today,
+                  Icons.error_outline,
                   size: 80,
-                  color: Colors.grey.shade400,
+                  color: Colors.red.shade400,
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No Appointments Scheduled',
+                  'Error Loading Follow-ups',
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade600,
+                    color: Colors.red.shade600,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Upcoming appointments will appear here',
+                  readOnlyProvider.error!,
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.grey.shade500,
+                    color: Colors.red.shade500,
                   ),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => readOnlyProvider.loadFollowups(),
+                  child: Text('Retry', style: GoogleFonts.poppins()),
+                ),
               ],
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Header
+              Row(
+                children: [
+                  Text(
+                    'Follow-up Appointments',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: MadadgarTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Total: ${finalFollowups.length}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: MadadgarTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Follow-ups list or empty state
+              Expanded(
+                child: finalFollowups.isEmpty
+                    ? _buildEmptyFollowupsState()
+                    : _buildFollowupsList(finalFollowups),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyFollowupsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.calendar_today,
+            size: 80,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Follow-ups Scheduled',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Follow-up appointments will appear here when scheduled',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFollowupsList(List<Followup> followups) {
+    return ListView.builder(
+      itemCount: followups.length,
+      itemBuilder: (context, index) {
+        final followup = followups[index];
+        return _buildFollowupCard(followup);
+      },
+    );
+  }
+
+  Widget _buildFollowupCard(Followup followup) {
+    final statusColor = _getFollowupStatusColor(followup.status);
+    final statusIcon = _getFollowupStatusIcon(followup.status);
+    final isOverdue = followup.status == 'scheduled' && 
+                     followup.scheduledDate.isBefore(DateTime.now());
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        elevation: 2,
+        child: InkWell(
+          onTap: () => _showFollowupDialog(followup),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header row with status and date
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, size: 14, color: statusColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            _getFollowupStatusLabel(followup.status),
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: statusColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    if (isOverdue)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'OVERDUE',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Scheduled date
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 16, color: Colors.grey.shade600),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Scheduled: ${_formatFollowupDate(followup.scheduledDate)}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Facility
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 16, color: Colors.grey.shade600),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        followup.facility.isNotEmpty ? followup.facility : 'No facility specified',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                // Completed date (if applicable)
+                if (followup.completedDate != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, size: 16, color: Colors.green.shade600),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Completed: ${_formatFollowupDate(followup.completedDate!)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                
+                // Notes preview (if any)
+                if (followup.notes.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.note, size: 16, color: Colors.grey.shade600),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          followup.notes.length > 50 
+                            ? '${followup.notes.substring(0, 50)}...'
+                            : followup.notes,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                
+                const SizedBox(height: 8),
+                
+                // Tap to view hint
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Tap to view details',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: MadadgarTheme.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 12,
+                      color: MadadgarTheme.primaryColor,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFollowupDialog(Followup followup) {
+    final statusColor = _getFollowupStatusColor(followup.status);
+    final statusIcon = _getFollowupStatusIcon(followup.status);
+    final isOverdue = followup.status == 'scheduled' && 
+                     followup.scheduledDate.isBefore(DateTime.now());
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_month,
+                    color: MadadgarTheme.primaryColor,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Follow-up Details',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Status badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: statusColor.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(statusIcon, size: 18, color: statusColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      _getFollowupStatusLabel(followup.status),
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: statusColor,
+                      ),
+                    ),
+                    if (isOverdue) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'OVERDUE',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Details
+              _buildDetailRow('Follow-up ID', followup.followupId),
+              _buildDetailRow('Patient ID', followup.patientId),
+              _buildDetailRow('Scheduled Date', _formatFullDate(followup.scheduledDate)),
+              _buildDetailRow('Facility', followup.facility.isNotEmpty ? followup.facility : 'Not specified'),
+              
+              if (followup.completedDate != null)
+                _buildDetailRow('Completed Date', _formatFullDate(followup.completedDate!)),
+              
+              if (followup.notes.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Notes',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Text(
+                    followup.notes,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 24),
+              
+              // Action button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MadadgarTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Close',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.black87,
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Color _getFollowupStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'scheduled':
+        return Colors.blue;
+      case 'completed':
+        return Colors.green;
+      case 'missed':
+        return Colors.red;
+      case 'cancelled':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getFollowupStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'scheduled':
+        return Icons.schedule;
+      case 'completed':
+        return Icons.check_circle;
+      case 'missed':
+        return Icons.warning;
+      case 'cancelled':
+        return Icons.cancel;
+      default:
+        return Icons.help;
+    }
+  }
+
+  String _getFollowupStatusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'scheduled':
+        return 'Scheduled';
+      case 'completed':
+        return 'Completed';
+      case 'missed':
+        return 'Missed';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  String _formatFollowupDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = date.difference(now).inDays;
+    
+    if (difference == 0) {
+      return 'Today, ${_formatTime(date)}';
+    } else if (difference == 1) {
+      return 'Tomorrow, ${_formatTime(date)}';
+    } else if (difference == -1) {
+      return 'Yesterday, ${_formatTime(date)}';
+    } else if (difference > 1 && difference <= 7) {
+      return 'In $difference days, ${_formatTime(date)}';
+    } else if (difference < -1 && difference >= -7) {
+      return '${difference.abs()} days ago, ${_formatTime(date)}';
+    } else {
+      return '${date.day}/${date.month}/${date.year} at ${_formatTime(date)}';
+    }
+  }
+
+  String _formatFullDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} at ${_formatTime(date)}';
+  }
+
+  String _formatTime(DateTime date) {
+    final hour = date.hour == 0 ? 12 : (date.hour > 12 ? date.hour - 12 : date.hour);
+    final minute = date.minute.toString().padLeft(2, '0');
+    final period = date.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
   }
 
 
@@ -1224,5 +1791,64 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen>
         content: Text('Export feature coming soon!', style: GoogleFonts.poppins()),
       ),
     );
+  }
+
+  /// Load follow-ups directly for a specific patient
+  Future<void> _loadFollowupsDirectly(String patientId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('followups')
+          .where('patientId', isEqualTo: patientId)
+          .get();
+
+      final List<Followup> directFollowups = [];
+      
+      for (var doc in snapshot.docs) {
+        // Try to parse the data
+        try {
+          final followup = Followup.fromFirestore(doc.data());
+          directFollowups.add(followup);
+        } catch (e) {
+          // Handle parsing error silently
+        }
+      }
+      
+      // Update the provider with the direct results for this session
+      if (directFollowups.isNotEmpty && mounted) {
+        await _updateProviderFollowups(directFollowups);
+      }
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+  
+  /// Temporarily update provider with direct follow-ups
+  Future<void> _updateProviderFollowups(List<Followup> followups) async {
+    // Create a temporary method to load just this patient's follow-ups
+    await _loadSinglePatientFollowups(patientId!);
+  }
+  
+  /// Load follow-ups for a single patient (bypass assignment check)
+  Future<void> _loadSinglePatientFollowups(String patientId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('followups')
+          .where('patientId', isEqualTo: patientId)
+          .orderBy('scheduledDate', descending: true)
+          .get();
+
+      final followups = snapshot.docs
+          .map((doc) => Followup.fromFirestore(doc.data()))
+          .toList();
+          
+      // Store them locally for this session
+      if (mounted) {
+        setState(() {
+          _tempFollowups = followups;
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+    }
   }
 }
