@@ -1,6 +1,6 @@
 // ignore_for_file: avoid_print
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import '../../models/core_models.dart';
 import '../services/patient_service.dart';
 import '../services/visit_service.dart';
@@ -333,12 +333,18 @@ class PatientProvider with ChangeNotifier {
 
   void _setLoading(bool loading) {
     _isLoading = loading;
-    notifyListeners();
+    // Defer notifyListeners to avoid calling during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   void _setError(String error) {
     _error = error;
-    notifyListeners();
+    // Defer notifyListeners to avoid calling during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   void _clearError() {
@@ -646,12 +652,18 @@ class VisitProvider with ChangeNotifier {
 
   void _setLoading(bool loading) {
     _isLoading = loading;
-    notifyListeners();
+    // Defer notifyListeners to avoid calling during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   void _setError(String error) {
     _error = error;
-    notifyListeners();
+    // Defer notifyListeners to avoid calling during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   void _clearError() {

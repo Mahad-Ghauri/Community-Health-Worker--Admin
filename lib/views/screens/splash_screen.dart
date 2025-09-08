@@ -73,20 +73,25 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _startAnimationSequence() async {
     // Start rotating background elements immediately
+    if (!mounted) return;
     _rotateController.repeat();
 
     // Sequence animations with delays
     await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
     _scaleController.forward();
 
     await Future.delayed(const Duration(milliseconds: 200));
+    if (!mounted) return;
     _fadeController.forward();
 
     await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
     _slideController.forward();
 
     // Navigate to next screen after total duration
     await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
     _navigateToHome();
   }
 
@@ -97,6 +102,13 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    // Stop any ongoing animations before disposing
+    _fadeController.stop();
+    _scaleController.stop();
+    _slideController.stop();
+    _rotateController.stop();
+    
+    // Dispose controllers
     _fadeController.dispose();
     _scaleController.dispose();
     _slideController.dispose();
