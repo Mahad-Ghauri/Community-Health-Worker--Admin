@@ -145,7 +145,11 @@ class _NewVisitScreenState extends State<NewVisitScreen>
 
       if (visitId != null && mounted) {
         _showSnackBar('Visit recorded successfully!');
-        Navigator.pop(context, true); // Return success result
+        Navigator.pushReplacementNamed(
+          context,
+          '/adherence-tracking',
+          arguments: {'patientId': _selectedPatient!.patientId},
+        );
       } else {
         _showSnackBar('Failed to record visit', isError: true);
       }
