@@ -177,14 +177,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     },
                   ),
                   _buildDrawerItem(
-                    icon: Icons.search,
-                    title: 'Search Patients',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/search-patients');
-                    },
-                  ),
-                  _buildDrawerItem(
                     icon: Icons.add_location,
                     title: 'New Visit',
                     onTap: () {

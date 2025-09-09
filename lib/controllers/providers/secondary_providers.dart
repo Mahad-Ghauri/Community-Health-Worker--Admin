@@ -26,7 +26,7 @@ class HouseholdProvider with ChangeNotifier {
       print('🏠 HouseholdProvider: Loading household for patient: $patientId');
       _setLoading(true);
       _clearError();
-      
+
       // Clear existing data first
       _households.clear();
       _selectedHousehold = null;
@@ -38,7 +38,9 @@ class HouseholdProvider with ChangeNotifier {
           .where('patientId', isEqualTo: patientId)
           .get();
 
-      print('🏠 HouseholdProvider: Firestore query returned ${snapshot.docs.length} documents');
+      print(
+        '🏠 HouseholdProvider: Firestore query returned ${snapshot.docs.length} documents',
+      );
 
       _households = snapshot.docs
           .map((doc) => Household.fromFirestore(doc.data()))
@@ -47,15 +49,25 @@ class HouseholdProvider with ChangeNotifier {
       _selectedHousehold = _households.isNotEmpty ? _households.first : null;
 
       if (_selectedHousehold != null) {
-        print('🏠 HouseholdProvider: Selected household ID: ${_selectedHousehold!.householdId}');
-        print('🏠 HouseholdProvider: Household patient ID: ${_selectedHousehold!.patientId}');
-        print('🏠 HouseholdProvider: Household has ${_selectedHousehold!.members.length} members');
+        print(
+          '🏠 HouseholdProvider: Selected household ID: ${_selectedHousehold!.householdId}',
+        );
+        print(
+          '🏠 HouseholdProvider: Household patient ID: ${_selectedHousehold!.patientId}',
+        );
+        print(
+          '🏠 HouseholdProvider: Household has ${_selectedHousehold!.members.length} members',
+        );
         for (int i = 0; i < _selectedHousehold!.members.length; i++) {
           final member = _selectedHousehold!.members[i];
-          print('🏠 HouseholdProvider: Member $i: ${member.name} (${member.relationship})');
+          print(
+            '🏠 HouseholdProvider: Member $i: ${member.name} (${member.relationship})',
+          );
         }
       } else {
-        print('🏠 HouseholdProvider: No household found for patient $patientId');
+        print(
+          '🏠 HouseholdProvider: No household found for patient $patientId',
+        );
       }
 
       _setLoading(false);
@@ -82,7 +94,7 @@ class HouseholdProvider with ChangeNotifier {
 
       // Find existing household or create new one
       Household? household = _households.isNotEmpty ? _households.first : null;
-      
+
       final newMember = HouseholdMember(
         name: name,
         age: age,
@@ -93,7 +105,10 @@ class HouseholdProvider with ChangeNotifier {
 
       if (household == null) {
         // Create new household
-        final householdId = FirebaseFirestore.instance.collection('households').doc().id;
+        final householdId = FirebaseFirestore.instance
+            .collection('households')
+            .doc()
+            .id;
         household = Household(
           householdId: householdId,
           patientId: patientId,
@@ -167,7 +182,9 @@ class HouseholdProvider with ChangeNotifier {
     _selectedHousehold = null;
     _error = null;
     notifyListeners();
-    print('🏠 HouseholdProvider: Household data cleared and listeners notified');
+    print(
+      '🏠 HouseholdProvider: Household data cleared and listeners notified',
+    );
   }
 }
 
@@ -209,6 +226,7 @@ class ContactTracingProvider with ChangeNotifier {
   }
 
   /// Screen contact for TB - Used by Screen 18: Contact Screening
+  /// Ensures the stored householdId exactly matches an existing Household document.
   Future<String?> screenContact({
     required String householdId,
     required String indexPatientId,
@@ -226,8 +244,37 @@ class ContactTracingProvider with ChangeNotifier {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) throw Exception('User not authenticated');
 
-      final contactId = FirebaseFirestore.instance.collection('contactTracing').doc().id;
-      
+      final firestore = FirebaseFirestore.instance;
+      final householdsCol = firestore.collection('households');
+
+      // Resolve and validate the correct householdId to store
+      String resolvedHouseholdId = householdId;
+      try {
+        // 1) Check if the provided householdId actually exists
+        final providedDoc = await householdsCol.doc(householdId).get();
+        if (!providedDoc.exists) {
+          // 2) Fallback: find household by index patient
+          final byPatient = await householdsCol
+              .where('patientId', isEqualTo: indexPatientId)
+              .limit(1)
+              .get();
+          if (byPatient.docs.isEmpty) {
+            throw Exception(
+              'No household found for index patient: ' + indexPatientId,
+            );
+          }
+          // Prefer the field value, but doc.id is the source of truth
+          final doc = byPatient.docs.first;
+          resolvedHouseholdId =
+              (doc.data()['householdId'] as String?) ?? doc.id;
+        }
+      } catch (e) {
+        // If resolution fails for any reason, bubble up a clear error
+        throw Exception('Failed to resolve householdId: ' + e.toString());
+      }
+
+      final contactId = firestore.collection('contactTracing').doc().id;
+
       // Get GPS location for screening (optional, used for audit trail)
       try {
         await GPSService().getCurrentLocation();
@@ -237,7 +284,7 @@ class ContactTracingProvider with ChangeNotifier {
 
       final contact = ContactTracing(
         contactId: contactId,
-        householdId: householdId,
+        householdId: resolvedHouseholdId,
         indexPatientId: indexPatientId,
         contactName: contactName,
         relationship: relationship,
@@ -251,7 +298,7 @@ class ContactTracingProvider with ChangeNotifier {
         notes: notes,
       );
 
-      await FirebaseFirestore.instance
+      await firestore
           .collection('contactTracing')
           .doc(contactId)
           .set(contact.toFirestore());
@@ -262,10 +309,12 @@ class ContactTracingProvider with ChangeNotifier {
         'symptoms': symptoms,
         'testResult': 'pending',
         'referralNeeded': symptoms.isNotEmpty,
+        'householdId': resolvedHouseholdId,
+        'indexPatientId': indexPatientId,
       });
 
-      // Refresh data
-      await loadHouseholdContacts(householdId);
+      // Refresh data with the resolved household id
+      await loadHouseholdContacts(resolvedHouseholdId);
 
       _setLoading(false);
       return contactId;
@@ -291,11 +340,11 @@ class ContactTracingProvider with ChangeNotifier {
           .collection('contactTracing')
           .doc(contactId)
           .update({
-        'testResult': testResult,
-        'referralNeeded': referralNeeded,
-        'notes': notes ?? '',
-        'updatedAt': Timestamp.now(),
-      });
+            'testResult': testResult,
+            'referralNeeded': referralNeeded,
+            'notes': notes ?? '',
+            'updatedAt': Timestamp.now(),
+          });
 
       // Refresh selected contact
       if (_selectedContact?.contactId == contactId) {
@@ -403,12 +452,19 @@ class TreatmentAdherenceProvider with ChangeNotifier {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) throw Exception('User not authenticated');
 
-      final adherenceId = FirebaseFirestore.instance.collection('treatmentAdherence').doc().id;
+      final adherenceId = FirebaseFirestore.instance
+          .collection('treatmentAdherence')
+          .doc()
+          .id;
 
       // Calculate adherence score based on doses taken
       final totalDoses = dosesToday.length;
-      final takenDoses = dosesToday.values.where((dose) => dose == 'taken').length;
-      final adherenceScore = totalDoses > 0 ? (takenDoses / totalDoses) * 100 : 0.0;
+      final takenDoses = dosesToday.values
+          .where((dose) => dose == 'taken')
+          .length;
+      final adherenceScore = totalDoses > 0
+          ? (takenDoses / totalDoses) * 100
+          : 0.0;
 
       final adherence = TreatmentAdherence(
         adherenceId: adherenceId,
@@ -464,17 +520,19 @@ class TreatmentAdherenceProvider with ChangeNotifier {
     }
 
     final totalRecords = _adherenceRecords.length;
-    final overallScore = _adherenceRecords
-        .map((r) => r.adherenceScore)
-        .reduce((a, b) => a + b) / totalRecords;
+    final overallScore =
+        _adherenceRecords.map((r) => r.adherenceScore).reduce((a, b) => a + b) /
+        totalRecords;
 
     // Weekly score (last 7 days)
     final weekAgo = DateTime.now().subtract(Duration(days: 7));
     final weeklyRecords = _adherenceRecords
         .where((r) => r.date.isAfter(weekAgo))
         .toList();
-    final weeklyScore = weeklyRecords.isEmpty ? 0.0 :
-        weeklyRecords.map((r) => r.adherenceScore).reduce((a, b) => a + b) / weeklyRecords.length;
+    final weeklyScore = weeklyRecords.isEmpty
+        ? 0.0
+        : weeklyRecords.map((r) => r.adherenceScore).reduce((a, b) => a + b) /
+              weeklyRecords.length;
 
     final sideEffectsReported = _adherenceRecords
         .where((r) => r.sideEffects.isNotEmpty)
@@ -558,13 +616,12 @@ class NotificationProvider with ChangeNotifier {
       await FirebaseFirestore.instance
           .collection('notifications')
           .doc(notificationId)
-          .update({
-        'status': 'read',
-        'readAt': Timestamp.now(),
-      });
+          .update({'status': 'read', 'readAt': Timestamp.now()});
 
       // Update local state
-      final index = _notifications.indexWhere((n) => n.notificationId == notificationId);
+      final index = _notifications.indexWhere(
+        (n) => n.notificationId == notificationId,
+      );
       if (index != -1) {
         _unreadCount = _notifications.where((n) => n.status == 'unread').length;
         notifyListeners();

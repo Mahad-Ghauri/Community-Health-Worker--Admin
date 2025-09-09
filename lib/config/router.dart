@@ -15,7 +15,6 @@ import '../views/interface/authentication/forget_password.dart';
 
 // Patient Management Screens
 import '../views/screens/patient_list_screen.dart';
-import '../views/screens/patient_search_screen.dart';
 import '../views/screens/patient_details_screen.dart';
 import '../views/screens/register_patient_screen.dart';
 import '../views/screens/edit_patient_screen.dart';
@@ -84,9 +83,6 @@ class AppRouter {
       case '/patients':
       case '/patient-list':
         return ElegantRoute.build(const PatientListScreen());
-      case '/patient-search':
-      case '/search-patients':
-        return ElegantRoute.build(const PatientSearchScreen());
       case '/patient-details':
         final patientId = settings.arguments as String?;
         return ElegantRoute.build(PatientDetailsScreen(patientId: patientId));
