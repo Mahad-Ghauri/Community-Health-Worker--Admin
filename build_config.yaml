@@ -1,0 +1,7 @@
+# Flutter Build Optimization Configuration
+# This file contains additional build settings for Flutter
+
+# Build modes configuration
+include: package:flutter_lints/flutter.yaml
+
+# Additional build optimizations will be handled by flutter build commands

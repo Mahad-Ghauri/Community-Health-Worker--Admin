@@ -445,7 +445,7 @@ class VisitProvider with ChangeNotifier {
       // Validate if visit can be created
       final canCreate = await VisitService.canCreateVisit(patientId: patientId);
       if (!canCreate) {
-        throw Exception('Recent visit already exists for this patient');
+        throw Exception('You cannot create another visit for this patient yet. Please wait at least 2 hours between visits.');
       }
 
       // Validate location if GPS is available

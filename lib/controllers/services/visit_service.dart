@@ -347,7 +347,7 @@ class VisitService {
       // Validate current location against patient location
       return await _gpsService.validateVisitLocation(
         patientLocation: patientLocation,
-        allowedRadius: 100.0, // 100 meters radius
+        allowedRadius: 35.0, // 35 meters radius - balanced validation
       );
     } catch (e) {
       // Allow visit if validation fails (don't block CHW work)

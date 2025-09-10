@@ -2,8 +2,6 @@ import 'package:chw_tb/config/router.dart';
 import 'package:chw_tb/controllers/providers/app_providers.dart';
 import 'package:chw_tb/controllers/services/auth_gate.dart';
 import 'package:chw_tb/config/theme.dart';
-import 'package:chw_tb/models/storemockMedicationData.dart';
-import 'package:chw_tb/models/storeMockScreeningResults.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';

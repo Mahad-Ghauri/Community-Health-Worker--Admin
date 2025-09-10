@@ -206,7 +206,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     title: 'Sync Data',
                     onTap: () {
                       Navigator.pop(context);
-                      _showSyncDialog();
+                     Navigator.pushNamed(context, '/sync-status');
                     },
                   ),
                   const Divider(),
@@ -326,41 +326,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
-  void _showSyncDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Sync Data',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'Sync your offline data with the server?',
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _performSync();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: MadadgarTheme.primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: Text('Sync Now', style: GoogleFonts.poppins()),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   void _showLogoutDialog() {
     showDialog(
@@ -400,29 +366,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
-  void _performSync() {
-    // Mock sync operation
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Syncing data...', style: GoogleFonts.poppins()),
-        backgroundColor: MadadgarTheme.primaryColor,
-      ),
-    );
-
-    // Simulate sync delay
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Data synced successfully!',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: Colors.green,
-        ),
-      );
-    });
-  }
 }
 
 class NavigationItem {

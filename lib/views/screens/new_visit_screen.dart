@@ -1,10 +1,9 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:chw_tb/config/theme.dart';
 import 'package:chw_tb/controllers/providers/patient_provider.dart';
+import 'package:chw_tb/controllers/services/gps_service.dart';
 import 'package:chw_tb/models/core_models.dart';
 
 class NewVisitScreen extends StatefulWidget {
@@ -30,6 +29,10 @@ class _NewVisitScreenState extends State<NewVisitScreen>
   String _selectedVisitType = 'home_visit';
   final List<String> _capturedPhotos = [];
   Map<String, double>? _currentLocation;
+  bool? _locationValidated;
+  double? _distanceFromPatient;
+  double? _gpsAccuracy;
+  String? _gpsStatusMessage;
 
   final List<Map<String, String>> _visitTypes = [
     {'value': 'home_visit', 'label': 'Home Visit'},
@@ -130,6 +133,26 @@ class _NewVisitScreenState extends State<NewVisitScreen>
       return;
     }
 
+    if (!_gpsEnabled || _currentLocation == null) {
+      _showSnackBar('Please capture GPS location before submitting visit', isError: true);
+      return;
+    }
+
+    // Block submission if location validation failed
+    if (_locationValidated == false) {
+      _showSnackBar(
+        'Visit cannot be logged: You must be within 35 meters of the patient location. Current distance: ${_distanceFromPatient?.toStringAsFixed(1)}m',
+        isError: true,
+      );
+      return;
+    }
+
+    // Ensure location is validated for patients with GPS data
+    if (_selectedPatient!.gpsLocation.isNotEmpty && _locationValidated == null) {
+      _showSnackBar('Please wait for location validation to complete', isError: true);
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -142,19 +165,55 @@ class _NewVisitScreenState extends State<NewVisitScreen>
         notes: _notesController.text.trim(),
         photos: _capturedPhotos.isNotEmpty ? _capturedPhotos : null,
       );
+      
+      // Check if there's an error in the visit provider
+      if (visitProvider.error != null) {
+        String errorMessage = visitProvider.error!;
+        
+        // Make the 2-hour restriction message more user-friendly
+        if (errorMessage.contains('Recent visit already exists')) {
+          errorMessage = 'You cannot create another visit for this patient yet. Please wait at least 2 hours between visits for the same patient.';
+        }
+        
+        _showSnackBar(errorMessage, isError: true);
+        return;
+      }
 
       if (visitId != null && mounted) {
         _showSnackBar('Visit recorded successfully!');
-        Navigator.pushReplacementNamed(
-          context,
-          '/adherence-tracking',
-          arguments: {'patientId': _selectedPatient!.patientId},
-        );
+        
+        // Only navigate to adherence tracking if patient was found
+        if (_patientFound) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/adherence-tracking',
+            arguments: {'patientId': _selectedPatient!.patientId},
+          );
+        } else {
+          // Patient not found - return to previous screen
+          Navigator.pop(context);
+        }
       } else {
-        _showSnackBar('Failed to record visit', isError: true);
+        _showSnackBar('Failed to record visit - please try again', isError: true);
       }
     } catch (e) {
-      _showSnackBar('Error: $e', isError: true);
+      String errorMessage = e.toString();
+      
+      // Handle specific error cases with user-friendly messages
+      if (errorMessage.contains('2 hours') || errorMessage.contains('wait at least')) {
+        errorMessage = 'Cannot create visit: You must wait at least 2 hours between visits for the same patient. This prevents duplicate entries.';
+      } else if (errorMessage.contains('not authenticated')) {
+        errorMessage = 'Authentication error: Please log in again.';
+      } else if (errorMessage.contains('GPS') || errorMessage.contains('location')) {
+        errorMessage = 'Location error: Please ensure GPS is enabled and try again.';
+      } else if (errorMessage.contains('network') || errorMessage.contains('connection')) {
+        errorMessage = 'Network error: Please check your internet connection and try again.';
+      } else {
+        // Clean up the error message by removing "Exception: " prefix
+        errorMessage = errorMessage.replaceFirst('Exception: ', '');
+      }
+      
+      _showSnackBar(errorMessage, isError: true);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -346,7 +405,15 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                       setState(() {
                         _selectedPatient = patient;
                         _selectedPatientId = patient?.patientId;
+                        // Reset validation when patient changes
+                        _locationValidated = null;
+                        _distanceFromPatient = null;
                       });
+                      
+                      // Re-validate location if GPS is already captured
+                      if (_gpsEnabled && _currentLocation != null && patient != null) {
+                        _validateLocation();
+                      }
                     },
                     validator: (value) {
                       if (value == null) {
@@ -502,7 +569,7 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                 Icon(Icons.location_on, color: MadadgarTheme.primaryColor),
                 const SizedBox(width: 8),
                 Text(
-                  'GPS Location',
+                  'GPS Location Verification',
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -513,12 +580,14 @@ class _NewVisitScreenState extends State<NewVisitScreen>
             ),
             const SizedBox(height: 16),
 
+            // GPS Status Row
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Main status
                       Text(
                         _gpsEnabled ? 'Location Captured' : 'Location Required',
                         style: GoogleFonts.poppins(
@@ -529,23 +598,35 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                               : Colors.orange.shade700,
                         ),
                       ),
-                      Text(
-                        _gpsEnabled
-                            ? 'GPS coordinates recorded for visit verification'
-                            : 'Capture GPS location to verify visit',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.black54,
+                      
+                      // Status message
+                      if (_gpsStatusMessage != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          _gpsStatusMessage!,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: Colors.black54,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: _captureGPS,
-                  icon: Icon(_gpsEnabled ? Icons.refresh : Icons.gps_fixed),
+                  onPressed: _isLoading ? null : _captureGPS,
+                  icon: _isLoading 
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(_gpsEnabled ? Icons.refresh : Icons.gps_fixed),
                   label: Text(
-                    _gpsEnabled ? 'Refresh' : 'Capture',
+                    _isLoading ? 'Capturing...' : (_gpsEnabled ? 'Refresh' : 'Capture'),
                     style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -560,6 +641,113 @@ class _NewVisitScreenState extends State<NewVisitScreen>
                 ),
               ],
             ),
+
+            // GPS Details (when captured)
+            if (_gpsEnabled && _currentLocation != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // GPS Accuracy
+                    Row(
+                      children: [
+                        Icon(Icons.my_location, size: 16, color: Colors.grey.shade600),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Accuracy: ${_gpsAccuracy?.toStringAsFixed(1)}m (${_getAccuracyDescription(_gpsAccuracy ?? 0)})',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Location validation status
+                    if (_selectedPatient != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            _locationValidated == true 
+                                ? Icons.check_circle 
+                                : _locationValidated == false 
+                                    ? Icons.warning 
+                                    : Icons.info,
+                            size: 16,
+                            color: _locationValidated == true 
+                                ? Colors.green 
+                                : _locationValidated == false 
+                                    ? Colors.orange 
+                                    : Colors.blue,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _distanceFromPatient != null
+                                  ? 'Distance from patient: ${_distanceFromPatient!.toStringAsFixed(1)}m'
+                                  : 'Patient location validation pending',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    // Coordinates (for debugging)
+                    const SizedBox(height: 8),
+                    Text(
+                      'Coordinates: ${_currentLocation!['lat']!.toStringAsFixed(6)}, ${_currentLocation!['lng']!.toStringAsFixed(6)}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Warning for location validation
+            if (_locationValidated == false) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'You appear to be outside the patient\'s location area. Please ensure you are at the correct address.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -824,50 +1012,209 @@ class _NewVisitScreenState extends State<NewVisitScreen>
   }
 
   Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _submitVisit,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: MadadgarTheme.primaryColor,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+    return Column(
+      children: [
+        // Status indicator
+        if (!_patientFound) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Patient not found - Visit will be logged without adherence tracking',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.orange.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          elevation: 4,
-        ),
-        child: _isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
+        ],
+
+        // Timing restriction info
+        if (_selectedPatient != null) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.schedule, color: Colors.blue, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Note: Only one visit per patient every 2 hours is allowed to prevent duplicates',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
-              )
-            : Text(
-                'Log Visit',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+              ],
+            ),
+          ),
+        ],
+        
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _submitVisit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: MadadgarTheme.primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-      ),
+              elevation: 4,
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(
+                    _patientFound ? 'Log Visit & Track Adherence' : 'Log Visit Only',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+          ),
+        ),
+      ],
     );
   }
 
-  void _captureGPS() {
-    setState(() => _gpsEnabled = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'GPS location captured successfully',
-          style: GoogleFonts.poppins(),
+  void _captureGPS() async {
+    setState(() {
+      _isLoading = true;
+      _gpsStatusMessage = 'Capturing GPS location...';
+    });
+
+    try {
+      final gpsService = GPSService();
+      
+      // Get current location with high accuracy
+      final location = await gpsService.getCurrentLocationWithRetry();
+      
+      setState(() {
+        _currentLocation = location;
+        _gpsAccuracy = location['accuracy'];
+        _gpsEnabled = true;
+        _gpsStatusMessage = 'GPS location captured successfully';
+      });
+
+      // If patient is selected, validate location
+      if (_selectedPatient != null) {
+        await _validateLocation();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'GPS location captured with ${_getAccuracyDescription(_gpsAccuracy!)} accuracy',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.green,
         ),
-        backgroundColor: Colors.green,
-      ),
-    );
+      );
+    } catch (e) {
+      setState(() {
+        _gpsEnabled = false;
+        _gpsStatusMessage = 'Failed to capture GPS: $e';
+        _locationValidated = null;
+        _distanceFromPatient = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to capture GPS location: $e',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _validateLocation() async {
+    if (_currentLocation == null || _selectedPatient == null) return;
+
+    try {
+      // Get patient location from Firestore
+      final patientLocation = _selectedPatient!.gpsLocation;
+      
+      if (patientLocation.isEmpty) {
+        setState(() {
+          _locationValidated = null;
+          _distanceFromPatient = null;
+          _gpsStatusMessage = 'Patient location not available - validation skipped';
+        });
+        return;
+      }
+
+      final gpsService = GPSService();
+      
+      // Calculate distance
+      final distance = gpsService.calculateDistance(
+        lat1: _currentLocation!['lat']!,
+        lng1: _currentLocation!['lng']!,
+        lat2: patientLocation['lat']!,
+        lng2: patientLocation['lng']!,
+      );
+
+      // Validate if within allowed radius (35m)
+      final isValid = distance <= 35.0;
+
+      setState(() {
+        _distanceFromPatient = distance;
+        _locationValidated = isValid;
+        _gpsStatusMessage = isValid
+            ? 'Location verified - ${distance.toStringAsFixed(1)}m from patient'
+            : 'Invalid location: ${distance.toStringAsFixed(1)}m from patient (>35m limit)';
+      });
+    } catch (e) {
+      setState(() {
+        _locationValidated = null;
+        _distanceFromPatient = null;
+        _gpsStatusMessage = 'Location validation failed: $e';
+      });
+    }
+  }
+
+  String _getAccuracyDescription(double accuracy) {
+    if (accuracy <= 5) return 'Excellent';
+    if (accuracy <= 10) return 'Good';
+    if (accuracy <= 20) return 'Fair';
+    if (accuracy <= 50) return 'Poor';
+    return 'Very Poor';
   }
 
   void _capturePhoto() {
