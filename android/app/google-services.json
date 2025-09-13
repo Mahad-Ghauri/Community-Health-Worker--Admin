@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1027724937621",
+    "project_id": "community-health-a340d",
+    "storage_bucket": "community-health-a340d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1027724937621:android:3911a79dc336d4074a8e9c",
+        "android_client_info": {
+          "package_name": "com.example.chw_admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5EMQ1N9-MHIOXg7BeJ3kf-cBUOocdFnI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1027724937621:android:48c8a9cd30bd127a4a8e9c",
+        "android_client_info": {
+          "package_name": "com.example.chw_tb"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5EMQ1N9-MHIOXg7BeJ3kf-cBUOocdFnI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
