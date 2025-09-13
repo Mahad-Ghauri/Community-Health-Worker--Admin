@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../providers/audit_log_provider.dart';
 import '../../models/audit_log.dart';
 import '../../widgets/common_widgets.dart' as common;
-import '../../utils/responsive_helper.dart';
 
 class AuditLogsScreen extends StatefulWidget {
   const AuditLogsScreen({super.key});
@@ -54,7 +53,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
               _buildHeader(context, auditLogProvider),
               _buildStatisticsCards(context, auditLogProvider),
               _buildFiltersBar(context, auditLogProvider),
-              Expanded(
+              Flexible(
                 child: _buildAuditLogsList(context, auditLogProvider),
               ),
             ],
@@ -65,8 +64,129 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
   }
 
   Widget _buildHeader(BuildContext context, AuditLogProvider provider) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final isCompact = screenWidth < 600;
+    final isSmallMobile = screenWidth < 480;
+    
+    // Adaptive font sizes based on screen width
+    final titleFontSize = isSmallMobile ? 20.0 : 
+                          isCompact ? 24.0 : 
+                          screenWidth < 900 ? 28.0 :
+                          screenWidth < 1200 ? 32.0 : 36.0;
+    
+    final subtitleFontSize = isSmallMobile ? 12.0 :
+                             isCompact ? 14.0 :
+                             screenWidth < 1200 ? 16.0 : 18.0;
+    
+    // Adaptive padding
+    final padding = screenWidth < 480 ? 16.0 :
+                   screenWidth < 768 ? 20.0 :
+                   screenWidth < 1024 ? 24.0 : 32.0;
+    
+    // Adaptive button sizing
+    final buttonHeight = screenWidth < 480 ? 40.0 :
+                        screenWidth < 768 ? 44.0 :
+                        screenWidth < 1024 ? 48.0 : 52.0;
+    
+    // Capped spacing to prevent excessive height
+    final titleSpacing = (screenWidth * 0.01).clamp(4.0, 8.0);
+    final sectionSpacing = (screenWidth * 0.04).clamp(16.0, 32.0);
+    final buttonSpacing = (screenWidth * 0.02).clamp(8.0, 16.0);
+
+    if (isSmallMobile) {
+      // Stack vertically for very small screens
+      return Container(
+        padding: EdgeInsets.all(padding),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(
+            bottom: BorderSide(
+              color: Theme.of(context).dividerColor.withOpacity(0.1),
+            ),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Audit Logs',
+              style: TextStyle(
+                fontSize: titleFontSize,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            SizedBox(height: titleSpacing),
+            Text(
+              'Track all system activities and user actions',
+              style: TextStyle(
+                fontSize: subtitleFontSize,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            SizedBox(height: sectionSpacing),
+            // Stack buttons vertically on small screens
+            Column(
+              children: [
+                if (provider.hasActiveFilters) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: buttonHeight,
+                    child: common.CustomButton(
+                      text: 'Clear Filters',
+                      onPressed: () {
+                        _searchController.clear();
+                        provider.clearFilters();
+                      },
+                      isSecondary: true,
+                    ),
+                  ),
+                  SizedBox(height: buttonSpacing),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: buttonHeight,
+                        child: common.CustomButton(
+                          text: 'Export',
+                          onPressed: () => _showExportDialog(context, provider),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: buttonSpacing),
+                    SizedBox(
+                      height: buttonHeight,
+                      width: buttonHeight,
+                      child: IconButton(
+                        onPressed: provider.refresh,
+                        icon: Icon(
+                          Icons.refresh,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: screenWidth < 480 ? 18.0 : 20.0,
+                        ),
+                        tooltip: 'Refresh',
+                        style: IconButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.surface,
+                          foregroundColor: Theme.of(context).colorScheme.onSurface,
+                          side: BorderSide(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+    
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
@@ -83,14 +203,17 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
               children: [
                 Text(
                   'Audit Logs',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  style: TextStyle(
+                    fontSize: titleFontSize,
                     fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: titleSpacing / 2),
                 Text(
                   'Track all system activities and user actions',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  style: TextStyle(
+                    fontSize: subtitleFontSize,
                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
@@ -100,28 +223,46 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
           Row(
             children: [
               if (provider.hasActiveFilters) ...[
-                common.CustomButton(
-                  text: 'Clear Filters',
-                  onPressed: () {
-                    _searchController.clear();
-                    provider.clearFilters();
-                  },
-                  isSecondary: true,
+                SizedBox(
+                  height: buttonHeight,
+                  child: common.CustomButton(
+                    text: isCompact ? 'Clear' : 'Clear Filters',
+                    onPressed: () {
+                      _searchController.clear();
+                      provider.clearFilters();
+                    },
+                    isSecondary: true,
+                  ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: buttonSpacing),
               ],
-              common.CustomButton(
-                text: 'Export',
-                onPressed: () => _showExportDialog(context, provider),
-              ),
-              const SizedBox(width: 16),
-              IconButton(
-                onPressed: provider.refresh,
-                icon: Icon(
-                  Icons.refresh,
-                  color: Theme.of(context).colorScheme.primary,
+              SizedBox(
+                height: buttonHeight,
+                child: common.CustomButton(
+                  text: 'Export',
+                  onPressed: () => _showExportDialog(context, provider),
                 ),
-                tooltip: 'Refresh',
+              ),
+              SizedBox(width: buttonSpacing),
+              SizedBox(
+                height: buttonHeight,
+                width: buttonHeight,
+                child: IconButton(
+                  onPressed: provider.refresh,
+                  icon: Icon(
+                    Icons.refresh,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: screenWidth < 768 ? 18.0 : 20.0,
+                  ),
+                  tooltip: 'Refresh',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -132,79 +273,160 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
 
   Widget _buildStatisticsCards(BuildContext context, AuditLogProvider provider) {
     final stats = provider.statistics;
-    final isTablet = ResponsiveHelper.isTablet(context);
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
     
     if (stats.isEmpty) {
       return const SizedBox.shrink();
     }
+    
+    // Calculate optimal columns based on screen width
+    int columns;
+    if (screenWidth < 480) {
+      columns = 1;
+    } else if (screenWidth < 768) {
+      columns = 2;
+    } else if (screenWidth < 1024) {
+      columns = 3;
+    } else if (screenWidth < 1440) {
+      columns = 4;
+    } else {
+      columns = 4;
+    }
+    
+    // Dynamic spacing and padding based on screen width
+    final spacing = screenWidth < 600 ? 12.0 :
+                   screenWidth < 900 ? 16.0 :
+                   screenWidth < 1200 ? 20.0 : 24.0;
+    
+    final padding = screenWidth < 480 ? 16.0 :
+                   screenWidth < 768 ? 20.0 :
+                   screenWidth < 1024 ? 24.0 : 32.0;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: isTablet ? 4 : 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: isTablet ? 2.5 : 2.0,
-        children: [
-          _buildStatCard(
-            context,
-            'Total Logs',
-            stats['totalLogs']?.toString() ?? '0',
-            Icons.list_alt,
-            Theme.of(context).colorScheme.primary,
-          ),
-          _buildStatCard(
-            context,
-            'High Severity',
-            stats['severityBreakdown']?['high']?.toString() ?? '0',
-            Icons.warning,
-            Colors.red,
-          ),
-          _buildStatCard(
-            context,
-            'Users Active',
-            (stats['userBreakdown'] as Map?)?.length.toString() ?? '0',
-            Icons.people,
-            Colors.green,
-          ),
-          _buildStatCard(
-            context,
-            'Today\'s Activity',
-            _getTodayActivity(stats).toString(),
-            Icons.today,
-            Colors.blue,
-          ),
-        ],
+      padding: EdgeInsets.all(padding),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Calculate card width considering constraints and spacing
+          final availableWidth = constraints.maxWidth;
+          final totalSpacing = (columns - 1) * spacing;
+          final cardWidth = (availableWidth - totalSpacing) / columns;
+          
+          final statsList = [
+            {
+              'title': 'Total Logs',
+              'value': stats['totalLogs']?.toString() ?? '0',
+              'icon': Icons.list_alt,
+              'color': Theme.of(context).colorScheme.primary,
+            },
+            {
+              'title': 'High Severity',
+              'value': stats['severityBreakdown']?['high']?.toString() ?? '0',
+              'icon': Icons.warning,
+              'color': Colors.red,
+            },
+            {
+              'title': 'Users Active',
+              'value': (stats['userBreakdown'] as Map?)?.length.toString() ?? '0',
+              'icon': Icons.people,
+              'color': Colors.green,
+            },
+            {
+              'title': 'Today\'s Activity',
+              'value': _getTodayActivity(stats).toString(),
+              'icon': Icons.today,
+              'color': Colors.blue,
+            },
+          ];
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: statsList.map((stat) {
+              return SizedBox(
+                width: cardWidth,
+                child: _buildAdaptiveStatCard(stat, screenWidth),
+              );
+            }).toList(),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color color) {
+  Widget _buildAdaptiveStatCard(Map<String, dynamic> stat, double screenWidth) {
+    // Adaptive measurements based on screen width
+    final iconSize = screenWidth < 480 ? 20.0 :
+                    screenWidth < 768 ? 24.0 :
+                    screenWidth < 1024 ? 28.0 : 32.0;
+    
+    final titleFontSize = screenWidth < 480 ? 10.0 :
+                         screenWidth < 768 ? 11.0 :
+                         screenWidth < 1024 ? 12.0 : 13.0;
+    
+    final valueFontSize = screenWidth < 480 ? 16.0 :
+                         screenWidth < 768 ? 18.0 :
+                         screenWidth < 1024 ? 22.0 : 24.0;
+    
+    final cardPadding = screenWidth < 480 ? 12.0 :
+                       screenWidth < 768 ? 14.0 :
+                       screenWidth < 1024 ? 16.0 : 18.0;
+    
+    final borderRadius = screenWidth < 600 ? 8.0 :
+                        screenWidth < 1024 ? 10.0 : 12.0;
+    
+    final elevation = screenWidth < 600 ? 1.0 :
+                     screenWidth < 1024 ? 2.0 : 3.0;
+
     return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      elevation: elevation,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: Container(
+        padding: EdgeInsets.all(cardPadding),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(icon, size: 24, color: color),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
+            Container(
+              padding: EdgeInsets.all(screenWidth < 600 ? 6.0 : 8.0),
+              decoration: BoxDecoration(
+                color: (stat['color'] as Color).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(screenWidth < 600 ? 6.0 : 8.0),
+              ),
+              child: Icon(
+                stat['icon'] as IconData,
+                size: iconSize,
+                color: stat['color'] as Color,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            SizedBox(height: screenWidth * 0.012),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                stat['value'] as String,
+                style: TextStyle(
+                  fontSize: valueFontSize,
+                  fontWeight: FontWeight.bold,
+                  color: stat['color'] as Color,
+                ),
+              ),
+            ),
+            SizedBox(height: screenWidth * 0.006),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                stat['title'] as String,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: titleFontSize,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -213,10 +435,16 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
   }
 
   Widget _buildFiltersBar(BuildContext context, AuditLogProvider provider) {
-    final isTablet = ResponsiveHelper.isTablet(context);
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    
+    // Adaptive padding
+    final padding = screenWidth < 480 ? 16.0 :
+                   screenWidth < 768 ? 20.0 :
+                   screenWidth < 1024 ? 24.0 : 32.0;
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
@@ -225,186 +453,279 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
           ),
         ),
       ),
-      child: isTablet ? _buildTabletFilters(context, provider) : _buildMobileFilters(context, provider),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Determine layout based on available width
+          if (screenWidth < 480) {
+            return _buildVerticalFilters(context, provider, screenWidth);
+          } else if (screenWidth < 768) {
+            return _buildMixedFilters(context, provider, screenWidth);
+          } else if (screenWidth < 1024) {
+            return _buildHorizontalFilters(context, provider, screenWidth, 2);
+          } else {
+            return _buildFullHorizontalFilters(context, provider, screenWidth);
+          }
+        },
+      ),
     );
   }
 
-  Widget _buildTabletFilters(BuildContext context, AuditLogProvider provider) {
+  Widget _buildVerticalFilters(BuildContext context, AuditLogProvider provider, double screenWidth) {
+    final spacing = (screenWidth * 0.025).clamp(12.0, 20.0);
+    
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: common.CustomTextField(
-                label: 'Search',
-                hint: 'Search audit logs...',
-                controller: _searchController,
-                prefixIcon: const Icon(Icons.search),
-                onChanged: provider.searchAuditLogs,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: provider.actionFilter.isEmpty ? 'All Actions' : provider.actionFilter,
-                decoration: const InputDecoration(
-                  labelText: 'Action',
-                  border: OutlineInputBorder(),
-                ),
-                items: AuditLogProvider.actionFilterOptions.map((action) {
-                  return DropdownMenuItem(value: action, child: Text(action));
-                }).toList(),
-                onChanged: (value) => provider.filterByAction(value ?? ''),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: provider.entityFilter.isEmpty ? 'All Entities' : provider.entityFilter,
-                decoration: const InputDecoration(
-                  labelText: 'Entity',
-                  border: OutlineInputBorder(),
-                ),
-                items: AuditLogProvider.entityFilterOptions.map((entity) {
-                  return DropdownMenuItem(value: entity, child: Text(entity));
-                }).toList(),
-                onChanged: (value) => provider.filterByEntity(value ?? ''),
-              ),
-            ),
-            const SizedBox(width: 16),
-            OutlinedButton.icon(
-              onPressed: () => _showDateRangePicker(context, provider),
-              icon: const Icon(Icons.date_range),
-              label: Text(provider.startDate != null || provider.endDate != null
-                  ? 'Date Range Set'
-                  : 'Date Range'),
-            ),
-          ],
+        _buildAdaptiveSearchField(context, provider, screenWidth),
+        SizedBox(height: spacing),
+        _buildAdaptiveActionFilter(context, provider, screenWidth),
+        SizedBox(height: spacing),
+        _buildAdaptiveEntityFilter(context, provider, screenWidth),
+        SizedBox(height: spacing),
+        SizedBox(
+          width: double.infinity,
+          child: _buildDateRangeButton(context, provider, screenWidth),
         ),
         if (provider.hasActiveFilters) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.filter_list,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Active filters: ${provider.filtersDescription}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          SizedBox(height: spacing),
+          _buildActiveFiltersIndicator(context, provider, screenWidth),
         ],
       ],
     );
   }
 
-  Widget _buildMobileFilters(BuildContext context, AuditLogProvider provider) {
+  Widget _buildMixedFilters(BuildContext context, AuditLogProvider provider, double screenWidth) {
+    final spacing = (screenWidth * 0.02).clamp(8.0, 16.0);
+    
     return Column(
       children: [
-        common.CustomTextField(
-          label: 'Search',
-          hint: 'Search audit logs...',
-          controller: _searchController,
-          prefixIcon: const Icon(Icons.search),
-          onChanged: provider.searchAuditLogs,
-        ),
-        const SizedBox(height: 16),
+        _buildAdaptiveSearchField(context, provider, screenWidth),
+        SizedBox(height: spacing),
         Row(
           children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: provider.actionFilter.isEmpty ? 'All Actions' : provider.actionFilter,
-                decoration: const InputDecoration(
-                  labelText: 'Action',
-                  border: OutlineInputBorder(),
-                ),
-                items: AuditLogProvider.actionFilterOptions.map((action) {
-                  return DropdownMenuItem(value: action, child: Text(action));
-                }).toList(),
-                onChanged: (value) => provider.filterByAction(value ?? ''),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: provider.entityFilter.isEmpty ? 'All Entities' : provider.entityFilter,
-                decoration: const InputDecoration(
-                  labelText: 'Entity',
-                  border: OutlineInputBorder(),
-                ),
-                items: AuditLogProvider.entityFilterOptions.map((entity) {
-                  return DropdownMenuItem(value: entity, child: Text(entity));
-                }).toList(),
-                onChanged: (value) => provider.filterByEntity(value ?? ''),
-              ),
-            ),
+            Expanded(child: _buildAdaptiveActionFilter(context, provider, screenWidth)),
+            SizedBox(width: spacing),
+            Expanded(child: _buildAdaptiveEntityFilter(context, provider, screenWidth)),
           ],
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: spacing),
         Row(
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showDateRangePicker(context, provider),
-                icon: const Icon(Icons.date_range),
-                label: Text(provider.startDate != null || provider.endDate != null
-                    ? 'Date Range Set'
-                    : 'Set Date Range'),
-              ),
-            ),
+            Expanded(child: _buildDateRangeButton(context, provider, screenWidth)),
           ],
         ),
         if (provider.hasActiveFilters) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+          SizedBox(height: spacing),
+          _buildActiveFiltersIndicator(context, provider, screenWidth),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildHorizontalFilters(BuildContext context, AuditLogProvider provider, double screenWidth, int rows) {
+    final spacing = (screenWidth * 0.015).clamp(6.0, 12.0);
+    
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(flex: 2, child: _buildAdaptiveSearchField(context, provider, screenWidth)),
+            SizedBox(width: spacing),
+            Expanded(child: _buildAdaptiveActionFilter(context, provider, screenWidth)),
+          ],
+        ),
+        SizedBox(height: spacing),
+        Row(
+          children: [
+            Expanded(child: _buildAdaptiveEntityFilter(context, provider, screenWidth)),
+            SizedBox(width: spacing),
+            Expanded(child: _buildDateRangeButton(context, provider, screenWidth)),
+          ],
+        ),
+        if (provider.hasActiveFilters) ...[
+          SizedBox(height: spacing),
+          _buildActiveFiltersIndicator(context, provider, screenWidth),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFullHorizontalFilters(BuildContext context, AuditLogProvider provider, double screenWidth) {
+    final spacing = screenWidth < 1200 ? 16.0 : 
+                   screenWidth < 1600 ? 20.0 : 24.0;
+    
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(flex: 2, child: _buildAdaptiveSearchField(context, provider, screenWidth)),
+            SizedBox(width: spacing),
+            Expanded(child: _buildAdaptiveActionFilter(context, provider, screenWidth)),
+            SizedBox(width: spacing),
+            Expanded(child: _buildAdaptiveEntityFilter(context, provider, screenWidth)),
+            SizedBox(width: spacing),
+            _buildDateRangeButton(context, provider, screenWidth),
+          ],
+        ),
+        if (provider.hasActiveFilters) ...[
+          SizedBox(height: spacing * 0.75),
+          _buildActiveFiltersIndicator(context, provider, screenWidth),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAdaptiveSearchField(BuildContext context, AuditLogProvider provider, double screenWidth) {
+    return common.CustomTextField(
+      label: 'Search',
+      hint: screenWidth < 480 ? 'Search...' : 
+            screenWidth < 768 ? 'Search logs...' : 
+            'Search audit logs...',
+      controller: _searchController,
+      prefixIcon: Icon(
+        Icons.search,
+        size: screenWidth < 480 ? 18.0 : 20.0,
+      ),
+      onChanged: provider.searchAuditLogs,
+    );
+  }
+
+  Widget _buildAdaptiveActionFilter(BuildContext context, AuditLogProvider provider, double screenWidth) {
+    return _buildAdaptiveDropdown(
+      context: context,
+      label: 'Action',
+      value: provider.actionFilter.isEmpty ? 'All Actions' : provider.actionFilter,
+      items: AuditLogProvider.actionFilterOptions,
+      onChanged: (value) => provider.filterByAction(value ?? ''),
+      screenWidth: screenWidth,
+    );
+  }
+
+  Widget _buildAdaptiveEntityFilter(BuildContext context, AuditLogProvider provider, double screenWidth) {
+    return _buildAdaptiveDropdown(
+      context: context,
+      label: 'Entity',
+      value: provider.entityFilter.isEmpty ? 'All Entities' : provider.entityFilter,
+      items: AuditLogProvider.entityFilterOptions,
+      onChanged: (value) => provider.filterByEntity(value ?? ''),
+      screenWidth: screenWidth,
+    );
+  }
+
+  Widget _buildAdaptiveDropdown({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required List<String> items,
+    required Function(String?) onChanged,
+    required double screenWidth,
+  }) {
+    final fontSize = screenWidth < 480 ? 13.0 :
+                    screenWidth < 768 ? 14.0 :
+                    screenWidth < 1024 ? 15.0 : 16.0;
+    
+    final borderRadius = screenWidth < 600 ? 8.0 :
+                        screenWidth < 1024 ? 12.0 : 16.0;
+
+    return DropdownButtonFormField<String>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: fontSize - 1),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: screenWidth < 480 ? 12.0 : 16.0,
+          vertical: screenWidth < 480 ? 12.0 : 16.0,
+        ),
+      ),
+      style: TextStyle(fontSize: fontSize),
+      items: items.map((item) {
+        return DropdownMenuItem(value: item, child: Text(item));
+      }).toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildDateRangeButton(BuildContext context, AuditLogProvider provider, double screenWidth) {
+    final buttonHeight = screenWidth < 480 ? 52.0 :
+                        screenWidth < 768 ? 56.0 :
+                        screenWidth < 1024 ? 60.0 : 64.0;
+    
+    final fontSize = screenWidth < 480 ? 13.0 :
+                    screenWidth < 768 ? 14.0 :
+                    screenWidth < 1024 ? 15.0 : 16.0;
+    
+    final borderRadius = screenWidth < 600 ? 8.0 :
+                        screenWidth < 1024 ? 12.0 : 16.0;
+
+    return SizedBox(
+      height: buttonHeight,
+      child: OutlinedButton.icon(
+        onPressed: () => _showDateRangePicker(context, provider),
+        icon: Icon(
+          Icons.date_range,
+          size: screenWidth < 480 ? 18.0 : 20.0,
+        ),
+        label: Text(
+          provider.startDate != null || provider.endDate != null
+              ? (screenWidth < 600 ? 'Date Set' : 'Date Range Set')
+              : (screenWidth < 600 ? 'Date' : 'Date Range'),
+          style: TextStyle(fontSize: fontSize),
+        ),
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(borderRadius),
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: screenWidth < 480 ? 12.0 : 16.0,
+            vertical: screenWidth < 480 ? 12.0 : 16.0,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveFiltersIndicator(BuildContext context, AuditLogProvider provider, double screenWidth) {
+    final fontSize = screenWidth < 480 ? 11.0 :
+                    screenWidth < 768 ? 12.0 : 13.0;
+    
+    final iconSize = screenWidth < 480 ? 14.0 :
+                    screenWidth < 768 ? 16.0 : 18.0;
+    
+    final padding = screenWidth < 480 ? 8.0 :
+                   screenWidth < 768 ? 10.0 : 12.0;
+
+    return Container(
+      padding: EdgeInsets.all(padding),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(screenWidth < 600 ? 6.0 : 8.0),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.filter_list,
+            size: iconSize,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          SizedBox(width: screenWidth * 0.01),
+          Expanded(
+            child: Text(
+              screenWidth < 600 
+                  ? 'Filters: ${provider.filtersDescription}'
+                  : 'Active filters: ${provider.filtersDescription}',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontSize: fontSize,
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.filter_list,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Filters: ${provider.filtersDescription}',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 
@@ -428,100 +749,187 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     final auditLogs = provider.auditLogs;
     
     if (auditLogs.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.history,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              provider.hasActiveFilters
-                  ? 'No audit logs found matching your filters'
-                  : 'No audit logs found',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+      return Container(
+        height: 300,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.history,
+                size: 64,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            if (provider.hasActiveFilters) ...[
+              const SizedBox(height: 16),
               Text(
-                provider.filtersDescription,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                provider.hasActiveFilters
+                    ? 'No audit logs found matching your filters'
+                    : 'No audit logs found',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
-              common.CustomButton(
-                text: 'Clear Filters',
-                onPressed: () {
-                  _searchController.clear();
-                  provider.clearFilters();
-                },
-                isSecondary: true,
-              ),
+              const SizedBox(height: 8),
+              if (provider.hasActiveFilters) ...[
+                Text(
+                  provider.filtersDescription,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                common.CustomButton(
+                  text: 'Clear Filters',
+                  onPressed: () {
+                    _searchController.clear();
+                    provider.clearFilters();
+                  },
+                  isSecondary: true,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       );
     }
 
-    final isTablet = ResponsiveHelper.isTablet(context);
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    
+    // Adaptive padding
+    final padding = screenWidth < 480 ? 16.0 :
+                   screenWidth < 768 ? 20.0 :
+                   screenWidth < 1024 ? 24.0 : 32.0;
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: isTablet
-          ? _buildTabletList(context, auditLogs, provider)
-          : _buildMobileList(context, auditLogs, provider),
+      padding: EdgeInsets.symmetric(horizontal: padding),
+      child: screenWidth < 768
+          ? _buildMobileList(context, auditLogs, provider)
+          : _buildTabletList(context, auditLogs, provider),
     );
   }
 
   Widget _buildTabletList(BuildContext context, List<AuditLog> auditLogs, AuditLogProvider provider) {
-    return SingleChildScrollView(
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    
+    // Adaptive measurements
+    final cardPadding = screenWidth < 1024 ? 12.0 : 16.0;
+    final borderRadius = screenWidth < 1024 ? 8.0 : 12.0;
+    final headerFontSize = screenWidth < 1024 ? 14.0 : 16.0;
+    final fontSize = screenWidth < 1024 ? 13.0 : 14.0;
+    final elevation = screenWidth < 1024 ? 1.0 : 2.0;
+    
+    return ListView.builder(
       controller: _scrollController,
-      child: Card(
-        elevation: 2,
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
+      itemCount: auditLogs.length + 2 + (provider.isLoading ? 1 : 0), // +2 for header and potential loading
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          // Header card
+          return Card(
+            elevation: elevation,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(borderRadius),
+            ),
+            child: Container(
+              padding: EdgeInsets.all(cardPadding),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                borderRadius: BorderRadius.circular(borderRadius),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Expanded(flex: 2, child: Text('Action', style: TextStyle(fontWeight: FontWeight.bold))),
-                  Expanded(flex: 2, child: Text('User', style: TextStyle(fontWeight: FontWeight.bold))),
-                  Expanded(child: Text('Entity', style: TextStyle(fontWeight: FontWeight.bold))),
-                  Expanded(child: Text('Time', style: TextStyle(fontWeight: FontWeight.bold))),
-                  Expanded(child: Text('Severity', style: TextStyle(fontWeight: FontWeight.bold))),
-                  SizedBox(width: 60, child: Text('Details', style: TextStyle(fontWeight: FontWeight.bold))),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Action',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: headerFontSize,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      'User',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: headerFontSize,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Entity',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: headerFontSize,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Time',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: headerFontSize,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Severity',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: headerFontSize,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: screenWidth < 1024 ? 50 : 60,
+                    child: Text(
+                      'Details',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: headerFontSize,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-            // Audit log rows
-            ...auditLogs.map((auditLog) => _buildTabletAuditLogRow(context, auditLog)),
-            if (provider.isLoading)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-          ],
-        ),
-      ),
+          );
+        } else if (index <= auditLogs.length) {
+          // Audit log row
+          final auditLog = auditLogs[index - 1];
+          return Card(
+            elevation: elevation,
+            margin: EdgeInsets.only(top: cardPadding / 2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(borderRadius),
+            ),
+            child: _buildAdaptiveTabletAuditLogRow(context, auditLog, screenWidth, fontSize),
+          );
+        } else {
+          // Loading indicator
+          return Padding(
+            padding: EdgeInsets.all(cardPadding),
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+      },
     );
   }
 
-  Widget _buildTabletAuditLogRow(BuildContext context, AuditLog auditLog) {
+  Widget _buildAdaptiveTabletAuditLogRow(BuildContext context, AuditLog auditLog, double screenWidth, double fontSize) {
+    final rowPadding = screenWidth < 1024 ? 12.0 : 16.0;
+    final iconSize = screenWidth < 1024 ? 18.0 : 20.0;
+    
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(rowPadding),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -538,12 +946,16 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
               children: [
                 Text(
                   auditLog.actionDisplayName,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: fontSize,
+                  ),
                 ),
                 if (auditLog.description != null)
                   Text(
                     auditLog.description!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    style: TextStyle(
+                      fontSize: fontSize - 1,
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                     maxLines: 2,
@@ -559,18 +971,24 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
               children: [
                 Text(
                   auditLog.userName,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: fontSize,
+                  ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth < 1024 ? 4.0 : 6.0,
+                    vertical: screenWidth < 1024 ? 1.0 : 2.0,
+                  ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(screenWidth < 1024 ? 6.0 : 8.0),
                   ),
                   child: Text(
                     auditLog.userRole,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: screenWidth < 1024 ? 9.0 : 10.0,
                       color: Theme.of(context).colorScheme.secondary,
                     ),
                   ),
@@ -579,7 +997,10 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
             ),
           ),
           Expanded(
-            child: Text(auditLog.entityDisplayName),
+            child: Text(
+              auditLog.entityDisplayName,
+              style: TextStyle(fontSize: fontSize),
+            ),
           ),
           Expanded(
             child: Column(
@@ -587,11 +1008,15 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
               children: [
                 Text(
                   auditLog.formattedTime,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: fontSize,
+                  ),
                 ),
                 Text(
                   auditLog.timeAgo,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  style: TextStyle(
+                    fontSize: fontSize - 1,
                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
@@ -600,16 +1025,19 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
           ),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth < 1024 ? 6.0 : 8.0,
+                vertical: screenWidth < 1024 ? 2.0 : 4.0,
+              ),
               decoration: BoxDecoration(
                 color: _getSeverityColor(auditLog.severity).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(screenWidth < 1024 ? 8.0 : 12.0),
               ),
               child: Text(
                 auditLog.severity.name.toUpperCase(),
                 style: TextStyle(
                   color: _getSeverityColor(auditLog.severity),
-                  fontSize: 10,
+                  fontSize: screenWidth < 1024 ? 9.0 : 10.0,
                   fontWeight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,
@@ -617,9 +1045,9 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
             ),
           ),
           SizedBox(
-            width: 60,
+            width: screenWidth < 1024 ? 50 : 60,
             child: IconButton(
-              icon: const Icon(Icons.info_outline),
+              icon: Icon(Icons.info_outline, size: iconSize),
               onPressed: () => _showAuditLogDetails(context, auditLog),
               tooltip: 'View details',
             ),
@@ -630,116 +1058,266 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
   }
 
   Widget _buildMobileList(BuildContext context, List<AuditLog> auditLogs, AuditLogProvider provider) {
-    return ListView.builder(
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    
+    // Adaptive spacing and sizing
+    final cardSpacing = screenWidth < 480 ? 8.0 : 12.0;
+    final cardPadding = screenWidth < 480 ? 12.0 : 16.0;
+    final borderRadius = screenWidth < 480 ? 8.0 : 12.0;
+    final titleFontSize = screenWidth < 480 ? 14.0 : 16.0;
+    final bodyFontSize = screenWidth < 480 ? 12.0 : 14.0;
+    final smallFontSize = screenWidth < 480 ? 10.0 : 12.0;
+    final avatarRadius = screenWidth < 480 ? 16.0 : 20.0;
+    final iconSize = screenWidth < 480 ? 18.0 : 20.0;
+    
+    return ListView.separated(
       controller: _scrollController,
-      padding: const EdgeInsets.only(bottom: 80),
       itemCount: auditLogs.length + (provider.isLoading ? 1 : 0),
+      separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
       itemBuilder: (context, index) {
-        if (index == auditLogs.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
+        if (index >= auditLogs.length) {
+          return Padding(
+            padding: EdgeInsets.all(cardPadding),
+            child: const Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         final auditLog = auditLogs[index];
-        return _buildMobileAuditLogCard(context, auditLog);
+        return Card(
+          elevation: screenWidth < 480 ? 1.0 : 2.0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(borderRadius),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(borderRadius),
+            onTap: () => _showAuditLogDetails(context, auditLog),
+            child: Padding(
+              padding: EdgeInsets.all(cardPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Row
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: avatarRadius,
+                        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        child: Icon(
+                          _getActionIcon(auditLog.action),
+                          size: iconSize,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      SizedBox(width: cardPadding),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              auditLog.actionDisplayName,
+                              style: TextStyle(
+                                fontSize: titleFontSize,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (auditLog.description != null) ...[
+                              SizedBox(height: cardSpacing / 2),
+                              Text(
+                                auditLog.description!,
+                                style: TextStyle(
+                                  fontSize: bodyFontSize,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      // Severity badge
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth < 480 ? 6.0 : 8.0,
+                          vertical: screenWidth < 480 ? 2.0 : 4.0,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getSeverityColor(auditLog.severity).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(borderRadius / 2),
+                        ),
+                        child: Text(
+                          auditLog.severity.name.toUpperCase(),
+                          style: TextStyle(
+                            color: _getSeverityColor(auditLog.severity),
+                            fontSize: screenWidth < 480 ? 8.0 : 10.0,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: cardSpacing),
+                  
+                  // User Information
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.person_outline,
+                        size: iconSize,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                      SizedBox(width: cardSpacing),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              auditLog.userName,
+                              style: TextStyle(
+                                fontSize: bodyFontSize,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Container(
+                              margin: EdgeInsets.only(top: cardSpacing / 2),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth < 480 ? 4.0 : 6.0,
+                                vertical: screenWidth < 480 ? 1.0 : 2.0,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(borderRadius / 2),
+                              ),
+                              child: Text(
+                                auditLog.userRole,
+                                style: TextStyle(
+                                  fontSize: smallFontSize,
+                                  color: Theme.of(context).colorScheme.secondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  SizedBox(height: cardSpacing),
+                  
+                  // Entity and Time Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.account_tree_outlined,
+                                  size: iconSize,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                                SizedBox(width: cardSpacing),
+                                Text(
+                                  'Entity',
+                                  style: TextStyle(
+                                    fontSize: smallFontSize,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Padding(
+                              padding: EdgeInsets.only(left: iconSize + cardSpacing),
+                              child: Text(
+                                auditLog.entityDisplayName,
+                                style: TextStyle(fontSize: bodyFontSize),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.access_time,
+                                  size: iconSize,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                                SizedBox(width: cardSpacing),
+                                Text(
+                                  'Time',
+                                  style: TextStyle(
+                                    fontSize: smallFontSize,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Padding(
+                              padding: EdgeInsets.only(left: iconSize + cardSpacing),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    auditLog.formattedTime,
+                                    style: TextStyle(
+                                      fontSize: bodyFontSize,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    auditLog.timeAgo,
+                                    style: TextStyle(
+                                      fontSize: smallFontSize,
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
       },
     );
   }
 
-  Widget _buildMobileAuditLogCard(BuildContext context, AuditLog auditLog) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => _showAuditLogDetails(context, auditLog),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      auditLog.actionDisplayName,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getSeverityColor(auditLog.severity).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      auditLog.severity.name.toUpperCase(),
-                      style: TextStyle(
-                        color: _getSeverityColor(auditLog.severity),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.person, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${auditLog.userName} (${auditLog.userRole})',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(Icons.category, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                  const SizedBox(width: 4),
-                  Text(
-                    auditLog.entityDisplayName,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(Icons.access_time, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${auditLog.formattedDateTime} (${auditLog.timeAgo})',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              ),
-              if (auditLog.description != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  auditLog.description!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
+  IconData _getActionIcon(String action) {
+    switch (action) {
+      case 'create':
+        return Icons.add_circle;
+      case 'update':
+        return Icons.edit;
+      case 'delete':
+        return Icons.delete;
+      case 'login':
+        return Icons.login;
+      case 'logout':
+        return Icons.logout;
+      case 'view':
+        return Icons.visibility;
+      case 'export':
+        return Icons.download;
+      case 'import':
+        return Icons.upload;
+      default:
+        return Icons.info;
+    }
   }
 
   Color _getSeverityColor(AuditLogSeverity severity) {
