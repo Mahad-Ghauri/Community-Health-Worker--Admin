@@ -50,12 +50,16 @@ class AuthProvider extends ChangeNotifier {
         _errorMessage = null;
         _setLoading(false);
         return true;
+      } else {
+        _errorMessage = 'Failed to load user data';
+        _setLoading(false);
+        return false;
       }
     } catch (e) {
       _errorMessage = e.toString();
+      _setLoading(false);
+      return false;
     }
-    _setLoading(false);
-    return false;
   }
 
   // Sign up

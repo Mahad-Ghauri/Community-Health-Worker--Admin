@@ -4,7 +4,11 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'theme/theme.dart';
 import 'services/auth_provider.dart';
-import 'navigation/auth_wrapper.dart';
+import 'providers/user_provider.dart';
+import 'providers/facility_provider.dart';
+import 'providers/dashboard_provider.dart';
+import 'providers/audit_log_provider.dart';
+import 'config/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,13 +26,23 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => AuthProvider()..initialize(),
-      child: MaterialApp(
-        title: 'CHW Admin',
-        theme: CHWTheme.lightTheme,
-        debugShowCheckedModeBanner: false,
-        home: const AuthWrapper(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => AuthProvider()..initialize()),
+        ChangeNotifierProvider(create: (context) => UserProvider()),
+        ChangeNotifierProvider(create: (context) => FacilityProvider()),
+        ChangeNotifierProvider(create: (context) => DashboardProvider()),
+        ChangeNotifierProvider(create: (context) => AuditLogProvider()),
+      ],
+      child: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          return MaterialApp.router(
+            title: 'CHW TB Management Admin',
+            theme: CHWTheme.lightTheme,
+            routerConfig: AppRouter.getRouter(authProvider),
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }
