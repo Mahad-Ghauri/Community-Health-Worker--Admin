@@ -27,6 +27,14 @@ class AppConstants {
   static const String auditLogsRoute = '/audit-logs';
   static const String settingsRoute = '/settings';
 
+  // Staff-side Routes
+  static const String staffDashboardRoute = '/staff/dashboard';
+  static const String assignPatientsRoute = '/staff/assign-patients';
+  static const String facilityPatientsRoute = '/staff/facility-patients';
+  static const String referralsRoute = '/staff/referrals';
+  static const String createFollowupsRoute = '/staff/create-followups';
+  static const String manageFollowupsRoute = '/staff/manage-followups';
+
   // Facility Types
   static const String hospitalType = 'hospital';
   static const String healthCenterType = 'health_center';

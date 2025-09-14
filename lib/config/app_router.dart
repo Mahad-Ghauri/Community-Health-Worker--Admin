@@ -18,6 +18,13 @@ import '../screens/facilities/edit_facility_screen.dart';
 import '../screens/facilities/facility_details_screen.dart';
 import '../screens/audit_logs/audit_logs_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/staff/staff_layout.dart';
+import '../screens/staff/dashboard/staff_dashboard.dart';
+import '../screens/staff/patients/assign_patients_screen.dart';
+import '../screens/staff/patients/facility_patients_screen.dart';
+import '../screens/staff/referrals/referrals_screen.dart';
+import '../screens/staff/followups/create_followups_screen.dart';
+import '../screens/staff/followups/manage_followups_screen.dart';
 
 class AppRouter {
   static GoRouter getRouter(AuthProvider authProvider) {
@@ -123,6 +130,44 @@ class AppRouter {
             GoRoute(
               path: AppConstants.settingsRoute,
               builder: (context, state) => const SettingsScreen(),
+            ),
+          ],
+        ),
+
+        // Staff App Shell
+        ShellRoute(
+          builder: (context, state, child) => StaffLayout(child: child),
+          routes: [
+            // Staff Dashboard
+            GoRoute(
+              path: AppConstants.staffDashboardRoute,
+              builder: (context, state) => const StaffDashboard(),
+            ),
+
+            // Patient Management
+            GoRoute(
+              path: AppConstants.assignPatientsRoute,
+              builder: (context, state) => const AssignPatientsScreen(),
+            ),
+            GoRoute(
+              path: AppConstants.facilityPatientsRoute,
+              builder: (context, state) => const FacilityPatientsScreen(),
+            ),
+
+            // Referrals
+            GoRoute(
+              path: AppConstants.referralsRoute,
+              builder: (context, state) => const ReferralsScreen(),
+            ),
+
+            // Follow-ups
+            GoRoute(
+              path: AppConstants.createFollowupsRoute,
+              builder: (context, state) => const CreateFollowupsScreen(),
+            ),
+            GoRoute(
+              path: AppConstants.manageFollowupsRoute,
+              builder: (context, state) => const ManageFollowupsScreen(),
             ),
           ],
         ),

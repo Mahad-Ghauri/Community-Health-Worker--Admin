@@ -1,0 +1,82 @@
+import 'package:flutter/material.dart';
+
+class ReferralsScreen extends StatelessWidget {
+  const ReferralsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    
+    // Responsive text sizing
+    final titleFontSize = screenWidth < 600 ? 24.0 : 
+                         screenWidth < 1024 ? 28.0 : 32.0;
+    final subtitleFontSize = screenWidth < 600 ? 14.0 : 
+                            screenWidth < 1024 ? 16.0 : 18.0;
+    
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.orange.withOpacity(0.1),
+              Theme.of(context).colorScheme.surface,
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.assignment,
+                size: screenWidth < 600 ? 64 : 80,
+                color: Colors.orange,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Patient Referrals',
+                style: TextStyle(
+                  fontSize: titleFontSize,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Manage patients referred by CHWs to this facility',
+                style: TextStyle(
+                  fontSize: subtitleFontSize,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Text(
+                  'Coming Soon: Referral Cards & Accept/Decline Actions',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.orange.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
