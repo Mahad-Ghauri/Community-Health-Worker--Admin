@@ -1,3 +1,5 @@
+import 'package:chw_admin/screens/staff/patients/patient_details_screen.dart';
+import 'package:chw_admin/screens/staff/patients/patient_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -163,6 +165,16 @@ class AppRouter {
               path: AppConstants.assignPatientsRoute,
               builder: (context, state) => const AssignPatientsScreen(),
             ),
+
+            GoRoute(path: AppConstants.patientsRoute, builder: (context, state) {
+              return const PatientListScreen();
+            }),
+
+            GoRoute(path: '${AppConstants.patientDetailsRoute}/:patientId', builder: (context, state) {
+              final patientId = state.pathParameters['patientId']!;
+              return PatientDetailsScreen(patientId: patientId);
+            }),
+
             GoRoute(
               path: AppConstants.facilityPatientsRoute,
               builder: (context, state) => const FacilityPatientsScreen(),

@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:chw_admin/screens/staff/patients/patient_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -574,7 +575,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
     return GestureDetector(
       onTap: () {
         // Navigate to detailed view based on metric type
-        //  _navigateToDetilView(title);
+        _navigateToDetailView(title);
       },
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -1033,7 +1034,8 @@ class _StaffDashboardState extends State<StaffDashboard> {
             child: ElevatedButton(
               onPressed: () {
                 // Navigate to patients list
-                Navigator.pushNamed(context, AppConstants.patientsRoute);
+
+                PatientListScreen();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
@@ -1267,5 +1269,34 @@ class _StaffDashboardState extends State<StaffDashboard> {
         ),
       ],
     );
+  }
+
+  // Navigate to the appropriate detail view based on the metric title
+  void _navigateToDetailView(String title) {
+    switch (title) {
+      case 'Total Patients':
+        Navigator.pushNamed(context, AppConstants.facilityPatientsRoute);
+        break;
+      case 'Active Treatments':
+        Navigator.pushNamed(
+          context,
+          AppConstants.facilityPatientsRoute,
+          arguments: {'filter': AppConstants.onTreatmentStatus},
+        );
+        break;
+      case 'Pending Referrals':
+        Navigator.pushNamed(context, AppConstants.referralsRoute);
+        break;
+      case 'Lost to Follow-up':
+        Navigator.pushNamed(
+          context,
+          AppConstants.facilityPatientsRoute,
+          arguments: {'filter': AppConstants.lostToFollowUpStatus},
+        );
+        break;
+      default:
+        // Default to facility patients view
+        Navigator.pushNamed(context, AppConstants.facilityPatientsRoute);
+    }
   }
 }

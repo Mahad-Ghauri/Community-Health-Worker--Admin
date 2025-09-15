@@ -1,8 +1,15 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
-class AssignPatientsScreen extends StatelessWidget {
+class AssignPatientsScreen extends StatefulWidget {
   const AssignPatientsScreen({super.key});
 
+  @override
+  State<AssignPatientsScreen> createState() => _AssignPatientsScreenState();
+}
+
+class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);

@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -54,91 +56,91 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       final patient = Patient.fromFirestore(patientDoc);
 
       // Load treatment history (mock data for now)
-      final treatmentHistory = [
-        {
-          'date': DateTime.now().subtract(const Duration(days: 60)),
-          'type': 'Initial Diagnosis',
-          'notes': 'Patient diagnosed with TB',
-          'provider': 'Dr. Smith',
-        },
-        {
-          'date': DateTime.now().subtract(const Duration(days: 45)),
-          'type': 'Treatment Started',
-          'notes': 'Started on standard regimen',
-          'provider': 'Dr. Johnson',
-        },
-        {
-          'date': DateTime.now().subtract(const Duration(days: 30)),
-          'type': 'Follow-up',
-          'notes': 'Patient responding well to treatment',
-          'provider': 'Dr. Smith',
-        },
-        {
-          'date': DateTime.now().subtract(const Duration(days: 15)),
-          'type': 'Medication Adjustment',
-          'notes': 'Dosage adjusted due to side effects',
-          'provider': 'Dr. Johnson',
-        },
-      ];
+      // final treatmentHistory = [
+      //   {
+      //     'date': DateTime.now().subtract(const Duration(days: 60)),
+      //     'type': 'Initial Diagnosis',
+      //     'notes': 'Patient diagnosed with TB',
+      //     'provider': 'Dr. Smith',
+      //   },
+      //   {
+      //     'date': DateTime.now().subtract(const Duration(days: 45)),
+      //     'type': 'Treatment Started',
+      //     'notes': 'Started on standard regimen',
+      //     'provider': 'Dr. Johnson',
+      //   },
+      //   {
+      //     'date': DateTime.now().subtract(const Duration(days: 30)),
+      //     'type': 'Follow-up',
+      //     'notes': 'Patient responding well to treatment',
+      //     'provider': 'Dr. Smith',
+      //   },
+      //   {
+      //     'date': DateTime.now().subtract(const Duration(days: 15)),
+      //     'type': 'Medication Adjustment',
+      //     'notes': 'Dosage adjusted due to side effects',
+      //     'provider': 'Dr. Johnson',
+      //   },
+      // ];
 
-      // Load test results (mock data for now)
-      final testResults = [
-        {
-          'date': DateTime.now().subtract(const Duration(days: 60)),
-          'type': 'Sputum Smear',
-          'result': 'Positive',
-          'notes': 'AFB 2+',
-        },
-        {
-          'date': DateTime.now().subtract(const Duration(days: 45)),
-          'type': 'Chest X-Ray',
-          'result': 'Abnormal',
-          'notes': 'Infiltrates in right upper lobe',
-        },
-        {
-          'date': DateTime.now().subtract(const Duration(days: 30)),
-          'type': 'GeneXpert',
-          'result': 'MTB Detected, Rif Resistance Not Detected',
-          'notes': 'Sensitive to first-line drugs',
-        },
-        {
-          'date': DateTime.now().subtract(const Duration(days: 15)),
-          'type': 'Sputum Culture',
-          'result': 'Positive',
-          'notes': 'Growth after 14 days',
-        },
-      ];
+      // // Load test results (mock data for now)
+      // final testResults = [
+      //   {
+      //     'date': DateTime.now().subtract(const Duration(days: 60)),
+      //     'type': 'Sputum Smear',
+      //     'result': 'Positive',
+      //     'notes': 'AFB 2+',
+      //   },
+      //   {
+      //     'date': DateTime.now().subtract(const Duration(days: 45)),
+      //     'type': 'Chest X-Ray',
+      //     'result': 'Abnormal',
+      //     'notes': 'Infiltrates in right upper lobe',
+      //   },
+      //   {
+      //     'date': DateTime.now().subtract(const Duration(days: 30)),
+      //     'type': 'GeneXpert',
+      //     'result': 'MTB Detected, Rif Resistance Not Detected',
+      //     'notes': 'Sensitive to first-line drugs',
+      //   },
+      //   {
+      //     'date': DateTime.now().subtract(const Duration(days: 15)),
+      //     'type': 'Sputum Culture',
+      //     'result': 'Positive',
+      //     'notes': 'Growth after 14 days',
+      //   },
+      // ];
 
-      // Load upcoming appointments (mock data for now)
-      final appointments = [
-        {
-          'date': DateTime.now().add(const Duration(days: 7)),
-          'type': 'Follow-up',
-          'provider': 'Dr. Smith',
-          'location': 'Main Clinic',
-          'status': 'Scheduled',
-        },
-        {
-          'date': DateTime.now().add(const Duration(days: 14)),
-          'type': 'Sputum Test',
-          'provider': 'Lab Technician',
-          'location': 'Laboratory',
-          'status': 'Scheduled',
-        },
-        {
-          'date': DateTime.now().add(const Duration(days: 30)),
-          'type': 'Medication Review',
-          'provider': 'Dr. Johnson',
-          'location': 'Main Clinic',
-          'status': 'Scheduled',
-        },
-      ];
+      // // Load upcoming appointments (mock data for now)
+      // final appointments = [
+      //   {
+      //     'date': DateTime.now().add(const Duration(days: 7)),
+      //     'type': 'Follow-up',
+      //     'provider': 'Dr. Smith',
+      //     'location': 'Main Clinic',
+      //     'status': 'Scheduled',
+      //   },
+      //   {
+      //     'date': DateTime.now().add(const Duration(days: 14)),
+      //     'type': 'Sputum Test',
+      //     'provider': 'Lab Technician',
+      //     'location': 'Laboratory',
+      //     'status': 'Scheduled',
+      //   },
+      //   {
+      //     'date': DateTime.now().add(const Duration(days: 30)),
+      //     'type': 'Medication Review',
+      //     'provider': 'Dr. Johnson',
+      //     'location': 'Main Clinic',
+      //     'status': 'Scheduled',
+      //   },
+      // ];
 
       setState(() {
         _patient = patient;
-        _treatmentHistory = treatmentHistory;
-        _testResults = testResults;
-        _appointments = appointments;
+        // _treatmentHistory = treatmentHistory;
+        // _testResults = testResults;
+        // _appointments = appointments;
         _isLoading = false;
       });
     } catch (e) {

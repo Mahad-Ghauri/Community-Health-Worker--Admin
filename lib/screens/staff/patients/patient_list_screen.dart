@@ -9,7 +9,6 @@ import '../../../models/patient.dart';
 import '../../../services/auth_provider.dart';
 import '../../../theme/theme.dart';
 import '../../../utils/responsive_helper.dart';
-import '../../../widgets/dashboard_layout.dart';
 
 class PatientListScreen extends StatefulWidget {
   const PatientListScreen({super.key});
