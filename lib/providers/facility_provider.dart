@@ -11,6 +11,9 @@ class FacilityProvider with ChangeNotifier {
   String _typeFilter = '';
   String _statusFilter = '';
   Map<String, int> _statistics = {};
+  Map<String, Map<String, dynamic>> _facilityMetrics = {};
+  Map<String, List<Map<String, dynamic>>> _facilityActivities = {};
+  Map<String, List<Map<String, dynamic>>> _treatmentAdherenceData = {};
 
   // Getters
   List<Facility> get facilities => _filteredFacilities;
@@ -105,18 +108,23 @@ class FacilityProvider with ChangeNotifier {
   void _applyFilters() {
     _filteredFacilities = _facilities.where((facility) {
       // Search filter
-      bool matchesSearch = _searchQuery.isEmpty ||
+      bool matchesSearch =
+          _searchQuery.isEmpty ||
           facility.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           facility.address.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          facility.contactEmail.toLowerCase().contains(_searchQuery.toLowerCase());
+          facility.contactEmail.toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          );
 
       // Type filter
-      bool matchesType = _typeFilter.isEmpty ||
+      bool matchesType =
+          _typeFilter.isEmpty ||
           _typeFilter == 'All Types' ||
           facility.typeDisplayName == _typeFilter;
 
       // Status filter
-      bool matchesStatus = _statusFilter.isEmpty ||
+      bool matchesStatus =
+          _statusFilter.isEmpty ||
           _statusFilter == 'All Status' ||
           facility.statusDisplayName == _statusFilter;
 
@@ -158,7 +166,7 @@ class FacilityProvider with ChangeNotifier {
       notifyListeners();
 
       await FacilityService.createFacility(facility);
-      
+
       // Reload statistics
       await loadStatistics();
     } catch (e) {
@@ -175,7 +183,7 @@ class FacilityProvider with ChangeNotifier {
       notifyListeners();
 
       await FacilityService.updateFacility(id, facility);
-      
+
       // Reload statistics
       await loadStatistics();
     } catch (e) {
@@ -192,7 +200,7 @@ class FacilityProvider with ChangeNotifier {
       notifyListeners();
 
       await FacilityService.deleteFacility(id);
-      
+
       // Reload statistics
       await loadStatistics();
     } catch (e) {
@@ -209,7 +217,7 @@ class FacilityProvider with ChangeNotifier {
       notifyListeners();
 
       await FacilityService.deleteFacilities(ids);
-      
+
       // Reload statistics
       await loadStatistics();
     } catch (e) {
@@ -226,7 +234,7 @@ class FacilityProvider with ChangeNotifier {
       notifyListeners();
 
       await FacilityService.updateFacilityStatus(id, status);
-      
+
       // Reload statistics
       await loadStatistics();
     } catch (e) {
@@ -262,6 +270,84 @@ class FacilityProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // Get facility dashboard metrics
+  Future<Map<String, dynamic>> getFacilityMetrics(String facilityId) async {
+    try {
+      if (_facilityMetrics.containsKey(facilityId)) {
+        return _facilityMetrics[facilityId]!;
+      }
+
+      final metrics = await FacilityService.getFacilityMetrics(facilityId);
+      _facilityMetrics[facilityId] = metrics;
+      return metrics;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Failed to get facility metrics: $e');
+      }
+      rethrow;
+    }
+  }
+
+  // Get facility activities
+  Future<List<Map<String, dynamic>>> getFacilityActivities(
+    String facilityId,
+  ) async {
+    try {
+      if (_facilityActivities.containsKey(facilityId)) {
+        return _facilityActivities[facilityId]!;
+      }
+
+      final activities = await FacilityService.getFacilityActivities(
+        facilityId,
+      );
+      _facilityActivities[facilityId] = activities;
+      return activities;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Failed to get facility activities: $e');
+      }
+      rethrow;
+    }
+  }
+
+  // Get treatment adherence data for charts
+  Future<List<Map<String, dynamic>>> getTreatmentAdherenceData(
+    String facilityId,
+  ) async {
+    try {
+      if (_treatmentAdherenceData.containsKey(facilityId)) {
+        return _treatmentAdherenceData[facilityId]!;
+      }
+
+      final adherenceData = await FacilityService.getTreatmentAdherenceData(
+        facilityId,
+      );
+      _treatmentAdherenceData[facilityId] = adherenceData;
+      return adherenceData;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Failed to get treatment adherence data: $e');
+      }
+      rethrow;
+    }
+  }
+
+  // Clear cached facility data
+  void clearFacilityCache(String facilityId) {
+    _facilityMetrics.remove(facilityId);
+    _facilityActivities.remove(facilityId);
+    _treatmentAdherenceData.remove(facilityId);
+    notifyListeners();
+  }
+
+  // Clear all cached facility data
+  void clearAllFacilityCache() {
+    _facilityMetrics.clear();
+    _facilityActivities.clear();
+    _treatmentAdherenceData.clear();
+    notifyListeners();
+  }
+
   // Helper methods for UI
   bool get hasActiveFilters {
     return _searchQuery.isNotEmpty ||
@@ -274,7 +360,7 @@ class FacilityProvider with ChangeNotifier {
 
   String get filtersDescription {
     List<String> activeFilters = [];
-    
+
     if (_searchQuery.isNotEmpty) {
       activeFilters.add('Search: "$_searchQuery"');
     }
@@ -284,7 +370,7 @@ class FacilityProvider with ChangeNotifier {
     if (_statusFilter.isNotEmpty && _statusFilter != 'All Status') {
       activeFilters.add('Status: $_statusFilter');
     }
-    
+
     return activeFilters.join(', ');
   }
 }

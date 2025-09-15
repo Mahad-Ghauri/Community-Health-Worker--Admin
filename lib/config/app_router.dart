@@ -40,9 +40,23 @@ class AppRouter {
           return AppConstants.loginRoute;
         }
 
-        // If logged in and on login page, redirect to dashboard
-        if (isLoggedIn && currentLocation == AppConstants.loginRoute) {
-          return AppConstants.dashboardRoute;
+        if (isLoggedIn) {
+          final role = authProvider.currentUser?.role;
+
+          // If logged in and on login page, redirect by role
+          if (currentLocation == AppConstants.loginRoute) {
+            if (role == AppConstants.staffRole) {
+              return AppConstants.staffDashboardRoute;
+            }
+            // Default to admin-style dashboard for other roles
+            return AppConstants.dashboardRoute;
+          }
+
+          // Prevent staff from landing on admin dashboard route
+          if (role == AppConstants.staffRole &&
+              currentLocation == AppConstants.dashboardRoute) {
+            return AppConstants.staffDashboardRoute;
+          }
         }
 
         return null; // No redirect needed
@@ -177,11 +191,7 @@ class AppRouter {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
               Text(
                 'Page Not Found',

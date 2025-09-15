@@ -43,55 +43,58 @@ class StaffDashboard extends StatelessWidget {
         builder: (context, authProvider, child) {
           final user = authProvider.currentUser;
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: CHWTheme.secondaryColor,
-                    borderRadius: BorderRadius.circular(60),
-                  ),
-                  child: const Icon(
-                    Icons.badge,
-                    color: Colors.white,
-                    size: 60,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  'Welcome to Staff Dashboard',
-                  style: CHWTheme.headingStyle.copyWith(
-                    fontSize: 28,
-                    color: CHWTheme.primaryColor,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Hello ${user?.name ?? 'Staff Member'}!',
-                  style: CHWTheme.subheadingStyle.copyWith(
-                    color: Colors.grey.shade600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: CHWTheme.secondaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    UserRole.getDisplayName(user?.role ?? 'staff'),
-                    style: CHWTheme.bodyStyle.copyWith(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
                       color: CHWTheme.secondaryColor,
-                      fontWeight: FontWeight.w600,
+                      borderRadius: BorderRadius.circular(60),
+                    ),
+                    child: const Icon(
+                      Icons.badge,
+                      color: Colors.white,
+                      size: 60,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 32),
+                  Text(
+                    'Welcome to Staff Dashboard',
+                    style: CHWTheme.headingStyle.copyWith(
+                      fontSize: 28,
+                      color: CHWTheme.primaryColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Hello ${user?.name ?? 'Staff Member'}!',
+                    style: CHWTheme.subheadingStyle.copyWith(
+                      color: Colors.grey.shade600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: CHWTheme.secondaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      UserRole.getDisplayName(user?.role ?? 'staff'),
+                      style: CHWTheme.bodyStyle.copyWith(
+                        color: CHWTheme.secondaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
