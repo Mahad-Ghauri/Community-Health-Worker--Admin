@@ -3,10 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/assignment.dart';
 import '../models/patient.dart';
 import '../models/chw_user.dart';
+import '../models/audit_log.dart';
+import '../services/audit_log_service.dart';
+import '../constants/app_constants.dart';
 
 class AssignmentProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   List<Assignment> _assignments = [];
   List<Patient> _availablePatients = [];
   List<CHWUser> _availableCHWs = [];
@@ -43,30 +46,42 @@ class AssignmentProvider with ChangeNotifier {
 
     // Filter by facility if set
     if (_facilityId != null) {
-      filtered = filtered.where((assignment) => assignment.facilityId == _facilityId).toList();
+      filtered = filtered
+          .where((assignment) => assignment.facilityId == _facilityId)
+          .toList();
     }
 
     // Filter by CHW
     if (_selectedCHW != null && _selectedCHW!.isNotEmpty) {
-      filtered = filtered.where((assignment) => assignment.chwId == _selectedCHW).toList();
+      filtered = filtered
+          .where((assignment) => assignment.chwId == _selectedCHW)
+          .toList();
     }
 
     // Filter by status
     if (_selectedStatus != null && _selectedStatus!.isNotEmpty) {
-      filtered = filtered.where((assignment) => assignment.status == _selectedStatus).toList();
+      filtered = filtered
+          .where((assignment) => assignment.status == _selectedStatus)
+          .toList();
     }
 
     // Filter by priority
     if (_selectedPriority != null && _selectedPriority!.isNotEmpty) {
-      filtered = filtered.where((assignment) => assignment.priority == _selectedPriority).toList();
+      filtered = filtered
+          .where((assignment) => assignment.priority == _selectedPriority)
+          .toList();
     }
 
     // Search filter
     if (_searchTerm.isNotEmpty) {
       final searchLower = _searchTerm.toLowerCase();
-      filtered = filtered.where((assignment) =>
-          assignment.workArea.toLowerCase().contains(searchLower) ||
-          assignment.notes?.toLowerCase().contains(searchLower) == true).toList();
+      filtered = filtered
+          .where(
+            (assignment) =>
+                assignment.workArea.toLowerCase().contains(searchLower) ||
+                assignment.notes?.toLowerCase().contains(searchLower) == true,
+          )
+          .toList();
     }
 
     return filtered;
@@ -81,7 +96,7 @@ class AssignmentProvider with ChangeNotifier {
   // Load assignments for facility
   Future<void> loadAssignments() async {
     if (_facilityId == null) return;
-    
+
     _setLoading(true);
     _setError(null);
 
@@ -93,18 +108,18 @@ class AssignmentProvider with ChangeNotifier {
           .orderBy('assignedDate', descending: true)
           .snapshots()
           .listen(
-        (snapshot) {
-          _assignments = snapshot.docs
-              .map((doc) => Assignment.fromFirestore(doc))
-              .toList();
-          _setLoading(false);
-          notifyListeners();
-        },
-        onError: (error) {
-          _setError('Failed to load assignments: $error');
-          _setLoading(false);
-        },
-      );
+            (snapshot) {
+              _assignments = snapshot.docs
+                  .map((doc) => Assignment.fromFirestore(doc))
+                  .toList();
+              _setLoading(false);
+              notifyListeners();
+            },
+            onError: (error) {
+              _setError('Failed to load assignments: $error');
+              _setLoading(false);
+            },
+          );
     } catch (e) {
       _setError('Failed to load assignments: $e');
       _setLoading(false);
@@ -202,6 +217,28 @@ class AssignmentProvider with ChangeNotifier {
         relatedId: docRef.id,
       );
 
+      // Audit log
+      try {
+        final auditLog = AuditLog.createLog(
+          action: AuditLog.actionCreate,
+          entity: AuditLog.entityPatient,
+          entityId: patientIds.join(','),
+          userId: assignedBy,
+          userName: 'system',
+          userRole: UserRoles.staff,
+          description:
+              'Assigned ${patientIds.length} patient(s) to CHW $chwId with priority $priority',
+          metadata: {
+            'assignmentId': docRef.id,
+            'chwId': chwId,
+            'facilityId': _facilityId,
+            'workArea': workArea,
+            'notes': notes,
+          },
+        );
+        await AuditLogService.createAuditLog(auditLog);
+      } catch (_) {}
+
       _setLoading(false);
       await loadStatistics();
       return docRef.id;
@@ -213,15 +250,15 @@ class AssignmentProvider with ChangeNotifier {
   }
 
   // Update assignment
-  Future<bool> updateAssignment(String assignmentId, Map<String, dynamic> data) async {
+  Future<bool> updateAssignment(
+    String assignmentId,
+    Map<String, dynamic> data,
+  ) async {
     _setLoading(true);
     _setError(null);
 
     try {
-      await _firestore
-          .collection('assignments')
-          .doc(assignmentId)
-          .update({
+      await _firestore.collection('assignments').doc(assignmentId).update({
         ...data,
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -235,16 +272,152 @@ class AssignmentProvider with ChangeNotifier {
     }
   }
 
+  // Generate next Patient ID like TB001, TB002 using a transaction on counters/patients
+  Future<String> generateNextPatientId() async {
+    final counterRef = _firestore.collection('counters').doc('patients');
+    return _firestore.runTransaction((txn) async {
+      final snap = await txn.get(counterRef);
+      int next = 1;
+      if (snap.exists) {
+        final data = snap.data() as Map<String, dynamic>;
+        next = (data['next'] as int? ?? 1);
+      }
+      txn.set(counterRef, {'next': next + 1}, SetOptions(merge: true));
+      final id = 'TB${next.toString().padLeft(3, '0')}';
+      return id;
+    });
+  }
+
+  // Check duplicate phone by normalized phone field (fallback to raw phone)
+  Future<bool> phoneExists(String phone) async {
+    try {
+      final q1 = await _firestore
+          .collection(AppConstants.patientsCollection)
+          .where('phone', isEqualTo: phone)
+          .limit(1)
+          .get();
+      if (q1.docs.isNotEmpty) return true;
+      final normalized = _normalizePhone(phone);
+      final q2 = await _firestore
+          .collection(AppConstants.patientsCollection)
+          .where('phoneNormalized', isEqualTo: normalized)
+          .limit(1)
+          .get();
+      return q2.docs.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Create a new patient record
+  Future<String?> createPatient({
+    required String name,
+    required int age,
+    required String phone,
+    required String address,
+    required String gender,
+    required String tbStatus,
+    DateTime? diagnosisDate,
+    required String createdBy,
+    String? treatmentFacility,
+    Map<String, double>? gpsLocation,
+  }) async {
+    if (_facilityId == null) return null;
+    try {
+      final id = await generateNextPatientId();
+      final docRef = _firestore
+          .collection(AppConstants.patientsCollection)
+          .doc(id);
+      final now = FieldValue.serverTimestamp();
+      await docRef.set({
+        'patientId': id,
+        'name': name,
+        'nameLower': name.toLowerCase(),
+        'age': age,
+        'phone': phone,
+        'phoneNormalized': _normalizePhone(phone),
+        'address': address,
+        'gender': gender,
+        'tbStatus': tbStatus,
+        'assignedCHW': '',
+        'assignedFacility': _facilityId,
+        'treatmentFacility': treatmentFacility ?? _facilityId,
+        'gpsLocation': gpsLocation ?? <String, double>{},
+        'consent': true,
+        'createdBy': createdBy,
+        'validatedBy': null,
+        'createdAt': now,
+        'diagnosisDate': diagnosisDate != null
+            ? Timestamp.fromDate(diagnosisDate)
+            : null,
+      });
+      return id;
+    } catch (e) {
+      _setError('Failed to create patient: $e');
+      return null;
+    }
+  }
+
+  // Simple search: by id exact, by phone exact, or by name contains (client-side)
+  Future<List<Patient>> searchPatients(String query) async {
+    if (query.trim().isEmpty) return [];
+    final q = query.trim();
+    try {
+      // Try id exact
+      final idDoc = await _firestore
+          .collection(AppConstants.patientsCollection)
+          .doc(q)
+          .get();
+      if (idDoc.exists) {
+        return [Patient.fromFirestore(idDoc)];
+      }
+
+      // Try phone exact
+      final phoneSnap = await _firestore
+          .collection(AppConstants.patientsCollection)
+          .where('phone', isEqualTo: q)
+          .limit(10)
+          .get();
+      if (phoneSnap.docs.isNotEmpty) {
+        return phoneSnap.docs.map((d) => Patient.fromFirestore(d)).toList();
+      }
+
+      // Fallback: fetch a page and filter by name/address contains
+      final snap = await _firestore
+          .collection(AppConstants.patientsCollection)
+          .where('assignedFacility', isEqualTo: _facilityId)
+          .orderBy('createdAt', descending: true)
+          .limit(100)
+          .get();
+      final lower = q.toLowerCase();
+      return snap.docs
+          .map((d) => Patient.fromFirestore(d))
+          .where(
+            (p) =>
+                p.name.toLowerCase().contains(lower) ||
+                p.address.toLowerCase().contains(lower),
+          )
+          .toList();
+    } catch (e) {
+      _setError('Failed to search patients: $e');
+      return [];
+    }
+  }
+
+  String _normalizePhone(String phone) {
+    return phone.replaceAll(RegExp(r'[^0-9+]'), '');
+  }
+
   // Complete assignment
-  Future<bool> completeAssignment(String assignmentId, String completedBy) async {
+  Future<bool> completeAssignment(
+    String assignmentId,
+    String completedBy,
+  ) async {
     _setLoading(true);
     _setError(null);
 
     try {
-      await _firestore
-          .collection('assignments')
-          .doc(assignmentId)
-          .update({
+      await _firestore.collection('assignments').doc(assignmentId).update({
         'status': Assignment.statusCompleted,
         'completedDate': FieldValue.serverTimestamp(),
         'completedBy': completedBy,
@@ -267,13 +440,12 @@ class AssignmentProvider with ChangeNotifier {
     _setError(null);
 
     try {
-      final assignment = _assignments.firstWhere((a) => a.assignmentId == assignmentId);
-      
+      final assignment = _assignments.firstWhere(
+        (a) => a.assignmentId == assignmentId,
+      );
+
       // Update assignment status
-      await _firestore
-          .collection('assignments')
-          .doc(assignmentId)
-          .update({
+      await _firestore.collection('assignments').doc(assignmentId).update({
         'status': Assignment.statusCancelled,
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -315,7 +487,7 @@ class AssignmentProvider with ChangeNotifier {
       } else {
         _setError('Assignment not found');
       }
-      
+
       _setLoading(false);
     } catch (e) {
       _setError('Failed to load assignment: $e');
@@ -333,7 +505,9 @@ class AssignmentProvider with ChangeNotifier {
           .where('facilityId', isEqualTo: _facilityId)
           .get();
 
-      final assignments = snapshot.docs.map((doc) => Assignment.fromFirestore(doc)).toList();
+      final assignments = snapshot.docs
+          .map((doc) => Assignment.fromFirestore(doc))
+          .toList();
 
       _statistics = {
         'total': assignments.length,
@@ -341,7 +515,9 @@ class AssignmentProvider with ChangeNotifier {
         'completed': assignments.where((a) => a.isCompleted).length,
         'cancelled': assignments.where((a) => a.isCancelled).length,
         'overdue': assignments.where((a) => a.isOverdue).length,
-        'highPriority': assignments.where((a) => a.isHighPriority || a.isUrgentPriority).length,
+        'highPriority': assignments
+            .where((a) => a.isHighPriority || a.isUrgentPriority)
+            .length,
       };
 
       notifyListeners();
@@ -405,7 +581,9 @@ class AssignmentProvider with ChangeNotifier {
 
   // Get assignments by CHW
   List<Assignment> getAssignmentsByCHW(String chwId) {
-    return _assignments.where((assignment) => assignment.chwId == chwId).toList();
+    return _assignments
+        .where((assignment) => assignment.chwId == chwId)
+        .toList();
   }
 
   // Get patient count for CHW
@@ -472,12 +650,23 @@ class AssignmentProvider with ChangeNotifier {
 
   String get filtersDescription {
     final filters = <String>[];
-    
+
     if (_searchTerm.isNotEmpty) {
       filters.add('Search: "$_searchTerm"');
     }
     if (_selectedCHW != null) {
-      final chw = _availableCHWs.firstWhere((c) => c.userId == _selectedCHW, orElse: () => CHWUser(userId: '', name: 'Unknown', email: '', phone: '', workingArea: '', idNumber: '', createdAt: DateTime.now()));
+      final chw = _availableCHWs.firstWhere(
+        (c) => c.userId == _selectedCHW,
+        orElse: () => CHWUser(
+          userId: '',
+          name: 'Unknown',
+          email: '',
+          phone: '',
+          workingArea: '',
+          idNumber: '',
+          createdAt: DateTime.now(),
+        ),
+      );
       filters.add('CHW: ${chw.name}');
     }
     if (_selectedStatus != null) {
@@ -486,7 +675,7 @@ class AssignmentProvider with ChangeNotifier {
     if (_selectedPriority != null) {
       filters.add('Priority: $_selectedPriority');
     }
-    
+
     return filters.join(', ');
   }
 
@@ -494,11 +683,13 @@ class AssignmentProvider with ChangeNotifier {
   List<Assignment> get recentAssignments => _assignments.take(10).toList();
 
   // Get overdue assignments
-  List<Assignment> get overdueAssignments => _assignments.where((a) => a.isOverdue).toList();
+  List<Assignment> get overdueAssignments =>
+      _assignments.where((a) => a.isOverdue).toList();
 
   // Get high priority assignments
-  List<Assignment> get highPriorityAssignments => 
-      _assignments.where((a) => a.isHighPriority || a.isUrgentPriority).toList();
+  List<Assignment> get highPriorityAssignments => _assignments
+      .where((a) => a.isHighPriority || a.isUrgentPriority)
+      .toList();
 
   @override
   void dispose() {
