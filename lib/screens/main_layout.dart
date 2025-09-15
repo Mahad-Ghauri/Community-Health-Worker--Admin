@@ -10,10 +10,7 @@ import '../theme/theme.dart';
 class MainLayout extends StatefulWidget {
   final Widget child;
 
-  const MainLayout({
-    super.key,
-    required this.child,
-  });
+  const MainLayout({super.key, required this.child});
 
   @override
   State<MainLayout> createState() => _MainLayoutState();
@@ -34,7 +31,9 @@ class _MainLayoutState extends State<MainLayout> {
           Expanded(
             child: Container(
               color: CHWTheme.backgroundColor,
-              padding: EdgeInsets.all(ResponsiveHelper.isMobile(context) ? 16 : 24),
+              padding: EdgeInsets.all(
+                ResponsiveHelper.isMobile(context) ? 16 : 24,
+              ),
               child: widget.child,
             ),
           ),
@@ -43,9 +42,12 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, AuthProvider authProvider) {
+  PreferredSizeWidget _buildAppBar(
+    BuildContext context,
+    AuthProvider authProvider,
+  ) {
     final isDesktop = ResponsiveHelper.isDesktop(context);
-    
+
     return AppBar(
       elevation: 0,
       backgroundColor: CHWTheme.primaryColor,
@@ -58,10 +60,7 @@ class _MainLayoutState extends State<MainLayout> {
           ],
           Text(
             isDesktop ? AppConstants.appName : 'CHW Admin',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -74,7 +73,10 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  Widget _buildUserProfileDropdown(BuildContext context, AuthProvider authProvider) {
+  Widget _buildUserProfileDropdown(
+    BuildContext context,
+    AuthProvider authProvider,
+  ) {
     return PopupMenuButton<String>(
       icon: CircleAvatar(
         backgroundColor: Colors.white.withOpacity(0.2),
@@ -92,7 +94,7 @@ class _MainLayoutState extends State<MainLayout> {
             _showProfileDialog(context, authProvider);
             break;
           case 'settings':
-            context.go(AppConstants.settingsRoute);
+            context.goNamed('settings');
             break;
           case 'logout':
             _handleLogout(context, authProvider);
@@ -151,9 +153,7 @@ class _MainLayoutState extends State<MainLayout> {
       child: Column(
         children: [
           _buildSidebarHeader(authProvider),
-          Expanded(
-            child: _buildNavigationMenu(context),
-          ),
+          Expanded(child: _buildNavigationMenu(context)),
           _buildSidebarFooter(),
         ],
       ),
@@ -165,9 +165,7 @@ class _MainLayoutState extends State<MainLayout> {
       child: Column(
         children: [
           _buildSidebarHeader(authProvider),
-          Expanded(
-            child: _buildNavigationMenu(context),
-          ),
+          Expanded(child: _buildNavigationMenu(context)),
           _buildSidebarFooter(),
         ],
       ),
@@ -177,16 +175,15 @@ class _MainLayoutState extends State<MainLayout> {
   Widget _buildSidebarHeader(AuthProvider authProvider) {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: CHWTheme.primaryColor,
-      ),
+      decoration: BoxDecoration(color: CHWTheme.primaryColor),
       child: Column(
         children: [
           CircleAvatar(
             radius: 32,
             backgroundColor: Colors.white.withOpacity(0.2),
             child: Text(
-              authProvider.currentUser?.name.substring(0, 1).toUpperCase() ?? 'U',
+              authProvider.currentUser?.name.substring(0, 1).toUpperCase() ??
+                  'U',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 24,
@@ -217,7 +214,7 @@ class _MainLayoutState extends State<MainLayout> {
 
   Widget _buildNavigationMenu(BuildContext context) {
     final currentLocation = GoRouterState.of(context).uri.toString();
-    
+
     final menuItems = [
       NavigationItem(
         icon: Icons.dashboard,
@@ -293,10 +290,7 @@ class _MainLayoutState extends State<MainLayout> {
           const SizedBox(height: 8),
           Text(
             '${AppConstants.appName} v${AppConstants.appVersion}',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
             textAlign: TextAlign.center,
           ),
         ],
@@ -315,7 +309,10 @@ class _MainLayoutState extends State<MainLayout> {
           children: [
             _buildProfileRow('Name', authProvider.currentUser?.name ?? ''),
             _buildProfileRow('Email', authProvider.currentUser?.email ?? ''),
-            _buildProfileRow('Role', UserRoles.getDisplayName(authProvider.currentUser?.role ?? '')),
+            _buildProfileRow(
+              'Role',
+              UserRoles.getDisplayName(authProvider.currentUser?.role ?? ''),
+            ),
             _buildProfileRow('Phone', authProvider.currentUser?.phone ?? ''),
           ],
         ),
@@ -342,9 +339,7 @@ class _MainLayoutState extends State<MainLayout> {
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
-          Expanded(
-            child: Text(value.isNotEmpty ? value : 'Not provided'),
-          ),
+          Expanded(child: Text(value.isNotEmpty ? value : 'Not provided')),
         ],
       ),
     );
@@ -366,7 +361,7 @@ class _MainLayoutState extends State<MainLayout> {
               Navigator.of(context).pop();
               await authProvider.signOut();
               if (context.mounted) {
-                context.go(AppConstants.loginRoute);
+                context.goNamed('login');
               }
             },
             style: ElevatedButton.styleFrom(

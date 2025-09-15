@@ -5,7 +5,7 @@ import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
-  
+
   User? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
@@ -18,7 +18,9 @@ class AuthProvider extends ChangeNotifier {
 
   // Initialize auth state
   void initialize() {
-    _authService.authStateChanges.listen((firebase_auth.User? firebaseUser) async {
+    _authService.authStateChanges.listen((
+      firebase_auth.User? firebaseUser,
+    ) async {
       if (firebaseUser != null) {
         await _loadCurrentUser();
       } else {
@@ -44,7 +46,10 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> signIn(String email, String password) async {
     _setLoading(true);
     try {
-      final user = await _authService.signInWithEmailAndPassword(email, password);
+      final user = await _authService.signInWithEmailAndPassword(
+        email,
+        password,
+      );
       if (user != null) {
         _currentUser = user;
         _errorMessage = null;
@@ -85,7 +90,7 @@ class AuthProvider extends ChangeNotifier {
         dateOfBirth: dateOfBirth,
         gender: gender,
       );
-      
+
       if (user != null) {
         _currentUser = user;
         _errorMessage = null;
@@ -130,14 +135,14 @@ class AuthProvider extends ChangeNotifier {
   // Update user profile
   Future<bool> updateProfile(Map<String, dynamic> data) async {
     if (_currentUser == null) return false;
-    
+
     _setLoading(true);
     try {
       await _authService.updateUserProfile(
         userId: _currentUser!.userId,
         data: data,
       );
-      
+
       // Reload user data
       await _loadCurrentUser();
       _errorMessage = null;
@@ -165,7 +170,7 @@ class AuthProvider extends ChangeNotifier {
   // Check user permissions
   bool hasPermission(String permission) {
     if (_currentUser == null) return false;
-    
+
     switch (permission) {
       case 'admin_access':
         return _currentUser!.isAdmin;
@@ -181,16 +186,14 @@ class AuthProvider extends ChangeNotifier {
   // Get user dashboard route based on role
   String getDashboardRoute() {
     if (_currentUser == null) return '/login';
-    
+
     switch (_currentUser!.role) {
-      case 'admin':
-        return '/admin-dashboard';
       case 'staff':
-        return '/staff-dashboard';
+        return '/staff/dashboard';
+      case 'admin':
       case 'supervisor':
-        return '/supervisor-dashboard';
       default:
-        return '/login';
+        return '/dashboard';
     }
   }
 }

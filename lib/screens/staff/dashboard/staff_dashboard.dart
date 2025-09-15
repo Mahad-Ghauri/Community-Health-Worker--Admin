@@ -14,6 +14,7 @@ import '../../../models/patient.dart';
 import '../../../utils/responsive_helper.dart';
 import '../../../widgets/dashboard_layout.dart';
 import '../../../constants/app_constants.dart';
+import 'package:go_router/go_router.dart';
 
 class StaffDashboard extends StatefulWidget {
   const StaffDashboard({super.key});
@@ -665,7 +666,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
         icon: Icons.person_add,
         onTap: () {
           // Navigate to patient assignment screen
-          Navigator.pushNamed(context, AppConstants.assignPatientsRoute);
+          context.goNamed('assignPatients');
         },
       ),
       QuickAction(
@@ -674,7 +675,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
         icon: Icons.event,
         onTap: () {
           // Navigate to follow-up creation screen
-          Navigator.pushNamed(context, AppConstants.createFollowupsRoute);
+          context.goNamed('createFollowups');
         },
       ),
       QuickAction(
@@ -683,7 +684,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
         icon: Icons.assignment_return,
         onTap: () {
           // Navigate to referrals screen
-          Navigator.pushNamed(context, AppConstants.referralsRoute);
+          context.goNamed('referrals');
         },
       ),
       QuickAction(
@@ -1034,8 +1035,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
             child: ElevatedButton(
               onPressed: () {
                 // Navigate to patients list
-
-                PatientListScreen();
+                context.goNamed('patients');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,

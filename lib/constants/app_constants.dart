@@ -15,6 +15,8 @@ class AppConstants {
 
   // App Routes
   static const String loginRoute = '/login';
+  static const String signupRoute = '/signup';
+  static const String forgotPasswordRoute = '/forgot-password';
   static const String dashboardRoute = '/dashboard';
   static const String usersRoute = '/users';
   static const String createUserRoute = '/users/create';

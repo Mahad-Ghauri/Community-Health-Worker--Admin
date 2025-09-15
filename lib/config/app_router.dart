@@ -66,14 +66,17 @@ class AppRouter {
       routes: [
         // Auth Routes
         GoRoute(
+          name: 'login',
           path: AppConstants.loginRoute,
           builder: (context, state) => const LoginScreen(),
         ),
         // GoRoute(
-        //   path: '/signup',
+        //   name: 'signup',
+        //   path: AppConstants.signupRoute,
         //   builder: (context, state) => const SignupScreen(),
         // ),
         GoRoute(
+          name: 'forgotPassword',
           path: '/forgot-password',
           builder: (context, state) => const ForgotPasswordScreen(),
         ),
@@ -84,20 +87,24 @@ class AppRouter {
           routes: [
             // Dashboard
             GoRoute(
+              name: 'dashboard',
               path: AppConstants.dashboardRoute,
               builder: (context, state) => const MainDashboard(),
             ),
 
             // User Management
             GoRoute(
+              name: 'users',
               path: AppConstants.usersRoute,
               builder: (context, state) => const UserListScreen(),
             ),
             GoRoute(
+              name: 'createUser',
               path: AppConstants.createUserRoute,
               builder: (context, state) => const CreateUserScreen(),
             ),
             GoRoute(
+              name: 'editUser',
               path: '${AppConstants.editUserRoute}/:userId',
               builder: (context, state) {
                 final userId = state.pathParameters['userId']!;
@@ -105,6 +112,7 @@ class AppRouter {
               },
             ),
             GoRoute(
+              name: 'userDetails',
               path: '${AppConstants.userDetailsRoute}/:userId',
               builder: (context, state) {
                 final userId = state.pathParameters['userId']!;
@@ -114,14 +122,17 @@ class AppRouter {
 
             // Facility Management
             GoRoute(
+              name: 'facilities',
               path: AppConstants.facilitiesRoute,
               builder: (context, state) => const FacilityListScreen(),
             ),
             GoRoute(
+              name: 'createFacility',
               path: AppConstants.createFacilityRoute,
               builder: (context, state) => const CreateFacilityScreen(),
             ),
             GoRoute(
+              name: 'editFacility',
               path: '${AppConstants.editFacilityRoute}/:facilityId',
               builder: (context, state) {
                 final facilityId = state.pathParameters['facilityId']!;
@@ -129,6 +140,7 @@ class AppRouter {
               },
             ),
             GoRoute(
+              name: 'facilityDetails',
               path: '${AppConstants.facilityDetailsRoute}/:facilityId',
               builder: (context, state) {
                 final facilityId = state.pathParameters['facilityId']!;
@@ -138,12 +150,14 @@ class AppRouter {
 
             // Audit Logs
             GoRoute(
+              name: 'auditLogs',
               path: AppConstants.auditLogsRoute,
               builder: (context, state) => const AuditLogsScreen(),
             ),
 
             // Settings
             GoRoute(
+              name: 'settings',
               path: AppConstants.settingsRoute,
               builder: (context, state) => const SettingsScreen(),
             ),
@@ -156,42 +170,48 @@ class AppRouter {
           routes: [
             // Staff Dashboard
             GoRoute(
+              name: 'staffDashboard',
               path: AppConstants.staffDashboardRoute,
               builder: (context, state) => const StaffDashboard(),
             ),
 
             // Patient Management
             GoRoute(
+              name: 'assignPatients',
               path: AppConstants.assignPatientsRoute,
               builder: (context, state) => const AssignPatientsScreen(),
             ),
 
-            GoRoute(path: AppConstants.patientsRoute, builder: (context, state) {
+            GoRoute(name: 'patients', path: AppConstants.patientsRoute, builder: (context, state) {
               return const PatientListScreen();
             }),
 
-            GoRoute(path: '${AppConstants.patientDetailsRoute}/:patientId', builder: (context, state) {
+            GoRoute(name: 'patientDetails', path: '${AppConstants.patientDetailsRoute}/:patientId', builder: (context, state) {
               final patientId = state.pathParameters['patientId']!;
               return PatientDetailsScreen(patientId: patientId);
             }),
 
             GoRoute(
+              name: 'facilityPatients',
               path: AppConstants.facilityPatientsRoute,
               builder: (context, state) => const FacilityPatientsScreen(),
             ),
 
             // Referrals
             GoRoute(
+              name: 'referrals',
               path: AppConstants.referralsRoute,
               builder: (context, state) => const ReferralsScreen(),
             ),
 
             // Follow-ups
             GoRoute(
+              name: 'createFollowups',
               path: AppConstants.createFollowupsRoute,
               builder: (context, state) => const CreateFollowupsScreen(),
             ),
             GoRoute(
+              name: 'manageFollowups',
               path: AppConstants.manageFollowupsRoute,
               builder: (context, state) => const ManageFollowupsScreen(),
             ),
@@ -216,7 +236,7 @@ class AppRouter {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => context.go(AppConstants.dashboardRoute),
+                onPressed: () => context.goNamed('dashboard'),
                 child: const Text('Go to Dashboard'),
               ),
             ],
@@ -229,8 +249,8 @@ class AppRouter {
   static bool _isPublicRoute(String route) {
     const publicRoutes = [
       AppConstants.loginRoute,
-      '/signup',
-      '/forgot-password',
+      AppConstants.signupRoute,
+      AppConstants.forgotPasswordRoute,
     ];
     return publicRoutes.contains(route);
   }
