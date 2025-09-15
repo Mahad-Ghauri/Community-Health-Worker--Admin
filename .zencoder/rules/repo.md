@@ -6,7 +6,7 @@ alwaysApply: true
 # CHW TB Management Admin Information
 
 ## Summary
-A Flutter application for TB management by Community Health Workers (CHWs). The app provides an administrative interface for managing patients with tuberculosis, healthcare facilities, and community health workers. It includes role-based access control with different interfaces for administrators and staff members.
+A Flutter application for TB management by Community Health Workers (CHWs). The app provides an administrative interface for managing patients with tuberculosis, healthcare facilities, and community health workers. It includes role-based access control with different interfaces for administrators, staff members, and supervisors.
 
 ## Structure
 - **lib/**: Core application code organized in a feature-based structure
@@ -26,10 +26,14 @@ A Flutter application for TB management by Community Health Workers (CHWs). The 
 - firebase_auth: ^6.0.2
 - cloud_firestore: ^6.0.1
 - firebase_storage: ^13.0.1
+- firebase_database: ^12.0.1
 - provider: ^6.1.5+1
 - go_router: ^14.6.1
 - intl: ^0.20.2
 - geolocator: ^14.0.2
+- permission_handler: ^12.0.1
+- google_fonts: ^6.3.1
+- cached_network_image: ^3.4.1
 
 **Development Dependencies**:
 - flutter_test: SDK
@@ -57,9 +61,18 @@ flutter build ios  # For iOS (requires macOS)
 **Routing**: lib/config/app_router.dart (Using go_router)
 
 ## Application Features
-**Authentication**: Role-based login system
+**Authentication**: Role-based login system with admin, staff, and supervisor roles
 **User Management**: Admin can create and manage users
 **Facility Management**: Create and manage healthcare facilities
 **Patient Tracking**: Monitor TB patients and their treatment status
 **Staff Dashboard**: Specialized interface for staff members
 **Audit Logging**: Track system activities
+**Geolocation**: Track patient and facility locations
+
+## Data Models
+**Patient**: Manages TB patient information including treatment status
+**Facility**: Healthcare facilities with services and assigned staff
+**User**: System users with role-based permissions
+**Visit**: Patient visit records
+**Referral**: Patient referrals between facilities
+**Followup**: Patient follow-up appointments
