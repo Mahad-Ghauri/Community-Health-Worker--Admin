@@ -1459,9 +1459,6 @@ class ReferralProvider with ChangeNotifier {
     return filters.join(', ');
   }
 
-<<<<<<< HEAD
-}
-=======
   @override
   void dispose() {
     if (kDebugMode) {
@@ -1470,4 +1467,3 @@ class ReferralProvider with ChangeNotifier {
     super.dispose();
   }
 }
->>>>>>> ce7582962566ae206ab04e64240f8fdb390fe024
