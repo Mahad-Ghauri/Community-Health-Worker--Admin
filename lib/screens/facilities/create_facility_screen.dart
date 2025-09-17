@@ -512,28 +512,34 @@ class _CreateFacilityScreenState extends State<CreateFacilityScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final facilityProvider = Provider.of<FacilityProvider>(context, listen: false);
 
-      // Create coordinates map if both lat/lng are provided
-      Map<String, double>? coordinates;
+      // Create location map
+      Map<String, dynamic> location = {
+        'address': _addressController.text.trim(),
+      };
+      
+      // Add coordinates if both lat/lng are provided
       if (_latitudeController.text.isNotEmpty && _longitudeController.text.isNotEmpty) {
-        coordinates = {
-          'latitude': double.parse(_latitudeController.text),
-          'longitude': double.parse(_longitudeController.text),
-        };
+        location['latitude'] = double.parse(_latitudeController.text);
+        location['longitude'] = double.parse(_longitudeController.text);
       }
+
+      // Create contact map
+      Map<String, String> contact = {
+        'phone': _contactPhoneController.text.trim(),
+        'email': _contactEmailController.text.trim(),
+        'person': _contactPersonController.text.trim(),
+      };
 
       final facility = Facility(
         facilityId: '', // Will be set by Firestore
         name: _nameController.text.trim(),
         type: _selectedType,
-        address: _addressController.text.trim(),
-        contactPhone: _contactPhoneController.text.trim(),
-        contactEmail: _contactEmailController.text.trim(),
-        contactPerson: _contactPersonController.text.trim(),
-        coordinates: coordinates,
+        location: location,
+        contact: contact,
         staff: [], // Empty initially
         supervisors: [], // Empty initially
         services: _selectedServices,
-        status: _selectedStatus,
+        isActive: _selectedStatus == 'active',
         createdBy: authProvider.currentUser?.userId ?? '',
         createdAt: DateTime.now(),
       );
