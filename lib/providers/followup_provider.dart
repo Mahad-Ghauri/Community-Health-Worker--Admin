@@ -4,10 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/followup.dart';
 import '../models/patient.dart';
 import '../models/chw_user.dart';
+import '../services/scheduling_service.dart';
 
 class FollowupProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+  final SchedulingService _schedulingService = SchedulingService();
+
   List<Followup> _followups = [];
   List<Patient> _patients = [];
   List<CHWUser> _chwUsers = [];
@@ -15,7 +17,7 @@ class FollowupProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   Map<String, int> _statistics = {};
-  
+
   // Calendar and scheduling state
   DateTime _selectedDate = DateTime.now();
   List<Followup> _calendarFollowups = [];
@@ -28,6 +30,9 @@ class FollowupProvider with ChangeNotifier {
   String _searchTerm = '';
   String? _facilityId;
   DateTimeRange? _dateRange;
+  SchedulingConfig? _schedulingConfig;
+  int _slotCapacity = 3;
+  int _slotMinutes = 30;
 
   // Getters
   List<Followup> get followups => _followups;
@@ -37,11 +42,14 @@ class FollowupProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   Map<String, int> get statistics => _statistics;
-  
+
   // Calendar getters
   DateTime get selectedDate => _selectedDate;
   List<Followup> get calendarFollowups => _calendarFollowups;
   Map<DateTime, List<Followup>> get followupsByDate => _followupsByDate;
+  SchedulingConfig? get schedulingConfig => _schedulingConfig;
+  int get slotCapacity => _slotCapacity;
+  int get slotMinutes => _slotMinutes;
 
   // Filter getters
   String? get selectedPatient => _selectedPatient;
@@ -56,37 +64,57 @@ class FollowupProvider with ChangeNotifier {
 
     // Filter by facility if set
     if (_facilityId != null) {
-      filtered = filtered.where((followup) => followup.facilityId == _facilityId).toList();
+      filtered = filtered
+          .where((followup) => followup.facilityId == _facilityId)
+          .toList();
     }
 
     // Filter by patient
     if (_selectedPatient != null && _selectedPatient!.isNotEmpty) {
-      filtered = filtered.where((followup) => followup.patientId == _selectedPatient).toList();
+      filtered = filtered
+          .where((followup) => followup.patientId == _selectedPatient)
+          .toList();
     }
 
     // Filter by status
     if (_selectedStatus != null && _selectedStatus!.isNotEmpty) {
-      filtered = filtered.where((followup) => followup.status == _selectedStatus).toList();
+      filtered = filtered
+          .where((followup) => followup.status == _selectedStatus)
+          .toList();
     }
 
     // Filter by type
     if (_selectedType != null && _selectedType!.isNotEmpty) {
-      filtered = filtered.where((followup) => followup.followupType == _selectedType).toList();
+      filtered = filtered
+          .where((followup) => followup.followupType == _selectedType)
+          .toList();
     }
 
     // Date range filter
     if (_dateRange != null) {
-      filtered = filtered.where((followup) =>
-          followup.scheduledDate.isAfter(_dateRange!.start.subtract(const Duration(days: 1))) &&
-          followup.scheduledDate.isBefore(_dateRange!.end.add(const Duration(days: 1)))).toList();
+      filtered = filtered
+          .where(
+            (followup) =>
+                followup.scheduledDate.isAfter(
+                  _dateRange!.start.subtract(const Duration(days: 1)),
+                ) &&
+                followup.scheduledDate.isBefore(
+                  _dateRange!.end.add(const Duration(days: 1)),
+                ),
+          )
+          .toList();
     }
 
     // Search filter
     if (_searchTerm.isNotEmpty) {
       final searchLower = _searchTerm.toLowerCase();
-      filtered = filtered.where((followup) =>
-          followup.followupType.toLowerCase().contains(searchLower) ||
-          followup.notes?.toLowerCase().contains(searchLower) == true).toList();
+      filtered = filtered
+          .where(
+            (followup) =>
+                followup.followupType.toLowerCase().contains(searchLower) ||
+                followup.notes?.toLowerCase().contains(searchLower) == true,
+          )
+          .toList();
     }
 
     return filtered;
@@ -95,13 +123,20 @@ class FollowupProvider with ChangeNotifier {
   // Set facility context
   void setFacilityId(String facilityId) {
     _facilityId = facilityId;
+    // subscribe to scheduling config
+    _schedulingService.getFacilityScheduling(facilityId).listen((cfg) {
+      _schedulingConfig = cfg;
+      _slotCapacity = cfg.maxPerSlot;
+      _slotMinutes = cfg.slotMinutes;
+      notifyListeners();
+    });
     notifyListeners();
   }
 
   // Load followups for facility
   Future<void> loadFollowups() async {
     if (_facilityId == null) return;
-    
+
     _setLoading(true);
     _setError(null);
 
@@ -113,19 +148,19 @@ class FollowupProvider with ChangeNotifier {
           .orderBy('scheduledDate', descending: false)
           .snapshots()
           .listen(
-        (snapshot) {
-          _followups = snapshot.docs
-              .map((doc) => Followup.fromFirestore(doc))
-              .toList();
-          _updateCalendarData();
-          _setLoading(false);
-          notifyListeners();
-        },
-        onError: (error) {
-          _setError('Failed to load followups: $error');
-          _setLoading(false);
-        },
-      );
+            (snapshot) {
+              _followups = snapshot.docs
+                  .map((doc) => Followup.fromFirestore(doc))
+                  .toList();
+              _updateCalendarData();
+              _setLoading(false);
+              notifyListeners();
+            },
+            onError: (error) {
+              _setError('Failed to load followups: $error');
+              _setLoading(false);
+            },
+          );
     } catch (e) {
       _setError('Failed to load followups: $e');
       _setLoading(false);
@@ -139,7 +174,7 @@ class FollowupProvider with ChangeNotifier {
     try {
       final snapshot = await _firestore
           .collection('patients')
-          .where('assignedFacility', isEqualTo: _facilityId)
+          .where('treatmentFacility', isEqualTo: _facilityId)
           .get();
 
       _patients = snapshot.docs
@@ -182,6 +217,9 @@ class FollowupProvider with ChangeNotifier {
     String priority = Followup.priorityRoutine,
     String? notes,
     bool sendReminder = true,
+    int? durationMinutes,
+    String? assignedStaffId,
+    String? roomId,
   }) async {
     if (_facilityId == null) return null;
 
@@ -189,6 +227,41 @@ class FollowupProvider with ChangeNotifier {
     _setError(null);
 
     try {
+      // validations
+      final int dur = durationMinutes ?? _slotMinutes;
+      if (_schedulingConfig != null) {
+        if (_schedulingService.isHoliday(scheduledDate, _schedulingConfig!)) {
+          throw Exception('Selected date is a holiday');
+        }
+        if (!_schedulingService.isWithinWorkingHours(
+          scheduledDate,
+          dur,
+          _schedulingConfig!,
+        )) {
+          throw Exception('Outside working hours');
+        }
+        if (_schedulingService.isWithinBreaks(
+          scheduledDate,
+          dur,
+          _schedulingConfig!,
+        )) {
+          throw Exception('Overlaps with break time');
+        }
+      }
+
+      // capacity check (client-side best effort)
+      final existing = getFollowupsForDate(scheduledDate).where((f) {
+        final end = f.scheduledDate.add(
+          Duration(minutes: f.durationMinutes ?? 30),
+        );
+        final selEnd = scheduledDate.add(Duration(minutes: dur));
+        return f.status == Followup.statusScheduled &&
+            f.scheduledDate.isBefore(selEnd) &&
+            end.isAfter(scheduledDate);
+      }).length;
+      if (existing >= _slotCapacity) {
+        throw Exception('Slot is full');
+      }
       // Create followup
       final followup = Followup.createNew(
         patientId: patientId,
@@ -199,6 +272,9 @@ class FollowupProvider with ChangeNotifier {
         priority: priority,
         notes: notes,
         sendReminder: sendReminder,
+        durationMinutes: dur,
+        assignedStaffId: assignedStaffId,
+        roomId: roomId,
       );
 
       final docRef = await _firestore
@@ -206,23 +282,25 @@ class FollowupProvider with ChangeNotifier {
           .add(followup.toFirestore());
 
       // Get patient's assigned CHW for notification
-      final patient = _patients.firstWhere((p) => p.patientId == patientId, orElse: () => 
-          Patient(
-            patientId: '', 
-            name: 'Unknown', 
-            age: 0, 
-            phone: '', 
-            address: '', 
-            gender: '', 
-            tbStatus: 'newly_diagnosed', 
-            assignedCHW: '',
-            assignedFacility: '',
-            treatmentFacility: '',
-            gpsLocation: {},
-            consent: false,
-            createdBy: '',
-            createdAt: DateTime.now()
-          ));
+      final patient = _patients.firstWhere(
+        (p) => p.patientId == patientId,
+        orElse: () => Patient(
+          patientId: '',
+          name: 'Unknown',
+          age: 0,
+          phone: '',
+          address: '',
+          gender: '',
+          tbStatus: 'newly_diagnosed',
+          assignedCHW: '',
+          assignedFacility: '',
+          treatmentFacility: '',
+          gpsLocation: {},
+          consent: false,
+          createdBy: '',
+          createdAt: DateTime.now(),
+        ),
+      );
 
       if (patient.assignedCHW.isNotEmpty) {
         // Create notification for CHW
@@ -230,7 +308,8 @@ class FollowupProvider with ChangeNotifier {
           chwId: patient.assignedCHW,
           type: 'followup_scheduled',
           title: 'New Follow-up Scheduled',
-          message: 'Follow-up scheduled for ${followup.formattedScheduledDateTime}',
+          message:
+              'Follow-up scheduled for ${followup.formattedScheduledDateTime}',
           relatedId: docRef.id,
         );
       }
@@ -246,15 +325,15 @@ class FollowupProvider with ChangeNotifier {
   }
 
   // Update followup
-  Future<bool> updateFollowup(String followupId, Map<String, dynamic> data) async {
+  Future<bool> updateFollowup(
+    String followupId,
+    Map<String, dynamic> data,
+  ) async {
     _setLoading(true);
     _setError(null);
 
     try {
-      await _firestore
-          .collection('followups')
-          .doc(followupId)
-          .update({
+      await _firestore.collection('followups').doc(followupId).update({
         ...data,
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -269,7 +348,11 @@ class FollowupProvider with ChangeNotifier {
   }
 
   // Complete followup
-  Future<bool> completeFollowup(String followupId, String completedBy, {String? notes}) async {
+  Future<bool> completeFollowup(
+    String followupId,
+    String completedBy, {
+    String? notes,
+  }) async {
     _setLoading(true);
     _setError(null);
 
@@ -306,10 +389,7 @@ class FollowupProvider with ChangeNotifier {
     _setError(null);
 
     try {
-      await _firestore
-          .collection('followups')
-          .doc(followupId)
-          .update({
+      await _firestore.collection('followups').doc(followupId).update({
         'status': Followup.statusCancelled,
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -325,15 +405,17 @@ class FollowupProvider with ChangeNotifier {
   }
 
   // Reschedule followup
-  Future<bool> rescheduleFollowup(String followupId, DateTime newDate, String rescheduledBy, {String? reason}) async {
+  Future<bool> rescheduleFollowup(
+    String followupId,
+    DateTime newDate,
+    String rescheduledBy, {
+    String? reason,
+  }) async {
     _setLoading(true);
     _setError(null);
 
     try {
-      await _firestore
-          .collection('followups')
-          .doc(followupId)
-          .update({
+      await _firestore.collection('followups').doc(followupId).update({
         'scheduledDate': Timestamp.fromDate(newDate),
         'status': Followup.statusScheduled,
         'rescheduledBy': rescheduledBy,
@@ -366,7 +448,7 @@ class FollowupProvider with ChangeNotifier {
       } else {
         _setError('Followup not found');
       }
-      
+
       _setLoading(false);
     } catch (e) {
       _setError('Failed to load followup: $e');
@@ -384,7 +466,9 @@ class FollowupProvider with ChangeNotifier {
           .where('facilityId', isEqualTo: _facilityId)
           .get();
 
-      final followups = snapshot.docs.map((doc) => Followup.fromFirestore(doc)).toList();
+      final followups = snapshot.docs
+          .map((doc) => Followup.fromFirestore(doc))
+          .toList();
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final tomorrow = today.add(const Duration(days: 1));
@@ -397,8 +481,22 @@ class FollowupProvider with ChangeNotifier {
         'cancelled': followups.where((f) => f.isCancelled).length,
         'overdue': followups.where((f) => f.isOverdue).length,
         'today': followups.where((f) => f.isToday).length,
-        'tomorrow': followups.where((f) => f.scheduledDate.isAfter(today) && f.scheduledDate.isBefore(tomorrow.add(const Duration(days: 1)))).length,
-        'thisWeek': followups.where((f) => f.scheduledDate.isAfter(today) && f.scheduledDate.isBefore(thisWeek)).length,
+        'tomorrow': followups
+            .where(
+              (f) =>
+                  f.scheduledDate.isAfter(today) &&
+                  f.scheduledDate.isBefore(
+                    tomorrow.add(const Duration(days: 1)),
+                  ),
+            )
+            .length,
+        'thisWeek': followups
+            .where(
+              (f) =>
+                  f.scheduledDate.isAfter(today) &&
+                  f.scheduledDate.isBefore(thisWeek),
+            )
+            .length,
       };
 
       notifyListeners();
@@ -448,7 +546,8 @@ class FollowupProvider with ChangeNotifier {
   // Check if date has followups
   bool hasFollowupsOnDate(DateTime date) {
     final day = DateTime(date.year, date.month, date.day);
-    return _followupsByDate.containsKey(day) && _followupsByDate[day]!.isNotEmpty;
+    return _followupsByDate.containsKey(day) &&
+        _followupsByDate[day]!.isNotEmpty;
   }
 
   // Filter methods
@@ -503,8 +602,22 @@ class FollowupProvider with ChangeNotifier {
   }
 
   // Utility methods
+  // Eligible patients per business rules
+  List<Patient> get eligiblePatients {
+    return _patients.where((p) {
+      final hasPending = _followups.any(
+        (f) => f.patientId == p.patientId && f.isScheduled && f.isUpcoming,
+      );
+      return p.treatmentFacility == _facilityId &&
+          p.isOnTreatment &&
+          !hasPending;
+    }).toList();
+  }
+
   List<Followup> getFollowupsByPatient(String patientId) {
-    return _followups.where((followup) => followup.patientId == patientId).toList();
+    return _followups
+        .where((followup) => followup.patientId == patientId)
+        .toList();
   }
 
   List<Followup> getTodaysFollowups() {
@@ -514,10 +627,14 @@ class FollowupProvider with ChangeNotifier {
   List<Followup> getUpcomingFollowups({int days = 7}) {
     final now = DateTime.now();
     final futureDate = now.add(Duration(days: days));
-    return _followups.where((followup) =>
-        followup.scheduledDate.isAfter(now) &&
-        followup.scheduledDate.isBefore(futureDate) &&
-        followup.isScheduled).toList();
+    return _followups
+        .where(
+          (followup) =>
+              followup.scheduledDate.isAfter(now) &&
+              followup.scheduledDate.isBefore(futureDate) &&
+              followup.isScheduled,
+        )
+        .toList();
   }
 
   List<Followup> getOverdueFollowups() {
@@ -577,28 +694,30 @@ class FollowupProvider with ChangeNotifier {
 
   String get filtersDescription {
     final filters = <String>[];
-    
+
     if (_searchTerm.isNotEmpty) {
       filters.add('Search: "$_searchTerm"');
     }
     if (_selectedPatient != null) {
-      final patient = _patients.firstWhere((p) => p.patientId == _selectedPatient, orElse: () => 
-          Patient(
-            patientId: '', 
-            name: 'Unknown', 
-            age: 0, 
-            phone: '', 
-            address: '', 
-            gender: '', 
-            tbStatus: 'newly_diagnosed', 
-            assignedCHW: '',
-            assignedFacility: '',
-            treatmentFacility: '',
-            gpsLocation: {},
-            consent: false,
-            createdBy: '',
-            createdAt: DateTime.now()
-          ));
+      final patient = _patients.firstWhere(
+        (p) => p.patientId == _selectedPatient,
+        orElse: () => Patient(
+          patientId: '',
+          name: 'Unknown',
+          age: 0,
+          phone: '',
+          address: '',
+          gender: '',
+          tbStatus: 'newly_diagnosed',
+          assignedCHW: '',
+          assignedFacility: '',
+          treatmentFacility: '',
+          gpsLocation: {},
+          consent: false,
+          createdBy: '',
+          createdAt: DateTime.now(),
+        ),
+      );
       filters.add('Patient: ${patient.name}');
     }
     if (_selectedStatus != null) {
@@ -608,10 +727,11 @@ class FollowupProvider with ChangeNotifier {
       filters.add('Type: $_selectedType');
     }
     if (_dateRange != null) {
-      filters.add('Date: ${_dateRange!.start.toString().split(' ')[0]} - ${_dateRange!.end.toString().split(' ')[0]}');
+      filters.add(
+        'Date: ${_dateRange!.start.toString().split(' ')[0]} - ${_dateRange!.end.toString().split(' ')[0]}',
+      );
     }
-    
+
     return filters.join(', ');
   }
-
 }

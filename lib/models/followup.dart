@@ -6,7 +6,8 @@ class Followup {
   final DateTime scheduledDate;
   final String status; // scheduled, completed, missed, cancelled, rescheduled
   final String facilityId;
-  final String followupType; // routine_checkup, medication_review, lab_results, xray_followup, treatment_completion
+  final String
+  followupType; // routine_checkup, medication_review, lab_results, xray_followup, treatment_completion
   final String priority; // routine, important, urgent
   final String? notes;
   final String createdBy;
@@ -20,6 +21,15 @@ class Followup {
   final String? rescheduledBy;
   final bool sendReminder;
   final DateTime? reminderSentAt;
+  // Scheduling extensions
+  final int? durationMinutes; // default 30
+  final String? assignedStaffId;
+  final String? roomId;
+  final String? seriesId; // recurring series grouping
+  final String? seriesRule; // RRULE or similar text
+  final String? cancelReason;
+  final String? appointmentType; // visual categorization
+  final String? urgencyLevel; // mirrors priority for integrations
 
   Followup({
     required this.followupId,
@@ -41,6 +51,14 @@ class Followup {
     this.rescheduledBy,
     this.sendReminder = true,
     this.reminderSentAt,
+    this.durationMinutes,
+    this.assignedStaffId,
+    this.roomId,
+    this.seriesId,
+    this.seriesRule,
+    this.cancelReason,
+    this.appointmentType,
+    this.urgencyLevel,
   });
 
   // Convert Followup to Firestore document
@@ -56,15 +74,29 @@ class Followup {
       'notes': notes,
       'createdBy': createdBy,
       'createdAt': Timestamp.fromDate(createdAt),
-      'completedDate': completedDate != null ? Timestamp.fromDate(completedDate!) : null,
+      'completedDate': completedDate != null
+          ? Timestamp.fromDate(completedDate!)
+          : null,
       'completedBy': completedBy,
       'outcomeNotes': outcomeNotes,
       'missedDate': missedDate != null ? Timestamp.fromDate(missedDate!) : null,
       'missedReason': missedReason,
-      'rescheduledDate': rescheduledDate != null ? Timestamp.fromDate(rescheduledDate!) : null,
+      'rescheduledDate': rescheduledDate != null
+          ? Timestamp.fromDate(rescheduledDate!)
+          : null,
       'rescheduledBy': rescheduledBy,
       'sendReminder': sendReminder,
-      'reminderSentAt': reminderSentAt != null ? Timestamp.fromDate(reminderSentAt!) : null,
+      'reminderSentAt': reminderSentAt != null
+          ? Timestamp.fromDate(reminderSentAt!)
+          : null,
+      'durationMinutes': durationMinutes ?? 30,
+      'assignedStaffId': assignedStaffId,
+      'roomId': roomId,
+      'seriesId': seriesId,
+      'seriesRule': seriesRule,
+      'cancelReason': cancelReason,
+      'appointmentType': appointmentType,
+      'urgencyLevel': urgencyLevel ?? priority,
     };
   }
 
@@ -74,7 +106,8 @@ class Followup {
     return Followup(
       followupId: doc.id,
       patientId: data['patientId'] ?? '',
-      scheduledDate: (data['scheduledDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      scheduledDate:
+          (data['scheduledDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       status: data['status'] ?? 'scheduled',
       facilityId: data['facilityId'] ?? '',
       followupType: data['followupType'] ?? 'routine_checkup',
@@ -91,6 +124,14 @@ class Followup {
       rescheduledBy: data['rescheduledBy'],
       sendReminder: data['sendReminder'] ?? true,
       reminderSentAt: (data['reminderSentAt'] as Timestamp?)?.toDate(),
+      durationMinutes: (data['durationMinutes'] as int?) ?? 30,
+      assignedStaffId: data['assignedStaffId'],
+      roomId: data['roomId'],
+      seriesId: data['seriesId'],
+      seriesRule: data['seriesRule'],
+      cancelReason: data['cancelReason'],
+      appointmentType: data['appointmentType'],
+      urgencyLevel: data['urgencyLevel'] ?? data['priority'],
     );
   }
 
@@ -99,7 +140,8 @@ class Followup {
     return Followup(
       followupId: id,
       patientId: data['patientId'] ?? '',
-      scheduledDate: (data['scheduledDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      scheduledDate:
+          (data['scheduledDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       status: data['status'] ?? 'scheduled',
       facilityId: data['facilityId'] ?? '',
       followupType: data['followupType'] ?? 'routine_checkup',
@@ -116,6 +158,14 @@ class Followup {
       rescheduledBy: data['rescheduledBy'],
       sendReminder: data['sendReminder'] ?? true,
       reminderSentAt: (data['reminderSentAt'] as Timestamp?)?.toDate(),
+      durationMinutes: (data['durationMinutes'] as int?) ?? 30,
+      assignedStaffId: data['assignedStaffId'],
+      roomId: data['roomId'],
+      seriesId: data['seriesId'],
+      seriesRule: data['seriesRule'],
+      cancelReason: data['cancelReason'],
+      appointmentType: data['appointmentType'],
+      urgencyLevel: data['urgencyLevel'] ?? data['priority'],
     );
   }
 
@@ -140,6 +190,14 @@ class Followup {
     String? rescheduledBy,
     bool? sendReminder,
     DateTime? reminderSentAt,
+    int? durationMinutes,
+    String? assignedStaffId,
+    String? roomId,
+    String? seriesId,
+    String? seriesRule,
+    String? cancelReason,
+    String? appointmentType,
+    String? urgencyLevel,
   }) {
     return Followup(
       followupId: followupId ?? this.followupId,
@@ -161,6 +219,14 @@ class Followup {
       rescheduledBy: rescheduledBy ?? this.rescheduledBy,
       sendReminder: sendReminder ?? this.sendReminder,
       reminderSentAt: reminderSentAt ?? this.reminderSentAt,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
+      assignedStaffId: assignedStaffId ?? this.assignedStaffId,
+      roomId: roomId ?? this.roomId,
+      seriesId: seriesId ?? this.seriesId,
+      seriesRule: seriesRule ?? this.seriesRule,
+      cancelReason: cancelReason ?? this.cancelReason,
+      appointmentType: appointmentType ?? this.appointmentType,
+      urgencyLevel: urgencyLevel ?? this.urgencyLevel,
     );
   }
 
@@ -245,16 +311,16 @@ class Followup {
   // Time-related helpers
   bool get isToday {
     final now = DateTime.now();
-    return scheduledDate.year == now.year && 
-           scheduledDate.month == now.month && 
-           scheduledDate.day == now.day;
+    return scheduledDate.year == now.year &&
+        scheduledDate.month == now.month &&
+        scheduledDate.day == now.day;
   }
 
   bool get isTomorrow {
     final tomorrow = DateTime.now().add(const Duration(days: 1));
-    return scheduledDate.year == tomorrow.year && 
-           scheduledDate.month == tomorrow.month && 
-           scheduledDate.day == tomorrow.day;
+    return scheduledDate.year == tomorrow.year &&
+        scheduledDate.month == tomorrow.month &&
+        scheduledDate.day == tomorrow.day;
   }
 
   bool get isPast {
@@ -295,18 +361,18 @@ class Followup {
 
   // Check if reminder should be sent
   bool get shouldSendReminder {
-    return sendReminder && 
-           isScheduled && 
-           reminderSentAt == null &&
-           daysUntilAppointment <= 1; // Send reminder 1 day before
+    return sendReminder &&
+        isScheduled &&
+        reminderSentAt == null &&
+        daysUntilAppointment <= 1; // Send reminder 1 day before
   }
 
   // Validation methods
   bool get isValid {
-    return patientId.isNotEmpty && 
-           facilityId.isNotEmpty &&
-           followupType.isNotEmpty &&
-           createdBy.isNotEmpty;
+    return patientId.isNotEmpty &&
+        facilityId.isNotEmpty &&
+        followupType.isNotEmpty &&
+        createdBy.isNotEmpty;
   }
 
   // Check if followup can be modified
@@ -371,6 +437,10 @@ class Followup {
     String priority = priorityRoutine,
     String? notes,
     bool sendReminder = true,
+    int durationMinutes = 30,
+    String? assignedStaffId,
+    String? roomId,
+    String? appointmentType,
   }) {
     return Followup(
       followupId: '', // Will be set by Firestore
@@ -383,6 +453,10 @@ class Followup {
       createdBy: createdBy,
       createdAt: DateTime.now(),
       sendReminder: sendReminder,
+      durationMinutes: durationMinutes,
+      assignedStaffId: assignedStaffId,
+      roomId: roomId,
+      appointmentType: appointmentType,
     );
   }
 
