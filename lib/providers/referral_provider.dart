@@ -204,11 +204,11 @@ class ReferralProvider with ChangeNotifier {
     try {
       final snapshot = await _firestore
           .collection('facilities')
-          .where('status', isEqualTo: 'active')
+          .where('isActive', isEqualTo: true)
           .get();
 
       _facilities = snapshot.docs
-          .map((doc) => Facility.fromFirestore(doc))
+          .map((doc) => Facility.fromFirestoreDoc(doc))
           .toList();
 
       notifyListeners();
