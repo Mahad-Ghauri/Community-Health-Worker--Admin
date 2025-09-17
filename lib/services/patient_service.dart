@@ -56,7 +56,21 @@ class PatientService {
       query = query.startAfterDocument(lastDocument);
     }
 
-    return await query.get();
+    try {
+      return await query.get();
+    } on FirebaseException catch (e) {
+      // Graceful fallback if composite index is missing
+      if (e.code == 'failed-precondition') {
+        Query<Map<String, dynamic>> fallback = _baseFacilityQuery(
+          facilityId,
+        ).limit(limit);
+        if (lastDocument != null) {
+          // startAfter requires an orderBy cursor; so skip pagination on fallback
+        }
+        return await fallback.get();
+      }
+      rethrow;
+    }
   }
 
   Stream<List<Patient>> getFacilityPatientsStream({

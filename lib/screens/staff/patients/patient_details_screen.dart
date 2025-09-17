@@ -3,10 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import '../../../constants/app_constants.dart';
 import '../../../models/patient.dart';
-import '../../../services/auth_provider.dart';
 import '../../../theme/theme.dart';
 import '../../../utils/responsive_helper.dart';
 
@@ -25,9 +23,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   bool _hasError = false;
   String? _errorMessage;
   Patient? _patient;
-  List<Map<String, dynamic>> _treatmentHistory = [];
-  List<Map<String, dynamic>> _testResults = [];
-  List<Map<String, dynamic>> _appointments = [];
+  // Legacy placeholders removed; data is loaded per-tab via streams
 
   @override
   void initState() {
@@ -288,9 +284,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
           const SizedBox(height: 24),
 
-          // Tabs for different sections
+          // Tabs for different sections (expanded to 6)
           DefaultTabController(
-            length: 3,
+            length: 6,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -311,20 +307,26 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     unselectedLabelColor: Colors.grey.shade700,
                     indicatorColor: CHWTheme.primaryColor,
                     tabs: const [
-                      Tab(text: 'Treatment History'),
-                      Tab(text: 'Test Results'),
-                      Tab(text: 'Appointments'),
+                      Tab(text: 'Details'),
+                      Tab(text: 'Visits'),
+                      Tab(text: 'Medications'),
+                      Tab(text: 'Adherence'),
+                      Tab(text: 'Follow-ups'),
+                      Tab(text: 'Contacts'),
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
-                  height: 400, // Fixed height for tab content
+                  height: 500, // Fixed height for tab content
                   child: TabBarView(
                     children: [
-                      _buildTreatmentHistoryList(),
-                      _buildTestResultsList(),
-                      _buildAppointmentsList(),
+                      _buildDetailsTab(),
+                      _buildVisitsTab(),
+                      _buildMedicationsTab(),
+                      _buildAdherenceTab(),
+                      _buildFollowupsTab(),
+                      _buildContactsTab(),
                     ],
                   ),
                 ),
@@ -333,6 +335,266 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // Tab: Details (editable placeholders)
+  Widget _buildDetailsTab() {
+    final p = _patient!;
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Personal Information', style: CHWTheme.subheadingStyle),
+            const SizedBox(height: 12),
+            _buildDetailItem(
+              icon: Icons.person,
+              label: 'Full Name',
+              value: p.name,
+            ),
+            _buildDetailItem(icon: Icons.cake, label: 'Age', value: '${p.age}'),
+            _buildDetailItem(icon: Icons.wc, label: 'Gender', value: p.gender),
+            _buildDetailItem(icon: Icons.phone, label: 'Phone', value: p.phone),
+            _buildDetailItem(
+              icon: Icons.home,
+              label: 'Address',
+              value: p.address,
+            ),
+            const SizedBox(height: 16),
+            Text('Medical Information', style: CHWTheme.subheadingStyle),
+            const SizedBox(height: 12),
+            _buildDetailItem(
+              icon: Icons.badge,
+              label: 'Patient ID',
+              value: p.patientId,
+            ),
+            _buildDetailItem(
+              icon: Icons.verified,
+              label: 'TB Status',
+              value: p.statusDisplayName,
+            ),
+            if (p.diagnosisDate != null)
+              _buildDetailItem(
+                icon: Icons.event,
+                label: 'Diagnosis Date',
+                value: DateFormat('MMM d, y').format(p.diagnosisDate!),
+              ),
+            _buildDetailItem(
+              icon: Icons.local_hospital,
+              label: 'Facility',
+              value: p.treatmentFacility,
+            ),
+            _buildDetailItem(
+              icon: Icons.support_agent,
+              label: 'Assigned CHW',
+              value: p.assignedCHW,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Tab: Visits
+  Widget _buildVisitsTab() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection(AppConstants.visitsCollection)
+          .where('patientId', isEqualTo: _patient!.patientId)
+          .orderBy('visitDate', descending: true)
+          .limit(100)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return _buildEmptyListMessage('Failed to load visits');
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return _buildEmptyListMessage('No visits recorded');
+        }
+        return ListView.separated(
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, i) {
+            final v = docs[i].data();
+            final date = (v['visitDate'] as Timestamp).toDate();
+            return ListTile(
+              leading: Icon(Icons.route, color: CHWTheme.primaryColor),
+              title: Text(
+                '${v['visitType'] ?? 'visit'} — ${DateFormat('MMM d, y').format(date)}',
+              ),
+              subtitle: Text(v['notes'] ?? ''),
+              trailing: v['found'] == true
+                  ? const Icon(Icons.check, color: Colors.green)
+                  : const Icon(Icons.close, color: Colors.red),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Tab: Medications
+  Widget _buildMedicationsTab() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('medications')
+          .where('patientId', isEqualTo: _patient!.patientId)
+          .orderBy('startDate', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return _buildEmptyListMessage('Failed to load medications');
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return _buildEmptyListMessage('No medications');
+        }
+        return ListView.separated(
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, i) {
+            final m = docs[i].data();
+            final start = (m['startDate'] as Timestamp?)?.toDate();
+            final end = (m['endDate'] as Timestamp?)?.toDate();
+            return ListTile(
+              leading: Icon(
+                m['isActive'] == true
+                    ? Icons.medication
+                    : Icons.medication_outlined,
+                color: CHWTheme.primaryColor,
+              ),
+              title: Text(m['drugName'] ?? m['genericName'] ?? 'Medication'),
+              subtitle: Text(
+                '${m['dosage'] ?? ''} ${m['frequency'] ?? ''}\n${start != null ? 'Start: ${DateFormat('MMM d, y').format(start)}' : ''} ${end != null ? ' End: ${DateFormat('MMM d, y').format(end)}' : ''}',
+              ),
+              isThreeLine: true,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Tab: Adherence
+  Widget _buildAdherenceTab() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('adherence')
+          .where('patientId', isEqualTo: _patient!.patientId)
+          .orderBy('date')
+          .limit(120)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return _buildEmptyListMessage('No adherence records');
+        }
+        // Simple summary list; charts can be added later
+        return ListView.separated(
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, i) {
+            final a = docs[i].data();
+            final date = (a['date'] as Timestamp).toDate();
+            final planned = (a['dosesPlanned'] ?? 0) as int;
+            final taken = (a['dosesTaken'] ?? 0) as int;
+            final pct = planned == 0
+                ? 0
+                : (taken / planned * 100).clamp(0, 100).round();
+            return ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: Text(DateFormat('MMM d, y').format(date)),
+              subtitle: Text('Taken $taken / $planned ($pct%)'),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Tab: Follow-ups
+  Widget _buildFollowupsTab() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('followups')
+          .where('patientId', isEqualTo: _patient!.patientId)
+          .orderBy('scheduledAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return _buildEmptyListMessage('No follow-ups');
+        }
+        return ListView.separated(
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, i) {
+            final f = docs[i].data();
+            final at = (f['scheduledAt'] as Timestamp?)?.toDate();
+            return ListTile(
+              leading: const Icon(Icons.event_note),
+              title: Text(f['type'] ?? 'Follow-up'),
+              subtitle: Text(
+                '${f['purpose'] ?? ''}\n${at != null ? DateFormat('MMM d, y – h:mm a').format(at) : ''}',
+              ),
+              isThreeLine: true,
+              trailing: Text(f['status'] ?? ''),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Tab: Contacts
+  Widget _buildContactsTab() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('contacts')
+          .where('indexPatientId', isEqualTo: _patient!.patientId)
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return _buildEmptyListMessage('No contacts');
+        }
+        return ListView.separated(
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, i) {
+            final c = docs[i].data();
+            return ListTile(
+              leading: const Icon(Icons.group),
+              title: Text(c['name'] ?? 'Household member'),
+              subtitle: Text(
+                'Relation: ${c['relationship'] ?? ''} • Screening: ${c['screeningStatus'] ?? ''} • Test: ${c['testResult'] ?? ''}',
+              ),
+              trailing: Text(c['referralStatus'] ?? ''),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -693,218 +955,6 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     );
   }
 
-  Widget _buildTreatmentHistoryList() {
-    if (_treatmentHistory.isEmpty) {
-      return _buildEmptyListMessage('No treatment history available');
-    }
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListView.builder(
-        itemCount: _treatmentHistory.length,
-        itemBuilder: (context, index) {
-          final event = _treatmentHistory[index];
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Timeline dot and line
-                Column(
-                  children: [
-                    Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: CHWTheme.primaryColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    if (index < _treatmentHistory.length - 1)
-                      Container(
-                        width: 2,
-                        height: 60,
-                        color: Colors.grey.shade300,
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 16),
-                // Event details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        event['type'] as String,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        DateFormat(
-                          'MMM d, y',
-                        ).format(event['date'] as DateTime),
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        event['notes'] as String,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Provider: ${event['provider']}',
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTestResultsList() {
-    if (_testResults.isEmpty) {
-      return _buildEmptyListMessage('No test results available');
-    }
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListView.separated(
-        itemCount: _testResults.length,
-        separatorBuilder: (context, index) => const Divider(),
-        itemBuilder: (context, index) {
-          final test = _testResults[index];
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundColor: _getResultColor(
-                test['result'] as String,
-              ).withOpacity(0.1),
-              child: Icon(
-                Icons.science,
-                color: _getResultColor(test['result'] as String),
-              ),
-            ),
-            title: Text(test['type'] as String),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  DateFormat('MMM d, y').format(test['date'] as DateTime),
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Notes: ${test['notes']}',
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ],
-            ),
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _getResultColor(
-                  test['result'] as String,
-                ).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _getResultColor(
-                    test['result'] as String,
-                  ).withOpacity(0.5),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                test['result'] as String,
-                style: TextStyle(
-                  color: _getResultColor(test['result'] as String),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildAppointmentsList() {
-    if (_appointments.isEmpty) {
-      return _buildEmptyListMessage('No appointments scheduled');
-    }
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListView.separated(
-        itemCount: _appointments.length,
-        separatorBuilder: (context, index) => const Divider(),
-        itemBuilder: (context, index) {
-          final appointment = _appointments[index];
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.green.withOpacity(0.1),
-              child: const Icon(Icons.event, color: Colors.green),
-            ),
-            title: Text(appointment['type'] as String),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  DateFormat(
-                    'MMM d, y - h:mm a',
-                  ).format(appointment['date'] as DateTime),
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'With: ${appointment['provider']} at ${appointment['location']}',
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ],
-            ),
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.blue.withOpacity(0.5),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                appointment['status'] as String,
-                style: const TextStyle(
-                  color: Colors.blue,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildEmptyListMessage(String message) {
     return Center(
       child: Column(
@@ -937,19 +987,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     }
   }
 
-  Color _getResultColor(String result) {
-    if (result.toLowerCase().contains('positive') ||
-        result.toLowerCase().contains('detected') ||
-        result.toLowerCase().contains('abnormal')) {
-      return Colors.red;
-    } else if (result.toLowerCase().contains('negative') ||
-        result.toLowerCase().contains('normal') ||
-        result.toLowerCase().contains('not detected')) {
-      return Colors.green;
-    } else {
-      return Colors.blue;
-    }
-  }
+  // Result color helper was used in legacy tab; removed
 
   void _showDeleteConfirmation() {
     showDialog(

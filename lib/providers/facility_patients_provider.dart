@@ -91,6 +91,7 @@ class FacilityPatientsProvider extends ChangeNotifier {
   Timer? _searchDebounce;
 
   void init(String facilityId) {
+    if (facilityId.isEmpty) return;
     if (_facilityId == facilityId && _patients.isNotEmpty) return;
     _facilityId = facilityId;
     refresh();
