@@ -60,38 +60,66 @@ class FollowupProvider with ChangeNotifier {
 
   // Filtered followups
   List<Followup> get filteredFollowups {
+    if (kDebugMode) {
+      print('🔍 FollowupProvider: Computing filtered followups');
+      print('   Total followups: ${_followups.length}');
+      print('   Facility ID: $_facilityId');
+      print('   Selected patient: $_selectedPatient');
+      print('   Selected status: $_selectedStatus');
+      print('   Selected type: $_selectedType');
+      print('   Search term: "$_searchTerm"');
+      print('   Date range: $_dateRange');
+    }
+
     var filtered = _followups;
 
     // Filter by facility if set
     if (_facilityId != null) {
+      final beforeCount = filtered.length;
       filtered = filtered
           .where((followup) => followup.facilityId == _facilityId)
           .toList();
+      if (kDebugMode) {
+        print('   After facility filter: ${filtered.length} (removed ${beforeCount - filtered.length})');
+      }
     }
 
     // Filter by patient
     if (_selectedPatient != null && _selectedPatient!.isNotEmpty) {
+      final beforeCount = filtered.length;
       filtered = filtered
           .where((followup) => followup.patientId == _selectedPatient)
           .toList();
+      if (kDebugMode) {
+        print('   After patient filter: ${filtered.length} (removed ${beforeCount - filtered.length})');
+      }
     }
 
     // Filter by status
     if (_selectedStatus != null && _selectedStatus!.isNotEmpty) {
+      final beforeCount = filtered.length;
       filtered = filtered
           .where((followup) => followup.status == _selectedStatus)
           .toList();
+      if (kDebugMode) {
+        print('   After status filter: ${filtered.length} (removed ${beforeCount - filtered.length})');
+      }
     }
 
     // Filter by type
     if (_selectedType != null && _selectedType!.isNotEmpty) {
+      final beforeCount = filtered.length;
       filtered = filtered
           .where((followup) => followup.followupType == _selectedType)
           .toList();
+      if (kDebugMode) {
+        print('   After type filter: ${filtered.length} (removed ${beforeCount - filtered.length})');
+      }
     }
 
     // Date range filter
     if (_dateRange != null) {
+      final beforeCount = filtered.length;
       filtered = filtered
           .where(
             (followup) =>
@@ -103,10 +131,14 @@ class FollowupProvider with ChangeNotifier {
                 ),
           )
           .toList();
+      if (kDebugMode) {
+        print('   After date range filter: ${filtered.length} (removed ${beforeCount - filtered.length})');
+      }
     }
 
     // Search filter
     if (_searchTerm.isNotEmpty) {
+      final beforeCount = filtered.length;
       final searchLower = _searchTerm.toLowerCase();
       filtered = filtered
           .where(
@@ -115,6 +147,13 @@ class FollowupProvider with ChangeNotifier {
                 followup.notes?.toLowerCase().contains(searchLower) == true,
           )
           .toList();
+      if (kDebugMode) {
+        print('   After search filter: ${filtered.length} (removed ${beforeCount - filtered.length})');
+      }
+    }
+
+    if (kDebugMode) {
+      print('   Final filtered count: ${filtered.length}');
     }
 
     return filtered;
@@ -122,9 +161,22 @@ class FollowupProvider with ChangeNotifier {
 
   // Set facility context
   void setFacilityId(String facilityId) {
+    if (kDebugMode) {
+      print('🏥 FollowupProvider: Setting facility ID to $facilityId');
+    }
+    
     _facilityId = facilityId;
+    
     // subscribe to scheduling config
+    if (kDebugMode) {
+      print('🏥 FollowupProvider: Subscribing to scheduling config for facility $facilityId');
+    }
+    
     _schedulingService.getFacilityScheduling(facilityId).listen((cfg) {
+      if (kDebugMode) {
+        print('📋 FollowupProvider: Received scheduling config - maxPerSlot: ${cfg.maxPerSlot}, slotMinutes: ${cfg.slotMinutes}');
+      }
+      
       _schedulingConfig = cfg;
       _slotCapacity = cfg.maxPerSlot;
       _slotMinutes = cfg.slotMinutes;
@@ -135,7 +187,16 @@ class FollowupProvider with ChangeNotifier {
 
   // Load followups for facility
   Future<void> loadFollowups() async {
-    if (_facilityId == null) return;
+    if (_facilityId == null) {
+      if (kDebugMode) {
+        print('⚠️ FollowupProvider: Cannot load followups - facility ID is null');
+      }
+      return;
+    }
+
+    if (kDebugMode) {
+      print('📥 FollowupProvider: Loading followups for facility $_facilityId');
+    }
 
     _setLoading(true);
     _setError(null);
@@ -149,19 +210,41 @@ class FollowupProvider with ChangeNotifier {
           .snapshots()
           .listen(
             (snapshot) {
+              if (kDebugMode) {
+                print('📥 FollowupProvider: Received ${snapshot.docs.length} followup documents');
+              }
+              
               _followups = snapshot.docs
                   .map((doc) => Followup.fromFirestore(doc))
                   .toList();
+              
+              if (kDebugMode) {
+                print('📥 FollowupProvider: Parsed ${_followups.length} followup objects');
+                for (var i = 0; i < _followups.length && i < 3; i++) {
+                  final f = _followups[i];
+                  print('   [$i] ID: ${f.followupId}, Patient: ${f.patientId}, Date: ${f.scheduledDate}, Status: ${f.status}');
+                }
+                if (_followups.length > 3) {
+                  print('   ... and ${_followups.length - 3} more');
+                }
+              }
+              
               _updateCalendarData();
               _setLoading(false);
               notifyListeners();
             },
             onError: (error) {
+              if (kDebugMode) {
+                print('❌ FollowupProvider: Error in followups stream: $error');
+              }
               _setError('Failed to load followups: $error');
               _setLoading(false);
             },
           );
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ FollowupProvider: Exception in loadFollowups: $e');
+      }
       _setError('Failed to load followups: $e');
       _setLoading(false);
     }
@@ -169,7 +252,16 @@ class FollowupProvider with ChangeNotifier {
 
   // Load patients for facility
   Future<void> loadPatients() async {
-    if (_facilityId == null) return;
+    if (_facilityId == null) {
+      if (kDebugMode) {
+        print('⚠️ FollowupProvider: Cannot load patients - facility ID is null');
+      }
+      return;
+    }
+
+    if (kDebugMode) {
+      print('👥 FollowupProvider: Loading patients for facility $_facilityId');
+    }
 
     try {
       final snapshot = await _firestore
@@ -177,19 +269,46 @@ class FollowupProvider with ChangeNotifier {
           .where('treatmentFacility', isEqualTo: _facilityId)
           .get();
 
+      if (kDebugMode) {
+        print('👥 FollowupProvider: Received ${snapshot.docs.length} patient documents');
+      }
+
       _patients = snapshot.docs
           .map((doc) => Patient.fromFirestore(doc))
           .toList();
 
+      if (kDebugMode) {
+        print('👥 FollowupProvider: Parsed ${_patients.length} patient objects');
+        for (var i = 0; i < _patients.length && i < 3; i++) {
+          final p = _patients[i];
+          print('   [$i] ID: ${p.patientId}, Name: ${p.name}, CHW: ${p.assignedCHW}');
+        }
+        if (_patients.length > 3) {
+          print('   ... and ${_patients.length - 3} more');
+        }
+      }
+
       notifyListeners();
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ FollowupProvider: Exception in loadPatients: $e');
+      }
       _setError('Failed to load patients: $e');
     }
   }
 
   // Load CHW users for facility
   Future<void> loadCHWUsers() async {
-    if (_facilityId == null) return;
+    if (_facilityId == null) {
+      if (kDebugMode) {
+        print('⚠️ FollowupProvider: Cannot load CHW users - facility ID is null');
+      }
+      return;
+    }
+
+    if (kDebugMode) {
+      print('👨‍⚕️ FollowupProvider: Loading CHW users for facility $_facilityId');
+    }
 
     try {
       final snapshot = await _firestore
@@ -198,12 +317,23 @@ class FollowupProvider with ChangeNotifier {
           .where('status', isEqualTo: 'active')
           .get();
 
+      if (kDebugMode) {
+        print('👨‍⚕️ FollowupProvider: Received ${snapshot.docs.length} CHW user documents');
+      }
+
       _chwUsers = snapshot.docs
           .map((doc) => CHWUser.fromFirestore(doc))
           .toList();
 
+      if (kDebugMode) {
+        print('👨‍⚕️ FollowupProvider: Parsed ${_chwUsers.length} CHW user objects');
+      }
+
       notifyListeners();
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ FollowupProvider: Exception in loadCHWUsers: $e');
+      }
       _setError('Failed to load CHW users: $e');
     }
   }
@@ -221,7 +351,23 @@ class FollowupProvider with ChangeNotifier {
     String? assignedStaffId,
     String? roomId,
   }) async {
-    if (_facilityId == null) return null;
+    if (_facilityId == null) {
+      if (kDebugMode) {
+        print('⚠️ FollowupProvider: Cannot create followup - facility ID is null');
+      }
+      return null;
+    }
+
+    if (kDebugMode) {
+      print('➕ FollowupProvider: Creating followup');
+      print('   Patient ID: $patientId');
+      print('   Created by: $createdBy');
+      print('   Scheduled date: $scheduledDate');
+      print('   Type: $followupType');
+      print('   Priority: $priority');
+      print('   Duration: ${durationMinutes ?? _slotMinutes} minutes');
+      print('   Facility ID: $_facilityId');
+    }
 
     _setLoading(true);
     _setError(null);
@@ -229,8 +375,18 @@ class FollowupProvider with ChangeNotifier {
     try {
       // validations
       final int dur = durationMinutes ?? _slotMinutes;
+      
+      if (kDebugMode) {
+        print('🔍 FollowupProvider: Running scheduling validations');
+        print('   Duration: $dur minutes');
+        print('   Scheduling config: ${_schedulingConfig != null ? 'available' : 'null'}');
+      }
+      
       if (_schedulingConfig != null) {
         if (_schedulingService.isHoliday(scheduledDate, _schedulingConfig!)) {
+          if (kDebugMode) {
+            print('❌ FollowupProvider: Validation failed - selected date is a holiday');
+          }
           throw Exception('Selected date is a holiday');
         }
         if (!_schedulingService.isWithinWorkingHours(
@@ -238,6 +394,9 @@ class FollowupProvider with ChangeNotifier {
           dur,
           _schedulingConfig!,
         )) {
+          if (kDebugMode) {
+            print('❌ FollowupProvider: Validation failed - outside working hours');
+          }
           throw Exception('Outside working hours');
         }
         if (_schedulingService.isWithinBreaks(
@@ -245,6 +404,9 @@ class FollowupProvider with ChangeNotifier {
           dur,
           _schedulingConfig!,
         )) {
+          if (kDebugMode) {
+            print('❌ FollowupProvider: Validation failed - overlaps with break time');
+          }
           throw Exception('Overlaps with break time');
         }
       }
@@ -259,10 +421,23 @@ class FollowupProvider with ChangeNotifier {
             f.scheduledDate.isBefore(selEnd) &&
             end.isAfter(scheduledDate);
       }).length;
+      
+      if (kDebugMode) {
+        print('🔍 FollowupProvider: Capacity check - existing overlapping: $existing, capacity: $_slotCapacity');
+      }
+      
       if (existing >= _slotCapacity) {
+        if (kDebugMode) {
+          print('❌ FollowupProvider: Validation failed - slot is full');
+        }
         throw Exception('Slot is full');
       }
+      
       // Create followup
+      if (kDebugMode) {
+        print('✨ FollowupProvider: Creating followup object');
+      }
+      
       final followup = Followup.createNew(
         patientId: patientId,
         scheduledDate: scheduledDate,
@@ -277,9 +452,17 @@ class FollowupProvider with ChangeNotifier {
         roomId: roomId,
       );
 
+      if (kDebugMode) {
+        print('💾 FollowupProvider: Saving followup to Firestore');
+      }
+
       final docRef = await _firestore
           .collection('followups')
           .add(followup.toFirestore());
+
+      if (kDebugMode) {
+        print('✅ FollowupProvider: Followup saved with ID: ${docRef.id}');
+      }
 
       // Get patient's assigned CHW for notification
       final patient = _patients.firstWhere(
@@ -302,7 +485,15 @@ class FollowupProvider with ChangeNotifier {
         ),
       );
 
+      if (kDebugMode) {
+        print('👥 FollowupProvider: Found patient - Name: ${patient.name}, CHW: ${patient.assignedCHW}');
+      }
+
       if (patient.assignedCHW.isNotEmpty) {
+        if (kDebugMode) {
+          print('🔔 FollowupProvider: Creating notification for CHW: ${patient.assignedCHW}');
+        }
+        
         // Create notification for CHW
         await _createCHWNotification(
           chwId: patient.assignedCHW,
@@ -316,8 +507,16 @@ class FollowupProvider with ChangeNotifier {
 
       _setLoading(false);
       await loadStatistics();
+      
+      if (kDebugMode) {
+        print('✅ FollowupProvider: Followup creation completed successfully');
+      }
+      
       return docRef.id;
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ FollowupProvider: Exception in createFollowup: $e');
+      }
       _setError('Failed to create followup: $e');
       _setLoading(false);
       return null;
@@ -329,6 +528,11 @@ class FollowupProvider with ChangeNotifier {
     String followupId,
     Map<String, dynamic> data,
   ) async {
+    if (kDebugMode) {
+      print('📝 FollowupProvider: Updating followup $followupId');
+      print('   Data: $data');
+    }
+
     _setLoading(true);
     _setError(null);
 
@@ -338,9 +542,16 @@ class FollowupProvider with ChangeNotifier {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      if (kDebugMode) {
+        print('✅ FollowupProvider: Followup updated successfully');
+      }
+
       _setLoading(false);
       return true;
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ FollowupProvider: Exception in updateFollowup: $e');
+      }
       _setError('Failed to update followup: $e');
       _setLoading(false);
       return false;
@@ -353,6 +564,12 @@ class FollowupProvider with ChangeNotifier {
     String completedBy, {
     String? notes,
   }) async {
+    if (kDebugMode) {
+      print('✅ FollowupProvider: Completing followup $followupId');
+      print('   Completed by: $completedBy');
+      print('   Notes: $notes');
+    }
+
     _setLoading(true);
     _setError(null);
 
@@ -373,10 +590,17 @@ class FollowupProvider with ChangeNotifier {
           .doc(followupId)
           .update(updateData);
 
+      if (kDebugMode) {
+        print('✅ FollowupProvider: Followup completed successfully');
+      }
+
       _setLoading(false);
       await loadStatistics();
       return true;
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ FollowupProvider: Exception in completeFollowup: $e');
+      }
       _setError('Failed to complete followup: $e');
       _setLoading(false);
       return false;
@@ -385,6 +609,11 @@ class FollowupProvider with ChangeNotifier {
 
   // Cancel followup
   Future<bool> cancelFollowup(String followupId, {String? reason}) async {
+    if (kDebugMode) {
+      print('❌ FollowupProvider: Cancelling followup $followupId');
+      print('   Reason: $reason');
+    }
+
     _setLoading(true);
     _setError(null);
 
@@ -394,10 +623,17 @@ class FollowupProvider with ChangeNotifier {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      if (kDebugMode) {
+        print('✅ FollowupProvider: Followup cancelled successfully');
+      }
+
       _setLoading(false);
       await loadStatistics();
       return true;
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ FollowupProvider: Exception in cancelFollowup: $e');
+      }
       _setError('Failed to cancel followup: $e');
       _setLoading(false);
       return false;
@@ -411,6 +647,13 @@ class FollowupProvider with ChangeNotifier {
     String rescheduledBy, {
     String? reason,
   }) async {
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Rescheduling followup $followupId');
+      print('   New date: $newDate');
+      print('   Rescheduled by: $rescheduledBy');
+      print('   Reason: $reason');
+    }
+
     _setLoading(true);
     _setError(null);
 
@@ -423,9 +666,16 @@ class FollowupProvider with ChangeNotifier {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      if (kDebugMode) {
+        print('✅ FollowupProvider: Followup rescheduled successfully');
+      }
+
       _setLoading(false);
       return true;
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ FollowupProvider: Exception in rescheduleFollowup: $e');
+      }
       _setError('Failed to reschedule followup: $e');
       _setLoading(false);
       return false;
@@ -434,6 +684,10 @@ class FollowupProvider with ChangeNotifier {
 
   // Load followup by ID
   Future<void> loadFollowupById(String followupId) async {
+    if (kDebugMode) {
+      print('📄 FollowupProvider: Loading followup by ID: $followupId');
+    }
+
     _setLoading(true);
     _setError(null);
 
@@ -445,12 +699,21 @@ class FollowupProvider with ChangeNotifier {
 
       if (doc.exists) {
         _selectedFollowup = Followup.fromFirestore(doc);
+        if (kDebugMode) {
+          print('✅ FollowupProvider: Followup loaded successfully');
+        }
       } else {
+        if (kDebugMode) {
+          print('❌ FollowupProvider: Followup not found');
+        }
         _setError('Followup not found');
       }
 
       _setLoading(false);
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ FollowupProvider: Exception in loadFollowupById: $e');
+      }
       _setError('Failed to load followup: $e');
       _setLoading(false);
     }
@@ -458,7 +721,16 @@ class FollowupProvider with ChangeNotifier {
 
   // Load statistics
   Future<void> loadStatistics() async {
-    if (_facilityId == null) return;
+    if (_facilityId == null) {
+      if (kDebugMode) {
+        print('⚠️ FollowupProvider: Cannot load statistics - facility ID is null');
+      }
+      return;
+    }
+
+    if (kDebugMode) {
+      print('📊 FollowupProvider: Loading statistics for facility $_facilityId');
+    }
 
     try {
       final snapshot = await _firestore
@@ -499,22 +771,42 @@ class FollowupProvider with ChangeNotifier {
             .length,
       };
 
+      if (kDebugMode) {
+        print('📊 FollowupProvider: Statistics loaded:');
+        _statistics.forEach((key, value) {
+          print('   $key: $value');
+        });
+      }
+
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
-        print('Failed to load followup statistics: $e');
+        print('❌ FollowupProvider: Exception in loadStatistics: $e');
       }
     }
   }
 
   // Calendar methods
   void selectDate(DateTime date) {
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Selecting date: $date');
+    }
+    
     _selectedDate = date;
     _updateCalendarFollowups();
+    
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Calendar followups for selected date: ${_calendarFollowups.length}');
+    }
+    
     notifyListeners();
   }
 
   void _updateCalendarData() {
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Updating calendar data');
+    }
+    
     // Update followups by date for calendar view
     _followupsByDate.clear();
     for (final followup in _followups) {
@@ -525,6 +817,14 @@ class FollowupProvider with ChangeNotifier {
       );
       _followupsByDate[date] = [...(_followupsByDate[date] ?? []), followup];
     }
+    
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Calendar data updated - ${_followupsByDate.length} dates with followups');
+      _followupsByDate.forEach((date, followups) {
+        print('   ${date.toString().split(' ')[0]}: ${followups.length} followups');
+      });
+    }
+    
     _updateCalendarFollowups();
   }
 
@@ -535,48 +835,88 @@ class FollowupProvider with ChangeNotifier {
       _selectedDate.day,
     );
     _calendarFollowups = _followupsByDate[selectedDay] ?? [];
+    
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Updated calendar followups for ${selectedDay.toString().split(' ')[0]}: ${_calendarFollowups.length}');
+    }
   }
 
   // Get followups for specific date
   List<Followup> getFollowupsForDate(DateTime date) {
     final day = DateTime(date.year, date.month, date.day);
-    return _followupsByDate[day] ?? [];
+    final followups = _followupsByDate[day] ?? [];
+    
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Getting followups for ${day.toString().split(' ')[0]}: ${followups.length}');
+    }
+    
+    return followups;
   }
 
   // Check if date has followups
   bool hasFollowupsOnDate(DateTime date) {
     final day = DateTime(date.year, date.month, date.day);
-    return _followupsByDate.containsKey(day) &&
+    final hasFollowups = _followupsByDate.containsKey(day) &&
         _followupsByDate[day]!.isNotEmpty;
+    
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Date ${day.toString().split(' ')[0]} has followups: $hasFollowups');
+    }
+    
+    return hasFollowups;
   }
 
   // Filter methods
   void searchFollowups(String searchTerm) {
+    if (kDebugMode) {
+      print('🔍 FollowupProvider: Setting search term: "$searchTerm"');
+    }
+    
     _searchTerm = searchTerm;
     notifyListeners();
   }
 
   void filterByPatient(String? patientId) {
+    if (kDebugMode) {
+      print('👥 FollowupProvider: Filtering by patient: $patientId');
+    }
+    
     _selectedPatient = patientId;
     notifyListeners();
   }
 
   void filterByStatus(String? status) {
+    if (kDebugMode) {
+      print('📊 FollowupProvider: Filtering by status: $status');
+    }
+    
     _selectedStatus = status;
     notifyListeners();
   }
 
   void filterByType(String? type) {
+    if (kDebugMode) {
+      print('🏷️ FollowupProvider: Filtering by type: $type');
+    }
+    
     _selectedType = type;
     notifyListeners();
   }
 
   void filterByDateRange(DateTimeRange? dateRange) {
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Filtering by date range: $dateRange');
+    }
+    
     _dateRange = dateRange;
     notifyListeners();
   }
 
   void clearFilters() {
+    if (kDebugMode) {
+      print('🔄 FollowupProvider: Clearing all filters');
+    }
+    
     _selectedPatient = null;
     _selectedStatus = null;
     _selectedType = null;
@@ -587,16 +927,28 @@ class FollowupProvider with ChangeNotifier {
 
   // Selection methods
   void selectFollowup(Followup followup) {
+    if (kDebugMode) {
+      print('👆 FollowupProvider: Selecting followup: ${followup.followupId}');
+    }
+    
     _selectedFollowup = followup;
     notifyListeners();
   }
 
   void clearSelectedFollowup() {
+    if (kDebugMode) {
+      print('🔄 FollowupProvider: Clearing selected followup');
+    }
+    
     _selectedFollowup = null;
     notifyListeners();
   }
 
   void clearError() {
+    if (kDebugMode) {
+      print('🔄 FollowupProvider: Clearing error');
+    }
+    
     _error = null;
     notifyListeners();
   }
@@ -604,30 +956,70 @@ class FollowupProvider with ChangeNotifier {
   // Utility methods
   // Eligible patients per business rules
   List<Patient> get eligiblePatients {
-    return _patients.where((p) {
+    if (kDebugMode) {
+      print('👥 FollowupProvider: Computing eligible patients');
+    }
+    
+    final eligible = _patients.where((p) {
       final hasPending = _followups.any(
         (f) => f.patientId == p.patientId && f.isScheduled && f.isUpcoming,
       );
-      return p.treatmentFacility == _facilityId &&
+      final isEligible = p.treatmentFacility == _facilityId &&
           p.isOnTreatment &&
           !hasPending;
+      
+      if (kDebugMode && isEligible) {
+        print('   Eligible: ${p.name} (${p.patientId})');
+      }
+      
+      return isEligible;
     }).toList();
+    
+    if (kDebugMode) {
+      print('👥 FollowupProvider: Found ${eligible.length} eligible patients out of ${_patients.length} total');
+    }
+    
+    return eligible;
   }
 
   List<Followup> getFollowupsByPatient(String patientId) {
-    return _followups
+    if (kDebugMode) {
+      print('🔍 FollowupProvider: Getting followups for patient: $patientId');
+    }
+    
+    final followups = _followups
         .where((followup) => followup.patientId == patientId)
         .toList();
+    
+    if (kDebugMode) {
+      print('🔍 FollowupProvider: Found ${followups.length} followups for patient $patientId');
+    }
+    
+    return followups;
   }
 
   List<Followup> getTodaysFollowups() {
-    return _followups.where((followup) => followup.isToday).toList();
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Getting today\'s followups');
+    }
+    
+    final todaysFollowups = _followups.where((followup) => followup.isToday).toList();
+    
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Found ${todaysFollowups.length} followups for today');
+    }
+    
+    return todaysFollowups;
   }
 
   List<Followup> getUpcomingFollowups({int days = 7}) {
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Getting upcoming followups for next $days days');
+    }
+    
     final now = DateTime.now();
     final futureDate = now.add(Duration(days: days));
-    return _followups
+    final upcoming = _followups
         .where(
           (followup) =>
               followup.scheduledDate.isAfter(now) &&
@@ -635,10 +1027,26 @@ class FollowupProvider with ChangeNotifier {
               followup.isScheduled,
         )
         .toList();
+    
+    if (kDebugMode) {
+      print('📅 FollowupProvider: Found ${upcoming.length} upcoming followups');
+    }
+    
+    return upcoming;
   }
 
   List<Followup> getOverdueFollowups() {
-    return _followups.where((followup) => followup.isOverdue).toList();
+    if (kDebugMode) {
+      print('⏰ FollowupProvider: Getting overdue followups');
+    }
+    
+    final overdue = _followups.where((followup) => followup.isOverdue).toList();
+    
+    if (kDebugMode) {
+      print('⏰ FollowupProvider: Found ${overdue.length} overdue followups');
+    }
+    
+    return overdue;
   }
 
   // Create CHW notification helper
@@ -650,6 +1058,16 @@ class FollowupProvider with ChangeNotifier {
     String? relatedId,
     String priority = 'medium',
   }) async {
+    if (kDebugMode) {
+      print('🔔 FollowupProvider: Creating CHW notification');
+      print('   CHW ID: $chwId');
+      print('   Type: $type');
+      print('   Title: $title');
+      print('   Message: $message');
+      print('   Related ID: $relatedId');
+      print('   Priority: $priority');
+    }
+    
     try {
       await _firestore.collection('notifications').add({
         'userId': chwId,
@@ -662,31 +1080,53 @@ class FollowupProvider with ChangeNotifier {
         'sentAt': FieldValue.serverTimestamp(),
         'isSystemNotification': false,
       });
+      
+      if (kDebugMode) {
+        print('✅ FollowupProvider: CHW notification created successfully');
+      }
     } catch (e) {
       if (kDebugMode) {
-        print('Failed to create CHW notification: $e');
+        print('❌ FollowupProvider: Failed to create CHW notification: $e');
       }
     }
   }
 
   // Private helper methods
   void _setLoading(bool loading) {
+    if (kDebugMode) {
+      print('⏳ FollowupProvider: Setting loading state to $loading');
+    }
+    
     _isLoading = loading;
     notifyListeners();
   }
 
   void _setError(String? error) {
+    if (kDebugMode) {
+      if (error != null) {
+        print('❌ FollowupProvider: Setting error: $error');
+      } else {
+        print('🔄 FollowupProvider: Clearing error state');
+      }
+    }
+    
     _error = error;
     notifyListeners();
   }
 
   // Helper getters for UI
   bool get hasActiveFilters {
-    return _selectedPatient != null ||
+    final hasFilters = _selectedPatient != null ||
         _selectedStatus != null ||
         _selectedType != null ||
         _searchTerm.isNotEmpty ||
         _dateRange != null;
+    
+    if (kDebugMode) {
+      print('🔍 FollowupProvider: Has active filters: $hasFilters');
+    }
+    
+    return hasFilters;
   }
 
   int get totalFollowupsCount => _followups.length;
@@ -732,6 +1172,12 @@ class FollowupProvider with ChangeNotifier {
       );
     }
 
-    return filters.join(', ');
+    final description = filters.join(', ');
+    
+    if (kDebugMode && description.isNotEmpty) {
+      print('🔍 FollowupProvider: Active filters - $description');
+    }
+    
+    return description;
   }
 }

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/followup_provider.dart';
 import '../../../services/auth_provider.dart';
-import 'package:provider/provider.dart';
 import '../../../models/followup.dart';
 import '../../../models/patient.dart';
 
@@ -282,7 +281,7 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
                 ),
                 const SizedBox(width: 12),
                 SizedBox(
-                  width: 200,
+                  width: 250,
                   child: DropdownButtonFormField<String>(
                     value: _selectedType,
                     items: Followup.allFollowupTypes
