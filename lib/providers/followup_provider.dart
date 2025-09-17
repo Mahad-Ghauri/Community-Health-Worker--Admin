@@ -19,7 +19,7 @@ class FollowupProvider with ChangeNotifier {
   // Calendar and scheduling state
   DateTime _selectedDate = DateTime.now();
   List<Followup> _calendarFollowups = [];
-  Map<DateTime, List<Followup>> _followupsByDate = {};
+  final Map<DateTime, List<Followup>> _followupsByDate = {};
 
   // Filter properties
   String? _selectedPatient;
@@ -614,8 +614,4 @@ class FollowupProvider with ChangeNotifier {
     return filters.join(', ');
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

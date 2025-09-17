@@ -11,8 +11,7 @@ import '../../../utils/responsive_helper.dart';
 class PatientDetailsScreen extends StatefulWidget {
   final String patientId;
 
-  const PatientDetailsScreen({Key? key, required this.patientId})
-    : super(key: key);
+  const PatientDetailsScreen({super.key, required this.patientId});
 
   @override
   State<PatientDetailsScreen> createState() => _PatientDetailsScreenState();

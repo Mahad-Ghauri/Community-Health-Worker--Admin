@@ -691,8 +691,4 @@ class AssignmentProvider with ChangeNotifier {
       .where((a) => a.isHighPriority || a.isUrgentPriority)
       .toList();
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

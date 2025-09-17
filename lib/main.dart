@@ -1,4 +1,5 @@
 import 'package:chw_admin/providers/assignment_provider.dart';
+import 'package:chw_admin/providers/referral_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -35,6 +36,7 @@ class MainApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => DashboardProvider()),
         ChangeNotifierProvider(create: (context) => AuditLogProvider()),
         ChangeNotifierProvider(create: (context) => AssignmentProvider()),
+        ChangeNotifierProvider(create: (context) => ReferralProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {

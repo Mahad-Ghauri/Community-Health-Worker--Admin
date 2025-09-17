@@ -11,9 +11,9 @@ class FacilityProvider with ChangeNotifier {
   String _typeFilter = '';
   String _statusFilter = '';
   Map<String, int> _statistics = {};
-  Map<String, Map<String, dynamic>> _facilityMetrics = {};
-  Map<String, List<Map<String, dynamic>>> _facilityActivities = {};
-  Map<String, List<Map<String, dynamic>>> _treatmentAdherenceData = {};
+  final Map<String, Map<String, dynamic>> _facilityMetrics = {};
+  final Map<String, List<Map<String, dynamic>>> _facilityActivities = {};
+  final Map<String, List<Map<String, dynamic>>> _treatmentAdherenceData = {};
 
   // Getters
   List<Facility> get facilities => _filteredFacilities;

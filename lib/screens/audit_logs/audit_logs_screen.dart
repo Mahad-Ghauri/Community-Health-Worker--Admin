@@ -760,7 +760,6 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     final auditLogs = provider.auditLogs;
     print('[DEBUG] auditLogs in _buildAuditLogsList: ${auditLogs.length}');
     if (auditLogs.isEmpty) {
-      print('[DEBUG] No audit logs found. Filters: ${provider.filtersDescription}');
       return Container(
         height: 300,
         child: Center(
