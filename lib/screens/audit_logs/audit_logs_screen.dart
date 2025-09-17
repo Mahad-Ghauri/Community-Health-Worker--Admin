@@ -2,6 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:convert';
+import 'package:universal_html/html.dart' as html;
 import '../../providers/audit_log_provider.dart';
 import '../../models/audit_log.dart';
 import '../../widgets/common_widgets.dart' as common;
@@ -50,6 +53,8 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: Consumer<AuditLogProvider>(
         builder: (context, auditLogProvider, child) {
+          // DEBUG: Print audit log provider state
+         
           return Column(
             children: [
               _buildHeader(context, auditLogProvider),
@@ -732,11 +737,15 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
   }
 
   Widget _buildAuditLogsList(BuildContext context, AuditLogProvider provider) {
+    // DEBUG: Print audit log list state
+    print('[DEBUG] _buildAuditLogsList: isLoading=${provider.isLoading}, error=${provider.error}, auditLogs.length=${provider.auditLogs.length}');
     if (provider.isLoading && provider.auditLogs.isEmpty) {
+      print('[DEBUG] Showing loading widget');
       return const Center(child: common.LoadingWidget());
     }
 
     if (provider.error != null) {
+      print('[DEBUG] Showing error widget: ${provider.error}');
       return Center(
         child: common.ErrorWidget(
           message: provider.error!,
@@ -749,8 +758,9 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     }
 
     final auditLogs = provider.auditLogs;
-    
+    print('[DEBUG] auditLogs in _buildAuditLogsList: ${auditLogs.length}');
     if (auditLogs.isEmpty) {
+      print('[DEBUG] No audit logs found. Filters: ${provider.filtersDescription}');
       return Container(
         height: 300,
         child: Center(
@@ -1433,7 +1443,8 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
             onPressed: () async {
               Navigator.of(context).pop();
               try {
-                await provider.exportAuditLogs();
+                final csvData = await provider.exportAuditLogs();
+                _downloadCsv(csvData, 'audit_logs_${DateTime.now().millisecondsSinceEpoch}.csv');
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Audit logs exported successfully')),
@@ -1458,5 +1469,43 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     final today = DateTime.now();
     final todayKey = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
     return (stats['dailyActivity'] as Map?)?[todayKey] ?? 0;
+  }
+
+  void _downloadCsv(String csvData, String filename) {
+    if (kIsWeb) {
+      // Web download
+      final bytes = utf8.encode(csvData);
+      final blob = html.Blob([bytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.document.createElement('a') as html.AnchorElement
+        ..href = url
+        ..style.display = 'none'
+        ..download = filename;
+      html.document.body?.children.add(anchor);
+      anchor.click();
+      html.document.body?.children.remove(anchor);
+      html.Url.revokeObjectUrl(url);
+    } else {
+      // For mobile/desktop, you would typically use path_provider and file system
+      // For now, we'll just show the CSV data in a dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('CSV Export'),
+          content: SingleChildScrollView(
+            child: SelectableText(
+              csvData,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }

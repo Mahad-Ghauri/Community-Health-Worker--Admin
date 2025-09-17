@@ -5,7 +5,7 @@ import '../constants/app_constants.dart';
 class AuditLogService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final CollectionReference _auditLogsCollection = 
-      _firestore.collection(AppConstants.auditLogsCollection);
+    _firestore.collection('auditLogs');
 
   // Create audit log entry
   static Future<void> createAuditLog(AuditLog auditLog) async {
@@ -27,7 +27,7 @@ class AuditLogService {
     DateTime? endDate,
   }) async {
     try {
-      Query query = _auditLogsCollection.orderBy('timestamp', descending: true);
+  Query query = _auditLogsCollection.orderBy('when', descending: true);
 
       // Apply filters
       if (actionFilter != null && actionFilter.isNotEmpty) {
@@ -43,11 +43,11 @@ class AuditLogService {
       }
 
       if (startDate != null) {
-        query = query.where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+        query = query.where('when', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
       }
 
       if (endDate != null) {
-        query = query.where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+        query = query.where('when', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
       }
 
       // Apply pagination
@@ -58,7 +58,7 @@ class AuditLogService {
       query = query.limit(limit);
 
       final QuerySnapshot snapshot = await query.get();
-      return snapshot.docs.map((doc) => AuditLog.fromFirestore(doc)).toList();
+      return snapshot.docs.map((doc) => AuditLog.fromFirestoreDoc(doc)).toList();
     } catch (e) {
       throw Exception('Failed to get audit logs: $e');
     }
@@ -82,7 +82,7 @@ class AuditLogService {
             .where('description', isGreaterThanOrEqualTo: searchText)
             .where('description', isLessThan: '${searchText}z')
             .orderBy('description')
-            .orderBy('timestamp', descending: true)
+            .orderBy('when', descending: true)
             .limit(limit ~/ 2)
             .get()
       );
@@ -93,7 +93,7 @@ class AuditLogService {
             .where('userName', isGreaterThanOrEqualTo: searchText)
             .where('userName', isLessThan: '${searchText}z')
             .orderBy('userName')
-            .orderBy('timestamp', descending: true)
+            .orderBy('when', descending: true)
             .limit(limit ~/ 2)
             .get()
       );
@@ -105,7 +105,7 @@ class AuditLogService {
       for (final snapshot in results) {
         for (final doc in snapshot.docs) {
           if (!seenIds.contains(doc.id)) {
-            logs.add(AuditLog.fromFirestore(doc));
+            logs.add(AuditLog.fromFirestoreDoc(doc));
             seenIds.add(doc.id);
           }
         }
@@ -130,11 +130,11 @@ class AuditLogService {
       final QuerySnapshot snapshot = await _auditLogsCollection
           .where('entityId', isEqualTo: entityId)
           .where('entity', isEqualTo: entity)
-          .orderBy('timestamp', descending: true)
+          .orderBy('when', descending: true)
           .limit(limit)
           .get();
 
-      return snapshot.docs.map((doc) => AuditLog.fromFirestore(doc)).toList();
+      return snapshot.docs.map((doc) => AuditLog.fromFirestoreDoc(doc)).toList();
     } catch (e) {
       throw Exception('Failed to get entity audit logs: $e');
     }
@@ -148,11 +148,11 @@ class AuditLogService {
     try {
       final QuerySnapshot snapshot = await _auditLogsCollection
           .where('userId', isEqualTo: userId)
-          .orderBy('timestamp', descending: true)
+          .orderBy('when', descending: true)
           .limit(limit)
           .get();
 
-      return snapshot.docs.map((doc) => AuditLog.fromFirestore(doc)).toList();
+      return snapshot.docs.map((doc) => AuditLog.fromFirestoreDoc(doc)).toList();
     } catch (e) {
       throw Exception('Failed to get user audit logs: $e');
     }
@@ -167,15 +167,15 @@ class AuditLogService {
       Query query = _auditLogsCollection;
 
       if (startDate != null) {
-        query = query.where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+        query = query.where('when', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
       }
 
       if (endDate != null) {
-        query = query.where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+        query = query.where('when', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
       }
 
       final QuerySnapshot snapshot = await query.get();
-      final logs = snapshot.docs.map((doc) => AuditLog.fromFirestore(doc)).toList();
+      final logs = snapshot.docs.map((doc) => AuditLog.fromFirestoreDoc(doc)).toList();
 
       final stats = <String, dynamic>{
         'totalLogs': logs.length,
@@ -224,9 +224,9 @@ class AuditLogService {
   static Future<void> deleteOldAuditLogs({required int daysToKeep}) async {
     try {
       final cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
-      final QuerySnapshot snapshot = await _auditLogsCollection
-          .where('timestamp', isLessThan: Timestamp.fromDate(cutoffDate))
-          .get();
+    final QuerySnapshot snapshot = await _auditLogsCollection
+      .where('when', isLessThan: Timestamp.fromDate(cutoffDate))
+      .get();
 
       final batch = _firestore.batch();
       for (final doc in snapshot.docs) {
@@ -245,7 +245,7 @@ class AuditLogService {
     String? actionFilter,
     String? entityFilter,
   }) {
-    Query query = _auditLogsCollection.orderBy('timestamp', descending: true);
+  Query query = _auditLogsCollection.orderBy('when', descending: true);
 
     if (actionFilter != null && actionFilter.isNotEmpty) {
       query = query.where('action', isEqualTo: actionFilter);
@@ -258,7 +258,7 @@ class AuditLogService {
     query = query.limit(limit);
 
     return query.snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => AuditLog.fromFirestore(doc)).toList());
+        snapshot.docs.map((doc) => AuditLog.fromFirestoreDoc(doc)).toList());
   }
 
   // Helper methods to create common audit logs
@@ -272,7 +272,7 @@ class AuditLogService {
     Map<String, dynamic>? newData,
     String? description,
   }) async {
-    final auditLog = AuditLog.createLog(
+    final auditLog = AuditLog.createLogLegacy(
       action: action,
       entity: AuditLog.entityUser,
       entityId: entityId,
@@ -297,7 +297,7 @@ class AuditLogService {
     Map<String, dynamic>? newData,
     String? description,
   }) async {
-    final auditLog = AuditLog.createLog(
+    final auditLog = AuditLog.createLogLegacy(
       action: action,
       entity: AuditLog.entityFacility,
       entityId: entityId,
@@ -320,7 +320,7 @@ class AuditLogService {
     String? description,
     Map<String, dynamic>? metadata,
   }) async {
-    final auditLog = AuditLog.createLog(
+    final auditLog = AuditLog.createLogLegacy(
       action: action,
       entity: AuditLog.entitySystem,
       entityId: 'system',
@@ -341,7 +341,7 @@ class AuditLogService {
     String? ipAddress,
     String? userAgent,
   }) async {
-    final auditLog = AuditLog.createLog(
+    final auditLog = AuditLog.createLogLegacy(
       action: AuditLog.actionLogin,
       entity: AuditLog.entitySystem,
       entityId: 'system',
@@ -361,7 +361,7 @@ class AuditLogService {
     required String userName,
     required String userRole,
   }) async {
-    final auditLog = AuditLog.createLog(
+    final auditLog = AuditLog.createLogLegacy(
       action: AuditLog.actionLogout,
       entity: AuditLog.entitySystem,
       entityId: 'system',

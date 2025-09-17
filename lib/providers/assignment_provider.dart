@@ -219,7 +219,7 @@ class AssignmentProvider with ChangeNotifier {
 
       // Audit log
       try {
-        final auditLog = AuditLog.createLog(
+        final auditLog = AuditLog.createLogLegacy(
           action: AuditLog.actionCreate,
           entity: AuditLog.entityPatient,
           entityId: patientIds.join(','),

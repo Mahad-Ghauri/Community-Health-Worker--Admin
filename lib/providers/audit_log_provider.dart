@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/audit_log.dart';
 import '../services/audit_log_service.dart';
+import '../utils/export_utils.dart';
 
 class AuditLogProvider with ChangeNotifier {
   List<AuditLog> _auditLogs = [];
@@ -233,8 +234,17 @@ class AuditLogProvider with ChangeNotifier {
     }
   }
 
-  // Export audit logs (simplified - returns data for export)
-  Future<List<Map<String, dynamic>>> exportAuditLogs() async {
+  // Export audit logs to CSV
+  Future<String> exportAuditLogs() async {
+    try {
+      return ExportUtils.generateAuditLogsCsv(_auditLogs);
+    } catch (e) {
+      throw Exception('Failed to export audit logs: $e');
+    }
+  }
+
+  // Export audit logs (legacy method - returns data for export)
+  Future<List<Map<String, dynamic>>> exportAuditLogsData() async {
     try {
       final exportData = <Map<String, dynamic>>[];
       
