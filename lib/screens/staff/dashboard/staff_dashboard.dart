@@ -1,13 +1,11 @@
 // ignore_for_file: deprecated_member_use
 
-import 'package:chw_admin/screens/staff/patients/patient_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../services/auth_provider.dart';
 import '../../../services/facility_service.dart';
-import '../../../providers/dashboard_provider.dart';
 import '../../../theme/theme.dart';
 import '../../../models/user.dart';
 import '../../../models/patient.dart';

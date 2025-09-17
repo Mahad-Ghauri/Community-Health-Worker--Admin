@@ -751,7 +751,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     final auditLogs = provider.auditLogs;
     
     if (auditLogs.isEmpty) {
-      return Container(
+      return SizedBox(
         height: 300,
         child: Center(
           child: Column(

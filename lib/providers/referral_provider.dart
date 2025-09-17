@@ -713,8 +713,4 @@ class ReferralProvider with ChangeNotifier {
     return filters.join(', ');
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

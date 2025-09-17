@@ -285,7 +285,7 @@ class Followup {
   }
 
   String get formattedScheduledDateTime {
-    return '${formattedScheduledDate} ${scheduledDate.hour.toString().padLeft(2, '0')}:${scheduledDate.minute.toString().padLeft(2, '0')}';
+    return '$formattedScheduledDate ${scheduledDate.hour.toString().padLeft(2, '0')}:${scheduledDate.minute.toString().padLeft(2, '0')}';
   }
 
   String? get formattedCompletedDate {

@@ -12,8 +12,7 @@ import '../../widgets/common_widgets.dart';
 class FacilityDashboard extends StatefulWidget {
   final String facilityId;
 
-  const FacilityDashboard({Key? key, required this.facilityId})
-    : super(key: key);
+  const FacilityDashboard({super.key, required this.facilityId});
 
   @override
   State<FacilityDashboard> createState() => _FacilityDashboardState();

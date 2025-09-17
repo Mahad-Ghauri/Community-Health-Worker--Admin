@@ -301,8 +301,9 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
                               firstDate: DateTime(now.year - 5),
                               lastDate: now,
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setState(() => _diagnosisDate = picked);
+                            }
                           },
                           child: Text(
                             _diagnosisDate == null

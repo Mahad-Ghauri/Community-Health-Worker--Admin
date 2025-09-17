@@ -4,7 +4,6 @@ import '../../services/auth_provider.dart';
 import '../../widgets/custom_form_widgets.dart';
 import '../../utils/responsive_helper.dart';
 import '../../theme/theme.dart';
-import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {

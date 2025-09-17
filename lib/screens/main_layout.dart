@@ -110,7 +110,7 @@ class _MainLayoutState extends State<MainLayout> {
             children: [
               const Icon(Icons.person),
               const SizedBox(width: 8),
-              Text('${authProvider.currentUser?.name ?? 'User'}'),
+              Text(authProvider.currentUser?.name ?? 'User'),
             ],
           ),
         ),

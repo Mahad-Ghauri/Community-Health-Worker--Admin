@@ -608,7 +608,7 @@ class _FacilityListScreenState extends State<FacilityListScreen> {
 
   Widget _buildFacilitiesList(BuildContext context, FacilityProvider provider) {
     if (provider.error != null) {
-      return Container(
+      return SizedBox(
         height: 300,
         child: Center(
           child: common.ErrorWidget(
@@ -625,7 +625,7 @@ class _FacilityListScreenState extends State<FacilityListScreen> {
     final facilities = provider.facilities;
     
     if (facilities.isEmpty) {
-      return Container(
+      return SizedBox(
         height: 300,
         child: Center(
           child: Column(

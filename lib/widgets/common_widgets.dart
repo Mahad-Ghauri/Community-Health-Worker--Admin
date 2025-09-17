@@ -151,7 +151,7 @@ class CustomDropdownField<T> extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<T>(
-          value: value,
+          initialValue: value,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: prefixIcon,
