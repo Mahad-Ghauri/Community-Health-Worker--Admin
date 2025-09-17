@@ -158,9 +158,16 @@ class FacilityPatientsProvider extends ChangeNotifier {
         ? _filters.tbStatuses.first
         : null;
 
+    // If we have client-side filtering (search or multi-status), we need to fetch more
+    // to account for filtered results, or use a different strategy
+    final bool hasClientSideFiltering =
+        _searchTerm.isNotEmpty || (_filters.tbStatuses.length > 1);
+
+    final int fetchLimit = hasClientSideFiltering ? 50 : 20;
+
     final snapshot = await _patientService.getFacilityPatientsPage(
       facilityId: _facilityId!,
-      limit: 20,
+      limit: fetchLimit,
       lastDocument: _lastDoc,
       tbStatus: tbStatus,
       assignedCHW: _filters.assignedCHW,
@@ -176,7 +183,6 @@ class FacilityPatientsProvider extends ChangeNotifier {
       return;
     }
 
-    _lastDoc = snapshot.docs.last;
     final fetched = snapshot.docs
         .map((d) => Patient.fromMap(d.data(), d.id))
         .toList();
@@ -198,7 +204,24 @@ class FacilityPatientsProvider extends ChangeNotifier {
       return matchesSearch && matchesStatuses;
     }).toList();
 
-    _patients.addAll(postProcessed);
+    // Only add patients that aren't already in the list to prevent duplicates
+    final existingIds = _patients.map((p) => p.patientId).toSet();
+    final newPatients = postProcessed
+        .where((p) => !existingIds.contains(p.patientId))
+        .toList();
+
+    _patients.addAll(newPatients);
+
+    // Update pagination cursor based on the last document from Firestore
+    // This ensures we don't skip documents even if they were filtered out client-side
+    _lastDoc = snapshot.docs.last;
+
+    // If we got fewer results than requested, we've likely reached the end.
+    // Do NOT flip _hasMore to false just because client-side filtering yielded
+    // zero new patients; advancing the cursor may still reveal more.
+    if (snapshot.docs.length < fetchLimit) {
+      _hasMore = false;
+    }
   }
 
   void setSort(FacilityPatientsSort sort) {

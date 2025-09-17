@@ -230,99 +230,7 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Appointment Date & Time',
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _selectedDateTime == null
-                                ? 'Select...'
-                                : '${_selectedDateTime!.toLocal()}',
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(
-                                const Duration(days: 90),
-                              ),
-                              initialDate: DateTime.now(),
-                            );
-                            if (date == null) return;
-                            final time = await showTimePicker(
-                              context: context,
-                              initialTime: TimeOfDay(hour: 9, minute: 0),
-                            );
-                            if (time == null) return;
-                            setState(() {
-                              _selectedDateTime = DateTime(
-                                date.year,
-                                date.month,
-                                date.day,
-                                time.hour,
-                                time.minute,
-                              );
-                            });
-                          },
-                          icon: const Icon(Icons.event),
-                          label: const Text('Pick'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 250,
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedType,
-                    items: Followup.allFollowupTypes
-                        .map(
-                          (t) => DropdownMenuItem(
-                            value: t,
-                            child: Text(t.replaceAll('_', ' ').toUpperCase()),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => _selectedType = v ?? _selectedType),
-                    decoration: const InputDecoration(
-                      labelText: 'Follow-up Type',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 160,
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedPriority,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'routine',
-                        child: Text('Routine'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'important',
-                        child: Text('Important'),
-                      ),
-                      DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
-                    ],
-                    onChanged: (v) => setState(
-                      () => _selectedPriority = v ?? _selectedPriority,
-                    ),
-                    decoration: const InputDecoration(labelText: 'Priority'),
-                  ),
-                ),
-              ],
-            ),
+            _buildDateTimeRow(context),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -390,6 +298,142 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // NEW RESPONSIVE DATE/TIME ROW METHOD
+  Widget _buildDateTimeRow(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    if (screenWidth < 700) {
+      // Stack vertically on small screens
+      return Column(
+        children: [
+          _buildDatePicker(),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _buildTypeDropdown()),
+              const SizedBox(width: 12),
+              Expanded(child: _buildPriorityDropdown()),
+            ],
+          ),
+        ],
+      );
+    }
+    
+    // Use horizontal layout for larger screens
+    return Row(
+      children: [
+        Expanded(
+          flex: 3, // Takes more space for date picker
+          child: _buildDatePicker(),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 2, // Flexible width for type dropdown
+          child: _buildTypeDropdown(),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 1, // Smaller flex for priority
+          child: _buildPriorityDropdown(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDatePicker() {
+    return InputDecorator(
+      decoration: const InputDecoration(
+        labelText: 'Appointment Date & Time',
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _selectedDateTime == null
+                  ? 'Select...'
+                  : '${_selectedDateTime!.toLocal()}',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () async {
+              final date = await showDatePicker(
+                context: context,
+                firstDate: DateTime.now(),
+                lastDate: DateTime.now().add(
+                  const Duration(days: 90),
+                ),
+                initialDate: DateTime.now(),
+              );
+              if (date == null) return;
+              final time = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay(hour: 9, minute: 0),
+              );
+              if (time == null) return;
+              setState(() {
+                _selectedDateTime = DateTime(
+                  date.year,
+                  date.month,
+                  date.day,
+                  time.hour,
+                  time.minute,
+                );
+              });
+            },
+            icon: const Icon(Icons.event),
+            label: const Text('Pick'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypeDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedType,
+      items: Followup.allFollowupTypes
+          .map(
+            (t) => DropdownMenuItem(
+              value: t,
+              child: Text(
+                t.replaceAll('_', ' ').toUpperCase(),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
+          .toList(),
+      onChanged: (v) =>
+          setState(() => _selectedType = v ?? _selectedType),
+      decoration: const InputDecoration(
+        labelText: 'Follow-up Type',
+      ),
+      isExpanded: true,
+    );
+  }
+
+  Widget _buildPriorityDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedPriority,
+      items: const [
+        DropdownMenuItem(
+          value: 'routine',
+          child: Text('Routine'),
+        ),
+        DropdownMenuItem(
+          value: 'important',
+          child: Text('Important'),
+        ),
+        DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
+      ],
+      onChanged: (v) => setState(
+        () => _selectedPriority = v ?? _selectedPriority,
+      ),
+      decoration: const InputDecoration(labelText: 'Priority'),
+      isExpanded: true,
     );
   }
 }
