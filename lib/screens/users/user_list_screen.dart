@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -861,7 +863,7 @@ class _UserListScreenState extends State<UserListScreen> {
               columnSpacing: 32,
               headingRowHeight: 64,
               dataRowHeight: 72,
-              headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
+              headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
               columns: const [
                 DataColumn(
                   label: Text(

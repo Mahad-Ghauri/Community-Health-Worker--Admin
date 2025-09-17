@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, duplicate_ignore, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/facility_patients_provider.dart';
