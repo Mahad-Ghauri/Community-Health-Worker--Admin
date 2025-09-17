@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user.dart';
