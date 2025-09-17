@@ -22,9 +22,12 @@ class Referral {
   final DateTime? completedDate;
   final String? outcome;
   final List<String>? attachments; // URLs to images or documents
-  final Map<String, dynamic>? patientCondition; // Vital signs, symptoms severity
+  final Map<String, dynamic>?
+  patientCondition; // Vital signs, symptoms severity
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final DateTime? appointmentDate;
+  final String? assignedStaffId;
 
   Referral({
     required this.referralId,
@@ -51,6 +54,8 @@ class Referral {
     this.patientCondition,
     required this.createdAt,
     this.updatedAt,
+    this.appointmentDate,
+    this.assignedStaffId,
   });
 
   // Convert Referral to Firestore document
@@ -68,18 +73,28 @@ class Referral {
       'symptoms': symptoms,
       'clinicalNotes': clinicalNotes,
       'referringCHWNotes': referringCHWNotes,
-      'responseDate': responseDate != null ? Timestamp.fromDate(responseDate!) : null,
+      'responseDate': responseDate != null
+          ? Timestamp.fromDate(responseDate!)
+          : null,
       'respondedBy': respondedBy,
       'responseNotes': responseNotes,
       'declineReason': declineReason,
-      'acceptedDate': acceptedDate != null ? Timestamp.fromDate(acceptedDate!) : null,
+      'acceptedDate': acceptedDate != null
+          ? Timestamp.fromDate(acceptedDate!)
+          : null,
       'acceptedBy': acceptedBy,
-      'completedDate': completedDate != null ? Timestamp.fromDate(completedDate!) : null,
+      'completedDate': completedDate != null
+          ? Timestamp.fromDate(completedDate!)
+          : null,
       'outcome': outcome,
       'attachments': attachments,
       'patientCondition': patientCondition,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'appointmentDate': appointmentDate != null
+          ? Timestamp.fromDate(appointmentDate!)
+          : null,
+      'assignedStaffId': assignedStaffId,
     };
   }
 
@@ -92,7 +107,8 @@ class Referral {
       referringCHWId: data['referringCHWId'] ?? '',
       referringFacilityId: data['referringFacilityId'] ?? '',
       receivingFacilityId: data['receivingFacilityId'] ?? '',
-      referralDate: (data['referralDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      referralDate:
+          (data['referralDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       status: data['status'] ?? 'pending',
       urgency: data['urgency'] ?? 'medium',
       referralReason: data['referralReason'] ?? '',
@@ -107,10 +123,14 @@ class Referral {
       acceptedBy: data['acceptedBy'],
       completedDate: (data['completedDate'] as Timestamp?)?.toDate(),
       outcome: data['outcome'],
-      attachments: data['attachments'] != null ? List<String>.from(data['attachments']) : null,
+      attachments: data['attachments'] != null
+          ? List<String>.from(data['attachments'])
+          : null,
       patientCondition: data['patientCondition']?.cast<String, dynamic>(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      appointmentDate: (data['appointmentDate'] as Timestamp?)?.toDate(),
+      assignedStaffId: data['assignedStaffId'],
     );
   }
 
@@ -122,7 +142,8 @@ class Referral {
       referringCHWId: data['referringCHWId'] ?? '',
       referringFacilityId: data['referringFacilityId'] ?? '',
       receivingFacilityId: data['receivingFacilityId'] ?? '',
-      referralDate: (data['referralDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      referralDate:
+          (data['referralDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       status: data['status'] ?? 'pending',
       urgency: data['urgency'] ?? 'medium',
       referralReason: data['referralReason'] ?? '',
@@ -137,10 +158,14 @@ class Referral {
       acceptedBy: data['acceptedBy'],
       completedDate: (data['completedDate'] as Timestamp?)?.toDate(),
       outcome: data['outcome'],
-      attachments: data['attachments'] != null ? List<String>.from(data['attachments']) : null,
+      attachments: data['attachments'] != null
+          ? List<String>.from(data['attachments'])
+          : null,
       patientCondition: data['patientCondition']?.cast<String, dynamic>(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      appointmentDate: (data['appointmentDate'] as Timestamp?)?.toDate(),
+      assignedStaffId: data['assignedStaffId'],
     );
   }
 
@@ -170,6 +195,8 @@ class Referral {
     Map<String, dynamic>? patientCondition,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? appointmentDate,
+    String? assignedStaffId,
   }) {
     return Referral(
       referralId: referralId ?? this.referralId,
@@ -196,6 +223,8 @@ class Referral {
       patientCondition: patientCondition ?? this.patientCondition,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      appointmentDate: appointmentDate ?? this.appointmentDate,
+      assignedStaffId: assignedStaffId ?? this.assignedStaffId,
     );
   }
 
@@ -256,9 +285,9 @@ class Referral {
   // Time-related helpers
   bool get isToday {
     final now = DateTime.now();
-    return referralDate.year == now.year && 
-           referralDate.month == now.month && 
-           referralDate.day == now.day;
+    return referralDate.year == now.year &&
+        referralDate.month == now.month &&
+        referralDate.day == now.day;
   }
 
   bool get isRecent {
@@ -307,15 +336,16 @@ class Referral {
   int get attachmentCount => attachments?.length ?? 0;
 
   // Check if referral has patient condition data
-  bool get hasPatientCondition => patientCondition != null && patientCondition!.isNotEmpty;
+  bool get hasPatientCondition =>
+      patientCondition != null && patientCondition!.isNotEmpty;
 
   // Validation methods
   bool get isValid {
-    return patientId.isNotEmpty && 
-           referringCHWId.isNotEmpty &&
-           referringFacilityId.isNotEmpty &&
-           receivingFacilityId.isNotEmpty &&
-           referralReason.isNotEmpty;
+    return patientId.isNotEmpty &&
+        referringCHWId.isNotEmpty &&
+        referringFacilityId.isNotEmpty &&
+        receivingFacilityId.isNotEmpty &&
+        referralReason.isNotEmpty;
   }
 
   // Check if referral can be responded to

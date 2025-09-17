@@ -22,7 +22,8 @@ class FacilityService {
     }
 
     if (statusFilter != null && statusFilter.isNotEmpty) {
-      query = query.where('status', isEqualTo: statusFilter);
+      bool isActive = statusFilter == 'active';
+      query = query.where('isActive', isEqualTo: isActive);
     }
 
     // Order by created date
@@ -35,7 +36,7 @@ class FacilityService {
 
     return query.snapshots().map((snapshot) {
       List<Facility> facilities = snapshot.docs
-          .map((doc) => Facility.fromFirestore(doc))
+          .map((doc) => Facility.fromFirestoreDoc(doc))
           .toList();
 
       // Apply search filter on the client side
@@ -65,7 +66,7 @@ class FacilityService {
           .doc(id)
           .get();
       if (doc.exists) {
-        return Facility.fromFirestore(doc);
+        return Facility.fromFirestoreDoc(doc);
       }
       return null;
     } catch (e) {
@@ -94,7 +95,6 @@ class FacilityService {
       DocumentReference docRef = await _firestore.collection(_collection).add({
         ...facility.toFirestore(),
         'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       return docRef.id;
@@ -123,7 +123,6 @@ class FacilityService {
 
       await _firestore.collection(_collection).doc(id).update({
         ...facility.toFirestore(),
-        'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       throw Exception('Failed to update facility: $e');
@@ -157,13 +156,13 @@ class FacilityService {
 
       for (var doc in allFacilities.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        String status = data['status'] ?? '';
+        bool isActive = data['isActive'] ?? true;
         String type = data['type'] ?? '';
 
         // Count by status
-        if (status == 'active') {
+        if (isActive) {
           stats['active'] = stats['active']! + 1;
-        } else if (status == 'inactive') {
+        } else {
           stats['inactive'] = stats['inactive']! + 1;
         }
 
@@ -202,9 +201,9 @@ class FacilityService {
   // Update facility status
   static Future<void> updateFacilityStatus(String id, String status) async {
     try {
+      bool isActive = status == 'active';
       await _firestore.collection(_collection).doc(id).update({
-        'status': status,
-        'updatedAt': FieldValue.serverTimestamp(),
+        'isActive': isActive,
       });
     } catch (e) {
       throw Exception('Failed to update facility status: $e');

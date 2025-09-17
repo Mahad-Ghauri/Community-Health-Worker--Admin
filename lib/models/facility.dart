@@ -4,37 +4,45 @@ import '../constants/app_constants.dart';
 class Facility {
   final String facilityId;
   final String name;
-  final String type; // hospital, health_center, clinic
-  final String address;
-  final String contactPhone;
-  final String contactEmail;
-  final String contactPerson;
-  final Map<String, double>? coordinates;
+  final String type; // 'hospital', 'health_center', 'clinic'
+  final Map<String, dynamic> location;
+  final Map<String, String> contact;
   final List<String> staff;
   final List<String> supervisors;
-  final List<String> services; // tb_treatment, xray, lab_tests
-  final String status; // active, inactive
+  final List<String> services; // 'tb_treatment', 'xray', 'lab_tests'
+  final bool isActive;
   final String createdBy;
   final DateTime createdAt;
-  final DateTime? updatedAt;
 
   Facility({
     required this.facilityId,
     required this.name,
     required this.type,
-    required this.address,
-    required this.contactPhone,
-    required this.contactEmail,
-    required this.contactPerson,
-    this.coordinates,
+    required this.location,
+    required this.contact,
     required this.staff,
     required this.supervisors,
     required this.services,
-    this.status = 'active',
+    required this.isActive,
     required this.createdBy,
     required this.createdAt,
-    this.updatedAt,
   });
+
+  factory Facility.fromFirestore(Map<String, dynamic> data) {
+    return Facility(
+      facilityId: data['facilityId'] ?? '',
+      name: data['name'] ?? '',
+      type: data['type'] ?? '',
+      location: Map<String, dynamic>.from(data['location'] ?? {}),
+      contact: Map<String, String>.from(data['contact'] ?? {}),
+      staff: List<String>.from(data['staff'] ?? []),
+      supervisors: List<String>.from(data['supervisors'] ?? []),
+      services: List<String>.from(data['services'] ?? []),
+      isActive: data['isActive'] ?? true,
+      createdBy: data['createdBy'] ?? '',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
 
   // Convert Facility to Firestore document
   Map<String, dynamic> toFirestore() {
@@ -42,66 +50,32 @@ class Facility {
       'facilityId': facilityId,
       'name': name,
       'type': type,
-      'address': address,
-      'contactPhone': contactPhone,
-      'contactEmail': contactEmail,
-      'contactPerson': contactPerson,
-      'coordinates': coordinates,
+      'location': location,
+      'contact': contact,
       'staff': staff,
       'supervisors': supervisors,
       'services': services,
-      'status': status,
+      'isActive': isActive,
       'createdBy': createdBy,
       'createdAt': createdAt,
-      if (updatedAt != null) 'updatedAt': updatedAt,
     };
   }
 
-  // Create Facility from Firestore document
-  factory Facility.fromFirestore(DocumentSnapshot doc) {
+  // Create Facility from Firestore document (for backward compatibility)
+  factory Facility.fromFirestoreDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    return Facility(
-      facilityId: doc.id,
-      name: data['name'] ?? '',
-      type: data['type'] ?? AppConstants.clinicType,
-      address: data['address'] ?? '',
-      contactPhone: data['contactPhone'] ?? '',
-      contactEmail: data['contactEmail'] ?? '',
-      contactPerson: data['contactPerson'] ?? '',
-      coordinates: data['coordinates'] != null 
-          ? Map<String, double>.from(data['coordinates'])
-          : null,
-      staff: List<String>.from(data['staff'] ?? []),
-      supervisors: List<String>.from(data['supervisors'] ?? []),
-      services: List<String>.from(data['services'] ?? []),
-      status: data['status'] ?? 'active',
-      createdBy: data['createdBy'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
-    );
+    return Facility.fromFirestore({
+      ...data,
+      'facilityId': doc.id,
+    });
   }
 
   // Create from Map
   factory Facility.fromMap(Map<String, dynamic> data, String id) {
-    return Facility(
-      facilityId: id,
-      name: data['name'] ?? '',
-      type: data['type'] ?? AppConstants.clinicType,
-      address: data['address'] ?? '',
-      contactPhone: data['contactPhone'] ?? '',
-      contactEmail: data['contactEmail'] ?? '',
-      contactPerson: data['contactPerson'] ?? '',
-      coordinates: data['coordinates'] != null 
-          ? Map<String, double>.from(data['coordinates'])
-          : null,
-      staff: List<String>.from(data['staff'] ?? []),
-      supervisors: List<String>.from(data['supervisors'] ?? []),
-      services: List<String>.from(data['services'] ?? []),
-      status: data['status'] ?? 'active',
-      createdBy: data['createdBy'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
-    );
+    return Facility.fromFirestore({
+      ...data,
+      'facilityId': id,
+    });
   }
 
   // Copy with method for immutable updates
@@ -109,35 +83,27 @@ class Facility {
     String? facilityId,
     String? name,
     String? type,
-    String? address,
-    String? contactPhone,
-    String? contactEmail,
-    String? contactPerson,
-    Map<String, double>? coordinates,
+    Map<String, dynamic>? location,
+    Map<String, String>? contact,
     List<String>? staff,
     List<String>? supervisors,
     List<String>? services,
-    String? status,
+    bool? isActive,
     String? createdBy,
     DateTime? createdAt,
-    DateTime? updatedAt,
   }) {
     return Facility(
       facilityId: facilityId ?? this.facilityId,
       name: name ?? this.name,
       type: type ?? this.type,
-      address: address ?? this.address,
-      contactPhone: contactPhone ?? this.contactPhone,
-      contactEmail: contactEmail ?? this.contactEmail,
-      contactPerson: contactPerson ?? this.contactPerson,
-      coordinates: coordinates ?? this.coordinates,
+      location: location ?? this.location,
+      contact: contact ?? this.contact,
       staff: staff ?? this.staff,
       supervisors: supervisors ?? this.supervisors,
       services: services ?? this.services,
-      status: status ?? this.status,
+      isActive: isActive ?? this.isActive,
       createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -145,7 +111,6 @@ class Facility {
   bool get isHospital => type == AppConstants.hospitalType;
   bool get isHealthCenter => type == AppConstants.healthCenterType;
   bool get isClinic => type == AppConstants.clinicType;
-  bool get isActive => status == 'active';
 
   // Facility type display name
   String get typeDisplayName {
@@ -173,6 +138,7 @@ class Facility {
 
   // Status helpers
   String get statusDisplayName => isActive ? 'Active' : 'Inactive';
+  String get status => isActive ? 'active' : 'inactive'; // For backward compatibility
 
   // Check if user is assigned to this facility
   bool hasStaffMember(String userId) => staff.contains(userId);
@@ -198,6 +164,25 @@ class Facility {
   String get servicesDisplayText {
     if (services.isEmpty) return 'No services';
     return servicesDisplayNames.join(', ');
+  }
+
+  // Location and contact helpers
+  String get address => location['address']?.toString() ?? '';
+  String get contactPhone => contact['phone'] ?? '';
+  String get contactEmail => contact['email'] ?? '';
+  String get contactPerson => contact['person'] ?? '';
+  
+  // Coordinates helpers
+  Map<String, double>? get coordinates {
+    final lat = location['latitude'];
+    final lng = location['longitude'];
+    if (lat != null && lng != null) {
+      return {
+        'latitude': double.tryParse(lat.toString()) ?? 0.0,
+        'longitude': double.tryParse(lng.toString()) ?? 0.0,
+      };
+    }
+    return null;
   }
 
   // Validation methods
@@ -231,7 +216,7 @@ class Facility {
 
   @override
   String toString() {
-    return 'Facility(facilityId: $facilityId, name: $name, type: $type, status: $status, staffCount: $staffCount)';
+    return 'Facility(facilityId: $facilityId, name: $name, type: $type, isActive: $isActive, staffCount: $staffCount)';
   }
 
   @override
