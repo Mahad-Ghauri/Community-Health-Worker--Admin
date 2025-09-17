@@ -495,3 +495,4 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 }
+
