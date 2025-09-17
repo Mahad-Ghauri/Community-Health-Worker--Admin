@@ -5,7 +5,7 @@ class AppConstants {
   static const String patientsCollection = 'patients';
   static const String visitsCollection = 'visits';
   static const String facilitiesCollection = 'facilities';
-  static const String auditLogsCollection = 'audit_logs';
+  static const String auditLogsCollection = 'auditLogs';
 
   // User Roles
   static const String adminRole = 'admin';
