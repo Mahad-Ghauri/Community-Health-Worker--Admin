@@ -148,13 +148,11 @@ class AssignmentProvider with ChangeNotifier {
 
   // Load available CHWs for the facility
   Future<void> loadAvailableCHWs() async {
-    if (_facilityId == null) return;
-
     try {
       final snapshot = await _firestore
-          .collection('chw_users')
-          .where('facilityId', isEqualTo: _facilityId)
-          .where('status', isEqualTo: 'active')
+          .collection('users')
+          .where('role', isEqualTo: AppConstants.chwRole)
+          .where('status', isEqualTo: AppConstants.activeStatus)
           .get();
 
       _availableCHWs = snapshot.docs
@@ -176,18 +174,45 @@ class AssignmentProvider with ChangeNotifier {
     String priority = Assignment.priorityMedium,
     String? notes,
   }) async {
-    if (_facilityId == null) return null;
-
     _setLoading(true);
     _setError(null);
 
     try {
+      // Determine effective facilityId: prefer provider context, fallback to patient's facility
+      String? effectiveFacilityId = _facilityId;
+      if (effectiveFacilityId == null || effectiveFacilityId.isEmpty) {
+        try {
+          if (patientIds.isNotEmpty) {
+            final firstPatientId = patientIds.first;
+            final pDoc = await _firestore
+                .collection(AppConstants.patientsCollection)
+                .doc(firstPatientId)
+                .get();
+            if (pDoc.exists) {
+              final pdata = pDoc.data() as Map<String, dynamic>;
+              effectiveFacilityId = (pdata['assignedFacility'] as String?)
+                  ?.trim();
+              effectiveFacilityId =
+                  (effectiveFacilityId == null || effectiveFacilityId.isEmpty)
+                  ? (pdata['treatmentFacility'] as String?)?.trim()
+                  : effectiveFacilityId;
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (effectiveFacilityId == null || effectiveFacilityId.isEmpty) {
+        _setError('Facility context missing for assignment');
+        _setLoading(false);
+        return null;
+      }
+
       // Create assignment
       final assignment = Assignment.createNew(
         chwId: chwId,
         patientIds: patientIds,
         assignedBy: assignedBy,
-        facilityId: _facilityId!,
+        facilityId: effectiveFacilityId,
         workArea: workArea,
         priority: priority,
         notes: notes,
@@ -203,7 +228,7 @@ class AssignmentProvider with ChangeNotifier {
         final patientRef = _firestore.collection('patients').doc(patientId);
         batch.update(patientRef, {
           'assignedCHW': chwId,
-          'assignedFacility': _facilityId,
+          'assignedFacility': effectiveFacilityId,
         });
       }
       await batch.commit();
@@ -383,9 +408,14 @@ class AssignmentProvider with ChangeNotifier {
       }
 
       // Fallback: fetch a page and filter by name/address contains
-      final snap = await _firestore
-          .collection(AppConstants.patientsCollection)
-          .where('assignedFacility', isEqualTo: _facilityId)
+      final col = _firestore.collection(AppConstants.patientsCollection);
+      Query baseQuery;
+      if (_facilityId != null && _facilityId!.isNotEmpty) {
+        baseQuery = col.where('assignedFacility', isEqualTo: _facilityId);
+      } else {
+        baseQuery = col; // No facility filter when facility context unknown
+      }
+      final snap = await baseQuery
           .orderBy('createdAt', descending: true)
           .limit(100)
           .get();
@@ -690,5 +720,4 @@ class AssignmentProvider with ChangeNotifier {
   List<Assignment> get highPriorityAssignments => _assignments
       .where((a) => a.isHighPriority || a.isUrgentPriority)
       .toList();
-
 }

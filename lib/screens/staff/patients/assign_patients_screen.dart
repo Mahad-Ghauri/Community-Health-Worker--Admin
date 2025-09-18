@@ -1,7 +1,8 @@
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously, avoid_print
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../providers/assignment_provider.dart';
 import '../../../models/patient.dart';
 import '../../../models/chw_user.dart';
@@ -32,6 +33,7 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
   CHWUser? _selectedCHW;
   String _priority = Assignment.priorityMedium;
   final _authService = AuthService();
+
 
   @override
   void dispose() {
@@ -330,67 +332,111 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
         if (chws.isEmpty) {
           return const Text('No active CHWs found for this facility.');
         }
+
+        // Group CHWs by workingArea
+        final groupedChws = <String, List<CHWUser>>{};
+        for (final chw in chws) {
+          final area = chw.workingArea.isNotEmpty
+              ? chw.workingArea
+              : 'Unknown Area';
+          groupedChws.putIfAbsent(area, () => []).add(chw);
+        }
+
         return SizedBox(
-          height: 320,
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 3,
-            ),
-            itemCount: chws.length,
-            itemBuilder: (context, index) {
-              final chw = chws[index];
-              final load = provider.getPatientCountForCHW(chw.userId);
-              final color = load < 20
-                  ? Colors.green
-                  : load <= 30
-                  ? Colors.orange
-                  : Colors.red;
-              final selected = _selectedCHW?.userId == chw.userId;
-              return InkWell(
-                onTap: () => setState(() => _selectedCHW = chw),
-                child: Card(
-                  color: selected
-                      ? Theme.of(context).colorScheme.secondaryContainer
-                      : null,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          child: Text(chw.name.isNotEmpty ? chw.name[0] : '?'),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                chw.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                chw.workingArea,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              Row(
-                                children: [
-                                  Icon(Icons.circle, size: 10, color: color),
-                                  const SizedBox(width: 6),
-                                  Text('Load: $load'),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+          height: 400,
+          child: ListView.builder(
+            itemCount: groupedChws.length,
+            itemBuilder: (context, areaIndex) {
+              final area = groupedChws.keys.elementAt(areaIndex);
+              final areaChws = groupedChws[area]!;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      area,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
-                ),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 8,
+                          childAspectRatio: 3,
+                        ),
+                    itemCount: areaChws.length,
+                    itemBuilder: (context, index) {
+                      final chw = areaChws[index];
+                      final load = provider.getPatientCountForCHW(chw.userId);
+                      final color = load < 20
+                          ? Colors.green
+                          : load <= 30
+                          ? Colors.orange
+                          : Colors.red;
+                      final selected = _selectedCHW?.userId == chw.userId;
+                      return InkWell(
+                        onTap: () => setState(() => _selectedCHW = chw),
+                        child: Card(
+                          color: selected
+                              ? Theme.of(context).colorScheme.secondaryContainer
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  child: Text(
+                                    chw.name.isNotEmpty ? chw.name[0] : '?',
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        chw.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        chw.idNumber,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.circle,
+                                            size: 10,
+                                            color: color,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text('Load: $load'),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
               );
             },
           ),
@@ -441,15 +487,31 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
     BuildContext context,
     AssignmentProvider provider,
   ) async {
+    print('DEBUG: Starting assignment confirmation');
+    
     if (_selectedPatient == null || _selectedCHW == null) {
+      print('DEBUG: Missing patient or CHW');
+      print('DEBUG: Selected patient: ${_selectedPatient?.name ?? 'null'}');
+      print('DEBUG: Selected CHW: ${_selectedCHW?.name ?? 'null'}');
       _showSnack(context, 'Select patient and CHW');
       return;
     }
+    
+    print('DEBUG: Patient selected: ${_selectedPatient!.name} (ID: ${_selectedPatient!.patientId})');
+    print('DEBUG: CHW selected: ${_selectedCHW!.name} (ID: ${_selectedCHW!.userId})');
+    print('DEBUG: Working Area: ${_selectedCHW!.workingArea}');
+    print('DEBUG: Priority: $_priority');
+    print('DEBUG: Notes: ${_notesCtrl.text.trim().isEmpty ? 'empty' : _notesCtrl.text.trim()}');
+    
     final canAssign = provider.chwHasCapacity(
       _selectedCHW!.userId,
       maxPatients: 30,
     );
+    
+    print('DEBUG: CHW has capacity: $canAssign');
+    
     if (!canAssign) {
+      print('DEBUG: CHW is at capacity, showing dialog');
       final proceed = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
@@ -469,31 +531,60 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
           ],
         ),
       );
+      
+      print('DEBUG: User decided to proceed: $proceed');
       if (proceed != true) return;
     }
 
     final userId = _authService.currentUser?.uid ?? '';
-    final assignmentId = await provider.createAssignment(
-      chwId: _selectedCHW!.userId,
-      patientIds: [_selectedPatient!.patientId],
-      assignedBy: userId,
-      workArea: _selectedCHW!.workingArea,
-      priority: _priority,
-      notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-    );
+    print('DEBUG: Current user ID: ${userId.isEmpty ? 'empty/null' : userId}');
+    
+    if (userId.isEmpty) {
+      print('DEBUG: ERROR - No authenticated user found');
+      _showSnack(context, 'Authentication error - please login again');
+      return;
+    }
 
-    if (assignmentId != null) {
-      if (mounted) {
-        _showSnack(context, 'Assignment created');
-        Navigator.of(context).pop(true);
+    print('DEBUG: Calling createAssignment with parameters:');
+    print('  - chwId: ${_selectedCHW!.userId}');
+    print('  - patientIds: [${_selectedPatient!.patientId}]');
+    print('  - assignedBy: $userId');
+    print('  - workArea: ${_selectedCHW!.workingArea}');
+    print('  - priority: $_priority');
+    print('  - notes: ${_notesCtrl.text.trim().isEmpty ? 'null' : _notesCtrl.text.trim()}');
+
+    try {
+      final assignmentId = await provider.createAssignment(
+        chwId: _selectedCHW!.userId,
+        patientIds: [_selectedPatient!.patientId],
+        assignedBy: userId,
+        workArea: _selectedCHW!.workingArea,
+        priority: _priority,
+        notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+      );
+
+      print('DEBUG: createAssignment returned: ${assignmentId ?? 'null'}');
+
+      if (assignmentId != null) {
+        print('DEBUG: Assignment created successfully with ID: $assignmentId');
+        if (mounted) {
+          _showSnack(context, 'Assignment created successfully');
+          Navigator.of(context).pop(true);
+        }
+      } else {
+        print('DEBUG: ERROR - createAssignment returned null');
+        print('DEBUG: This indicates the assignment creation failed in the provider');
+        _showSnack(context, 'Failed to create assignment - check logs for details');
       }
-    } else {
-      _showSnack(context, 'Failed to create assignment');
+    } catch (e, stackTrace) {
+      print('DEBUG: EXCEPTION during createAssignment: $e');
+      print('DEBUG: Stack trace: $stackTrace');
+      _showSnack(context, 'Error creating assignment: $e');
     }
   }
 
   void _showSnack(BuildContext context, String msg) {
+    print('DEBUG: Showing snackbar: $msg');
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 }
-
