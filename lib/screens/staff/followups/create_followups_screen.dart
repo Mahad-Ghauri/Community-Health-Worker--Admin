@@ -22,6 +22,7 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
   String _selectedPriority = Followup.priorityRoutine;
   int? _duration;
   final TextEditingController _notesCtrl = TextEditingController();
+  bool _isCreating = false;
 
   @override
   void dispose() {
@@ -216,7 +217,8 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
     double titleFontSize,
     double subtitleFontSize,
   ) {
-    final canSubmit = _selectedPatient != null && _selectedDateTime != null;
+    final canSubmit =
+        _selectedPatient != null && _selectedDateTime != null && !_isCreating;
     final slotMin = fup.slotMinutes;
     return Card(
       elevation: 1,
@@ -261,32 +263,49 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
             Row(
               children: [
                 ElevatedButton.icon(
-                  onPressed: !canSubmit || fup.isLoading
+                  onPressed: !canSubmit || fup.isLoading || _isCreating
                       ? null
                       : () async {
-                          final id = await fup.createFollowup(
-                            patientId: _selectedPatient!.patientId,
-                            createdBy: 'system',
-                            scheduledDate: _selectedDateTime!,
-                            followupType: _selectedType,
-                            priority: _selectedPriority,
-                            notes: _notesCtrl.text.trim(),
-                            durationMinutes: _duration,
-                          );
-                          if (id != null && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Follow-up scheduled'),
-                              ),
+                          if (_isCreating) return; // Double-check protection
+
+                          setState(() {
+                            _isCreating = true;
+                          });
+
+                          try {
+                            final id = await fup.createFollowup(
+                              patientId: _selectedPatient!.patientId,
+                              createdBy: 'system',
+                              scheduledDate: _selectedDateTime!,
+                              followupType: _selectedType,
+                              priority: _selectedPriority,
+                              notes: _notesCtrl.text.trim(),
+                              durationMinutes: _duration,
                             );
-                            setState(() {
-                              _selectedDateTime = null;
-                              _notesCtrl.clear();
-                            });
+
+                            if (id != null && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Follow-up scheduled'),
+                                ),
+                              );
+                              setState(() {
+                                _selectedDateTime = null;
+                                _notesCtrl.clear();
+                              });
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() {
+                                _isCreating = false;
+                              });
+                            }
                           }
                         },
                   icon: const Icon(Icons.save),
-                  label: Text(fup.isLoading ? 'Scheduling...' : 'Schedule'),
+                  label: Text(
+                    _isCreating || fup.isLoading ? 'Scheduling...' : 'Schedule',
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -304,7 +323,7 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
   // NEW RESPONSIVE DATE/TIME ROW METHOD
   Widget _buildDateTimeRow(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     if (screenWidth < 700) {
       // Stack vertically on small screens
       return Column(
@@ -321,7 +340,7 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
         ],
       );
     }
-    
+
     // Use horizontal layout for larger screens
     return Row(
       children: [
@@ -345,9 +364,7 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
 
   Widget _buildDatePicker() {
     return InputDecorator(
-      decoration: const InputDecoration(
-        labelText: 'Appointment Date & Time',
-      ),
+      decoration: const InputDecoration(labelText: 'Appointment Date & Time'),
       child: Row(
         children: [
           Expanded(
@@ -363,9 +380,7 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
               final date = await showDatePicker(
                 context: context,
                 firstDate: DateTime.now(),
-                lastDate: DateTime.now().add(
-                  const Duration(days: 90),
-                ),
+                lastDate: DateTime.now().add(const Duration(days: 90)),
                 initialDate: DateTime.now(),
               );
               if (date == null) return;
@@ -406,11 +421,8 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
             ),
           )
           .toList(),
-      onChanged: (v) =>
-          setState(() => _selectedType = v ?? _selectedType),
-      decoration: const InputDecoration(
-        labelText: 'Follow-up Type',
-      ),
+      onChanged: (v) => setState(() => _selectedType = v ?? _selectedType),
+      decoration: const InputDecoration(labelText: 'Follow-up Type'),
       isExpanded: true,
     );
   }
@@ -419,19 +431,12 @@ class _CreateFollowupsScreenState extends State<CreateFollowupsScreen> {
     return DropdownButtonFormField<String>(
       value: _selectedPriority,
       items: const [
-        DropdownMenuItem(
-          value: 'routine',
-          child: Text('Routine'),
-        ),
-        DropdownMenuItem(
-          value: 'important',
-          child: Text('Important'),
-        ),
+        DropdownMenuItem(value: 'routine', child: Text('Routine')),
+        DropdownMenuItem(value: 'important', child: Text('Important')),
         DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
       ],
-      onChanged: (v) => setState(
-        () => _selectedPriority = v ?? _selectedPriority,
-      ),
+      onChanged: (v) =>
+          setState(() => _selectedPriority = v ?? _selectedPriority),
       decoration: const InputDecoration(labelText: 'Priority'),
       isExpanded: true,
     );

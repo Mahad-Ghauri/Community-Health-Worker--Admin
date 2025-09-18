@@ -430,6 +430,36 @@ class FollowupProvider with ChangeNotifier {
     _setError(null);
 
     try {
+      // Check for duplicate followup (same patient, same time)
+      final existingFollowup = _followups.firstWhere(
+        (f) =>
+            f.patientId == patientId &&
+            f.scheduledDate.isAtSameMomentAs(scheduledDate) &&
+            f.status == Followup.statusScheduled,
+        orElse: () => Followup(
+          followupId: '',
+          patientId: '',
+          facilityId: '',
+          scheduledDate: DateTime.now(),
+          followupType: '',
+          status: '',
+          priority: '',
+          createdBy: '',
+          createdAt: DateTime.now(),
+        ),
+      );
+
+      if (existingFollowup.followupId.isNotEmpty) {
+        if (kDebugMode) {
+          print(
+            '❌ FollowupProvider: Duplicate followup detected for same patient and time',
+          );
+        }
+        throw Exception(
+          'A follow-up already exists for this patient at the selected time',
+        );
+      }
+
       // validations
       final int dur = durationMinutes ?? _slotMinutes;
 
