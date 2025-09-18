@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import '../../../providers/assignment_provider.dart';
 import '../../../models/patient.dart';
 import '../../../models/chw_user.dart';
@@ -34,6 +33,8 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
   String _priority = Assignment.priorityMedium;
   final _authService = AuthService();
 
+  // Add this flag to prevent multiple navigation calls
+  bool _isProcessing = false;
 
   @override
   void dispose() {
@@ -54,37 +55,80 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
           appBar: AppBar(title: const Text('Assign Patients to CHW')),
           body: Stepper(
             currentStep: _currentStep,
+            controlsBuilder: (context, details) {
+              return Row(
+                children: [
+                  if (details.stepIndex < 2)
+                    ElevatedButton(
+                      onPressed: _isProcessing ? null : details.onStepContinue,
+                      child: _isProcessing
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Continue'),
+                    )
+                  else
+                    ElevatedButton(
+                      onPressed: _isProcessing ? null : details.onStepContinue,
+                      child: _isProcessing
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Create Assignment'),
+                    ),
+                  const SizedBox(width: 8),
+                  if (details.stepIndex > 0)
+                    TextButton(
+                      onPressed: _isProcessing ? null : details.onStepCancel,
+                      child: const Text('Back'),
+                    ),
+                ],
+              );
+            },
             onStepContinue: () async {
+              if (_isProcessing) return;
+
               if (_currentStep == 0) {
                 if (_selectedPatient != null) {
                   setState(() => _currentStep = 1);
                 } else {
                   if (_formKey.currentState?.validate() == true) {
-                    final userId = _authService.currentUser?.uid ?? '';
-                    final exists = await provider.phoneExists(
-                      _phoneCtrl.text.trim(),
-                    );
-                    if (exists) {
-                      _showSnack(context, 'Phone already exists');
-                      return;
-                    }
-                    final id = await provider.createPatient(
-                      name: _nameCtrl.text.trim(),
-                      age: int.tryParse(_ageCtrl.text.trim()) ?? 0,
-                      phone: _phoneCtrl.text.trim(),
-                      address: _addressCtrl.text.trim(),
-                      gender: _gender,
-                      tbStatus: _tbStatus,
-                      diagnosisDate: _diagnosisDate,
-                      createdBy: userId,
-                    );
-                    if (id != null) {
-                      final doc = await provider.searchPatients(id);
-                      if (doc.isNotEmpty) {
-                        setState(() {
-                          _selectedPatient = doc.first;
-                          _currentStep = 1;
-                        });
+                    setState(() => _isProcessing = true);
+                    try {
+                      final userId = _authService.currentUser?.uid ?? '';
+                      final exists = await provider.phoneExists(
+                        _phoneCtrl.text.trim(),
+                      );
+                      if (exists) {
+                        _showSnack(context, 'Phone already exists');
+                        return;
+                      }
+                      final id = await provider.createPatient(
+                        name: _nameCtrl.text.trim(),
+                        age: int.tryParse(_ageCtrl.text.trim()) ?? 0,
+                        phone: _phoneCtrl.text.trim(),
+                        address: _addressCtrl.text.trim(),
+                        gender: _gender,
+                        tbStatus: _tbStatus,
+                        diagnosisDate: _diagnosisDate,
+                        createdBy: userId,
+                      );
+                      if (id != null) {
+                        final doc = await provider.searchPatients(id);
+                        if (doc.isNotEmpty) {
+                          setState(() {
+                            _selectedPatient = doc.first;
+                            _currentStep = 1;
+                          });
+                        }
+                      }
+                    } finally {
+                      if (mounted) {
+                        setState(() => _isProcessing = false);
                       }
                     }
                   }
@@ -100,7 +144,7 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
               }
             },
             onStepCancel: () {
-              if (_currentStep > 0) {
+              if (_currentStep > 0 && !_isProcessing) {
                 setState(() => _currentStep -= 1);
               }
             },
@@ -149,20 +193,52 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
             if (!mounted) return;
             showModalBottomSheet(
               context: context,
+              isScrollControlled: true,
               builder: (_) {
-                return ListView.builder(
-                  itemCount: results.length,
-                  itemBuilder: (ctx, i) {
-                    final p = results[i];
-                    return ListTile(
-                      title: Text(p.name),
-                      subtitle: Text('${p.patientId} • ${p.phone}'),
-                      onTap: () {
-                        setState(() {
-                          _selectedPatient = p;
-                        });
-                        Navigator.of(ctx).pop();
-                      },
+                return DraggableScrollableSheet(
+                  initialChildSize: 0.5,
+                  minChildSize: 0.25,
+                  maxChildSize: 0.9,
+                  builder: (_, controller) {
+                    return Container(
+                      decoration: const BoxDecoration(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(16),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'Search Results',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: ListView.builder(
+                              controller: controller,
+                              itemCount: results.length,
+                              itemBuilder: (ctx, i) {
+                                final p = results[i];
+                                return ListTile(
+                                  title: Text(p.name),
+                                  subtitle: Text('${p.patientId} • ${p.phone}'),
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedPatient = p;
+                                    });
+                                    Navigator.of(ctx).pop();
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 );
@@ -363,16 +439,9 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
                       ),
                     ),
                   ),
-                  GridView.builder(
+                  ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 8,
-                          crossAxisSpacing: 8,
-                          childAspectRatio: 3,
-                        ),
                     itemCount: areaChws.length,
                     itemBuilder: (context, index) {
                       final chw = areaChws[index];
@@ -383,54 +452,38 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
                           ? Colors.orange
                           : Colors.red;
                       final selected = _selectedCHW?.userId == chw.userId;
-                      return InkWell(
-                        onTap: () => setState(() => _selectedCHW = chw),
-                        child: Card(
-                          color: selected
-                              ? Theme.of(context).colorScheme.secondaryContainer
-                              : null,
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  child: Text(
-                                    chw.name.isNotEmpty ? chw.name[0] : '?',
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        chw.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        chw.idNumber,
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.circle,
-                                            size: 10,
-                                            color: color,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text('Load: $load'),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        color: selected
+                            ? Theme.of(context).colorScheme.secondaryContainer
+                            : null,
+                        child: ListTile(
+                          onTap: () => setState(() => _selectedCHW = chw),
+                          leading: CircleAvatar(
+                            child: Text(
+                              chw.name.isNotEmpty ? chw.name[0] : '?',
                             ),
                           ),
+                          title: Text(chw.name),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(chw.idNumber),
+                              Row(
+                                children: [
+                                  Icon(Icons.circle, size: 10, color: color),
+                                  const SizedBox(width: 6),
+                                  Text('Load: $load'),
+                                ],
+                              ),
+                            ],
+                          ),
+                          trailing: selected
+                              ? Icon(
+                                  Icons.check_circle,
+                                  color: Theme.of(context).colorScheme.primary,
+                                )
+                              : null,
                         ),
                       );
                     },
@@ -450,18 +503,22 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_selectedPatient != null)
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: Text(_selectedPatient!.name),
-            subtitle: Text('ID: ${_selectedPatient!.patientId}'),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.person),
+              title: Text(_selectedPatient!.name),
+              subtitle: Text('ID: ${_selectedPatient!.patientId}'),
+            ),
           ),
         if (_selectedCHW != null)
-          ListTile(
-            leading: const Icon(Icons.badge),
-            title: Text(_selectedCHW!.name),
-            subtitle: Text('Area: ${_selectedCHW!.workingArea}'),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.badge),
+              title: Text(_selectedCHW!.name),
+              subtitle: Text('Area: ${_selectedCHW!.workingArea}'),
+            ),
           ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           value: _priority,
           items: Assignment.allPriorities
@@ -473,11 +530,14 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
               setState(() => _priority = v ?? Assignment.priorityMedium),
           decoration: const InputDecoration(labelText: 'Priority'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         TextField(
           controller: _notesCtrl,
           maxLines: 3,
-          decoration: const InputDecoration(labelText: 'Notes (optional)'),
+          decoration: const InputDecoration(
+            labelText: 'Notes (optional)',
+            border: OutlineInputBorder(),
+          ),
         ),
       ],
     );
@@ -487,73 +547,67 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
     BuildContext context,
     AssignmentProvider provider,
   ) async {
+    if (_isProcessing) return;
+
     print('DEBUG: Starting assignment confirmation');
-    
+
     if (_selectedPatient == null || _selectedCHW == null) {
       print('DEBUG: Missing patient or CHW');
-      print('DEBUG: Selected patient: ${_selectedPatient?.name ?? 'null'}');
-      print('DEBUG: Selected CHW: ${_selectedCHW?.name ?? 'null'}');
       _showSnack(context, 'Select patient and CHW');
       return;
     }
-    
-    print('DEBUG: Patient selected: ${_selectedPatient!.name} (ID: ${_selectedPatient!.patientId})');
-    print('DEBUG: CHW selected: ${_selectedCHW!.name} (ID: ${_selectedCHW!.userId})');
-    print('DEBUG: Working Area: ${_selectedCHW!.workingArea}');
-    print('DEBUG: Priority: $_priority');
-    print('DEBUG: Notes: ${_notesCtrl.text.trim().isEmpty ? 'empty' : _notesCtrl.text.trim()}');
-    
-    final canAssign = provider.chwHasCapacity(
-      _selectedCHW!.userId,
-      maxPatients: 30,
-    );
-    
-    print('DEBUG: CHW has capacity: $canAssign');
-    
-    if (!canAssign) {
-      print('DEBUG: CHW is at capacity, showing dialog');
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('CHW at capacity'),
-          content: const Text(
-            'Selected CHW is at full capacity (>30). Proceed anyway?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Proceed'),
-            ),
-          ],
-        ),
-      );
-      
-      print('DEBUG: User decided to proceed: $proceed');
-      if (proceed != true) return;
-    }
 
-    final userId = _authService.currentUser?.uid ?? '';
-    print('DEBUG: Current user ID: ${userId.isEmpty ? 'empty/null' : userId}');
-    
-    if (userId.isEmpty) {
-      print('DEBUG: ERROR - No authenticated user found');
-      _showSnack(context, 'Authentication error - please login again');
-      return;
-    }
-
-    print('DEBUG: Calling createAssignment with parameters:');
-    print('  - chwId: ${_selectedCHW!.userId}');
-    print('  - patientIds: [${_selectedPatient!.patientId}]');
-    print('  - assignedBy: $userId');
-    print('  - workArea: ${_selectedCHW!.workingArea}');
-    print('  - priority: $_priority');
-    print('  - notes: ${_notesCtrl.text.trim().isEmpty ? 'null' : _notesCtrl.text.trim()}');
+    setState(() => _isProcessing = true);
 
     try {
+      print(
+        'DEBUG: Patient selected: ${_selectedPatient!.name} (ID: ${_selectedPatient!.patientId})',
+      );
+      print(
+        'DEBUG: CHW selected: ${_selectedCHW!.name} (ID: ${_selectedCHW!.userId})',
+      );
+
+      final canAssign = provider.chwHasCapacity(
+        _selectedCHW!.userId,
+        maxPatients: 30,
+      );
+
+      print('DEBUG: CHW has capacity: $canAssign');
+
+      if (!canAssign) {
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('CHW at capacity'),
+            content: const Text(
+              'Selected CHW is at full capacity (>30). Proceed anyway?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Proceed'),
+              ),
+            ],
+          ),
+        );
+
+        if (proceed != true) return;
+      }
+
+      final userId = _authService.currentUser?.uid ?? '';
+      if (userId.isEmpty) {
+        print('DEBUG: ERROR - No authenticated user found');
+        if (mounted) {
+          _showSnack(context, 'Authentication error - please login again');
+        }
+        return;
+      }
+
+      print('DEBUG: Calling createAssignment');
       final assignmentId = await provider.createAssignment(
         chwId: _selectedCHW!.userId,
         patientIds: [_selectedPatient!.patientId],
@@ -563,28 +617,61 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
 
-      print('DEBUG: createAssignment returned: ${assignmentId ?? 'null'}');
+      if (!mounted) return; // Critical check before any UI operations
 
       if (assignmentId != null) {
         print('DEBUG: Assignment created successfully with ID: $assignmentId');
-        if (mounted) {
-          _showSnack(context, 'Assignment created successfully');
+
+        // Show success message first
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Assignment created successfully'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Navigate back after a short delay to ensure snackbar is shown
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        if (mounted && Navigator.canPop(context)) {
           Navigator.of(context).pop(true);
         }
       } else {
         print('DEBUG: ERROR - createAssignment returned null');
-        print('DEBUG: This indicates the assignment creation failed in the provider');
-        _showSnack(context, 'Failed to create assignment - check logs for details');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Failed to create assignment - check logs for details',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     } catch (e, stackTrace) {
       print('DEBUG: EXCEPTION during createAssignment: $e');
       print('DEBUG: Stack trace: $stackTrace');
-      _showSnack(context, 'Error creating assignment: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating assignment: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
   }
 
   void _showSnack(BuildContext context, String msg) {
+    if (!mounted) return;
     print('DEBUG: Showing snackbar: $msg');
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
+    // Direct snackbar call without WidgetsBinding.instance.addPostFrameCallback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+    );
   }
 }

@@ -233,11 +233,28 @@ class AssignmentProvider with ChangeNotifier {
       }
       await batch.commit();
 
-      // Create notification for CHW
+      // Create notification for CHW with patient name in title if available
+      String notifTitle = 'New Patient Assignment';
+      try {
+        if (patientIds.isNotEmpty) {
+          final pDoc = await _firestore
+              .collection(AppConstants.patientsCollection)
+              .doc(patientIds.first)
+              .get();
+          if (pDoc.exists) {
+            final pdata = pDoc.data() as Map<String, dynamic>;
+            final pname = (pdata['name'] as String?)?.trim();
+            if (pname != null && pname.isNotEmpty) {
+              notifTitle = 'Assigned: $pname';
+            }
+          }
+        }
+      } catch (_) {}
+
       await _createCHWNotification(
         chwId: chwId,
         type: 'new_assignment',
-        title: 'New Patient Assignment',
+        title: notifTitle,
         message: 'You have been assigned ${patientIds.length} new patient(s)',
         relatedId: docRef.id,
       );
@@ -266,6 +283,7 @@ class AssignmentProvider with ChangeNotifier {
 
       _setLoading(false);
       await loadStatistics();
+      notifyListeners();
       return docRef.id;
     } catch (e) {
       _setError('Failed to create assignment: $e');
