@@ -14,7 +14,16 @@ class MedicationService {
         .where('isActive', isEqualTo: true)
         .orderBy('startDate', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => d.data()).toList());
+        .map((s) => s.docs.map((d) => {...d.data(), 'medicationId': d.id}).toList());
+  }
+
+  Future<List<Map<String, dynamic>>> getActiveMedicationsOnce(String patientId) async {
+    final snapshot = await _medsCol
+        .where('patientId', isEqualTo: patientId)
+        .where('isActive', isEqualTo: true)
+        .orderBy('startDate', descending: true)
+        .get();
+    return snapshot.docs.map((d) => {...d.data(), 'medicationId': d.id}).toList();
   }
 
   Stream<List<Map<String, dynamic>>> getMedicationHistory(String patientId) {
@@ -22,7 +31,15 @@ class MedicationService {
         .where('patientId', isEqualTo: patientId)
         .orderBy('startDate', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => d.data()).toList());
+        .map((s) => s.docs.map((d) => {...d.data(), 'medicationId': d.id}).toList());
+  }
+
+  Future<List<Map<String, dynamic>>> getMedicationHistoryOnce(String patientId) async {
+    final snapshot = await _medsCol
+        .where('patientId', isEqualTo: patientId)
+        .orderBy('startDate', descending: true)
+        .get();
+    return snapshot.docs.map((d) => {...d.data(), 'medicationId': d.id}).toList();
   }
 
   Future<void> addMedication(Map<String, dynamic> data) async {

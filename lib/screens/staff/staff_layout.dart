@@ -56,6 +56,12 @@ class _StaffLayoutState extends State<StaffLayout> {
       icon: Icons.event,
       route: AppConstants.manageFollowupsRoute,
     ),
+    StaffNavigationItem(
+      id: 'manage_medications',
+      label: 'Manage Medications',
+      icon: Icons.medical_services,
+      route: AppConstants.manageMedicationsRoute,
+    ),
   ];
 
   @override

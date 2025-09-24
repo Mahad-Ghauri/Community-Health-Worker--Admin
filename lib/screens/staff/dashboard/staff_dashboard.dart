@@ -331,26 +331,32 @@ class _StaffDashboardState extends State<StaffDashboard> {
 
           const SizedBox(height: 16),
 
-          // Quick Actions Grid
-          ResponsiveWidget(
-            mobile: Column(children: _buildQuickActions()),
-            tablet: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 4,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: _buildQuickActions(),
-            ),
-            desktop: GridView.count(
-              crossAxisCount: 3,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 4,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: _buildQuickActions(),
+          // Quick Actions Grid with scrollable container to prevent overflow
+          Container(
+            constraints: const BoxConstraints(maxHeight: 220), // Adjust height as needed
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: ResponsiveWidget(
+                mobile: Column(children: _buildQuickActions()),
+                tablet: GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: _buildQuickActions(),
+                ),
+                desktop: GridView.count(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: _buildQuickActions(),
+                ),
+              ),
             ),
           ),
 

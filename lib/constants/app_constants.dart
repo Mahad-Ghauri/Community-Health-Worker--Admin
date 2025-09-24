@@ -38,6 +38,7 @@ class AppConstants {
   static const String manageFollowupsRoute = '/staff/manage-followups';
   static const String patientDetailsRoute = '/staff/patient-details';
   static const String patientsRoute = '/staff/patient-list';
+  static const String manageMedicationsRoute = '/staff/manage-medications';
 
   // Supervisor Routes
   static const String supervisorDashboardRoute = '/supervisor/dashboard';
