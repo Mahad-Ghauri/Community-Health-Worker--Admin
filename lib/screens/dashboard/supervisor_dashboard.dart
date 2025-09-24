@@ -7,8 +7,8 @@ import '../../theme/theme.dart';
 import '../../providers/supervisor_dashboard_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../services/dashboard_service.dart';
-// import 'package:go_router/go_router.dart';
-// import '../../constants/app_constants.dart';
+import 'package:go_router/go_router.dart';
+import '../../constants/app_constants.dart';
 import 'package:flutter/services.dart';
 // import 'package:go_router/go_router.dart';
 // import '../../constants/app_constants.dart';
@@ -177,6 +177,7 @@ class SupervisorDashboard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _leaderboardCard(
+                            context,
                             'Top CHWs',
                             supProv.chwLeaderboard,
                           ),
@@ -184,6 +185,7 @@ class SupervisorDashboard extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _facilityPerfCard(
+                            context,
                             'Facility Performance',
                             supProv.facilityPerformance,
                           ),
@@ -250,9 +252,8 @@ void _showDetails(
                 alignment: Alignment.centerRight,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Navigate to manage followups screen if available
-                    // context.go(AppConstants.manageFollowupsRoute);
                     Navigator.of(ctx).pop();
+                    context.go(AppConstants.manageFollowupsRoute);
                   },
                   child: const Text('Manage Follow-ups'),
                 ),
@@ -264,8 +265,8 @@ void _showDetails(
                 alignment: Alignment.centerRight,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Navigate to create/manage follow-ups filtered (not implemented here)
                     Navigator.of(ctx).pop();
+                    context.go(AppConstants.manageFollowupsRoute);
                   },
                   child: const Text('View Overdue'),
                 ),
@@ -280,9 +281,8 @@ void _showDetails(
                 alignment: Alignment.centerRight,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Go to patients list
-                    // context.go(AppConstants.patientsRoute);
                     Navigator.of(ctx).pop();
+                    context.go(AppConstants.patientsRoute);
                   },
                   child: const Text('View Patients'),
                 ),
@@ -297,9 +297,8 @@ void _showDetails(
                 alignment: Alignment.centerRight,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Go to patients list
-                    // context.go(AppConstants.patientsRoute);
                     Navigator.of(ctx).pop();
+                    context.go(AppConstants.patientsRoute);
                   },
                   child: const Text('View Patients'),
                 ),
@@ -516,7 +515,11 @@ List<PieChartSectionData> _followupSections(FollowupStats? stats) {
   ];
 }
 
-Widget _leaderboardCard(String title, List<LeaderboardItem> items) {
+Widget _leaderboardCard(
+  BuildContext context,
+  String title,
+  List<LeaderboardItem> items,
+) {
   return Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
@@ -543,13 +546,12 @@ Widget _leaderboardCard(String title, List<LeaderboardItem> items) {
         ...items
             .take(8)
             .map(
-              (e) => InkWell(
-                onTap: () {
-                  // Example: navigate to patients list (if desired)
-                  // context.go(AppConstants.patientsRoute);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6.0),
+              (e) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6.0),
+                child: InkWell(
+                  onTap: () {
+                    context.go(AppConstants.patientsRoute);
+                  },
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -575,7 +577,11 @@ Widget _leaderboardCard(String title, List<LeaderboardItem> items) {
   );
 }
 
-Widget _facilityPerfCard(String title, List<FacilityPerformance> items) {
+Widget _facilityPerfCard(
+  BuildContext context,
+  String title,
+  List<FacilityPerformance> items,
+) {
   return Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
@@ -622,25 +628,30 @@ Widget _facilityPerfCard(String title, List<FacilityPerformance> items) {
             .map(
               (e) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(e.facilityId, style: CHWTheme.bodyStyle),
-                    ),
-                    Text(
-                      'Patients: ${e.patients}',
-                      style: CHWTheme.bodyStyle.copyWith(
-                        color: Colors.grey.shade700,
+                child: InkWell(
+                  onTap: () {
+                    context.go(AppConstants.facilityPatientsRoute);
+                  },
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(e.facilityId, style: CHWTheme.bodyStyle),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Completed: ${e.completedFollowups}',
-                      style: CHWTheme.bodyStyle.copyWith(
-                        fontWeight: FontWeight.bold,
+                      Text(
+                        'Patients: ${e.patients}',
+                        style: CHWTheme.bodyStyle.copyWith(
+                          color: Colors.grey.shade700,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Text(
+                        'Completed: ${e.completedFollowups}',
+                        style: CHWTheme.bodyStyle.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
