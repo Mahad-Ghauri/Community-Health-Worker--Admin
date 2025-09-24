@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
 import '../../theme/theme.dart';
-import '../../models/user.dart';
+import '../../providers/supervisor_dashboard_provider.dart';
 
 class SupervisorDashboard extends StatelessWidget {
   const SupervisorDashboard({super.key});
@@ -23,7 +23,10 @@ class SupervisorDashboard extends StatelessWidget {
             onSelected: (value) async {
               switch (value) {
                 case 'logout':
-                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                  final authProvider = Provider.of<AuthProvider>(
+                    context,
+                    listen: false,
+                  );
                   await authProvider.signOut();
                   break;
               }
@@ -33,7 +36,10 @@ class SupervisorDashboard extends StatelessWidget {
                 value: 'logout',
                 child: ListTile(
                   leading: Icon(Icons.logout, color: CHWTheme.errorColor),
-                  title: Text('Logout', style: TextStyle(color: CHWTheme.errorColor)),
+                  title: Text(
+                    'Logout',
+                    style: TextStyle(color: CHWTheme.errorColor),
+                  ),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -41,63 +47,158 @@ class SupervisorDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: Consumer<AuthProvider>(
-        builder: (context, authProvider, child) {
-          final user = authProvider.currentUser;
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: CHWTheme.accentColor,
-                    borderRadius: BorderRadius.circular(60),
-                  ),
-                  child: const Icon(
-                    Icons.supervisor_account,
-                    color: Colors.white,
-                    size: 60,
+      body: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => SupervisorDashboardProvider()..load(),
+          ),
+        ],
+        child: Consumer2<AuthProvider, SupervisorDashboardProvider>(
+          builder: (context, authProvider, supProv, child) {
+            final user = authProvider.currentUser;
+
+            if (supProv.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (supProv.error != null) {
+              return Center(
+                child: Text(
+                  supProv.error!,
+                  style: CHWTheme.bodyStyle.copyWith(
+                    color: CHWTheme.errorColor,
                   ),
                 ),
-                const SizedBox(height: 32),
-                Text(
-                  'Welcome to Supervisor Dashboard',
-                  style: CHWTheme.headingStyle.copyWith(
-                    fontSize: 28,
-                    color: CHWTheme.primaryColor,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Hello ${user?.name ?? 'Supervisor'}!',
-                  style: CHWTheme.subheadingStyle.copyWith(
-                    color: Colors.grey.shade600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: CHWTheme.accentColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    UserRole.getDisplayName(user?.role ?? 'supervisor'),
-                    style: CHWTheme.bodyStyle.copyWith(
-                      color: CHWTheme.accentColor,
-                      fontWeight: FontWeight.w600,
+              );
+            }
+
+            final stats = supProv.followupStats;
+            final patientsByStatus = supProv.patientsByStatus;
+
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Supervisor Dashboard',
+                          style: CHWTheme.headingStyle.copyWith(
+                            color: CHWTheme.primaryColor,
+                          ),
+                        ),
+                        Text(
+                          'Welcome, ${user?.name ?? 'Supervisor'}',
+                          style: CHWTheme.subheadingStyle,
+                        ),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 16),
+
+                    // KPI cards (initial subset)
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _kpiCard(
+                          'Follow-ups (Total)',
+                          (stats?.total ?? 0).toString(),
+                        ),
+                        _kpiCard(
+                          'Overdue Follow-ups',
+                          (stats?.overdue ?? 0).toString(),
+                        ),
+                        _kpiCard(
+                          'Newly Diagnosed',
+                          (patientsByStatus['newly_diagnosed'] ?? 0).toString(),
+                        ),
+                        _kpiCard(
+                          'On Treatment',
+                          (patientsByStatus['on_treatment'] ?? 0).toString(),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Placeholders for charts/leaderboards to be implemented next
+                    _sectionTitle('Trends & Distributions'),
+                    _placeholderBox(height: 220, label: 'Charts go here'),
+                    const SizedBox(height: 16),
+                    _sectionTitle('Leaderboards'),
+                    _placeholderBox(
+                      height: 220,
+                      label: 'Top CHWs / Facilities',
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
+}
+
+Widget _kpiCard(String title, String value) {
+  return Container(
+    width: 220,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 8,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: CHWTheme.bodyStyle.copyWith(color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: CHWTheme.headingStyle.copyWith(color: CHWTheme.primaryColor),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _sectionTitle(String title) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 8.0),
+    child: Text(
+      title,
+      style: CHWTheme.subheadingStyle.copyWith(color: CHWTheme.primaryColor),
+    ),
+  );
+}
+
+Widget _placeholderBox({double height = 180, required String label}) {
+  return Container(
+    height: height,
+    width: double.infinity,
+    decoration: BoxDecoration(
+      color: CHWTheme.backgroundColor,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.grey.shade200),
+    ),
+    child: Center(
+      child: Text(
+        label,
+        style: CHWTheme.bodyStyle.copyWith(color: Colors.grey),
+      ),
+    ),
+  );
 }

@@ -31,8 +31,9 @@ class DashboardService {
 
   // Get users metrics
   static Future<UsersMetrics> _getUsersMetrics() async {
-    final QuerySnapshot usersSnapshot = 
-        await _firestore.collection(AppConstants.usersCollection).get();
+    final QuerySnapshot usersSnapshot = await _firestore
+        .collection(AppConstants.usersCollection)
+        .get();
 
     int totalUsers = usersSnapshot.docs.length;
     int adminUsers = 0;
@@ -46,7 +47,7 @@ class DashboardService {
     for (var doc in usersSnapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
       final role = data['role'] ?? '';
-      
+
       switch (role) {
         case AppConstants.adminRole:
           adminUsers++;
@@ -77,8 +78,9 @@ class DashboardService {
 
   // Get facilities metrics
   static Future<FacilitiesMetrics> _getFacilitiesMetrics() async {
-    final QuerySnapshot facilitiesSnapshot = 
-        await _firestore.collection(AppConstants.facilitiesCollection).get();
+    final QuerySnapshot facilitiesSnapshot = await _firestore
+        .collection(AppConstants.facilitiesCollection)
+        .get();
 
     int totalFacilities = facilitiesSnapshot.docs.length;
     int activeFacilities = 0;
@@ -119,8 +121,9 @@ class DashboardService {
 
   // Get patients metrics
   static Future<PatientsMetrics> _getPatientsMetrics() async {
-    final QuerySnapshot patientsSnapshot = 
-        await _firestore.collection(AppConstants.patientsCollection).get();
+    final QuerySnapshot patientsSnapshot = await _firestore
+        .collection(AppConstants.patientsCollection)
+        .get();
 
     int totalPatients = patientsSnapshot.docs.length;
     int newlyDiagnosed = 0;
@@ -163,17 +166,24 @@ class DashboardService {
     final DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
     final DateTime startOfMonth = DateTime(now.year, now.month, 1);
 
-    final QuerySnapshot allVisitsSnapshot = 
-        await _firestore.collection(AppConstants.visitsCollection).get();
+    final QuerySnapshot allVisitsSnapshot = await _firestore
+        .collection(AppConstants.visitsCollection)
+        .get();
 
     final QuerySnapshot thisWeekVisitsSnapshot = await _firestore
         .collection(AppConstants.visitsCollection)
-        .where('visitDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek))
+        .where(
+          'visitDate',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek),
+        )
         .get();
 
     final QuerySnapshot thisMonthVisitsSnapshot = await _firestore
         .collection(AppConstants.visitsCollection)
-        .where('visitDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
+        .where(
+          'visitDate',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
+        )
         .get();
 
     int homeVisits = 0;
@@ -230,13 +240,15 @@ class DashboardService {
 
     for (var doc in recentUsers.docs) {
       final data = doc.data() as Map<String, dynamic>;
-      activities.add(ActivityItem(
-        type: 'user_created',
-        title: 'New user registered',
-        description: '${data['name']} joined as ${data['role']}',
-        timestamp: (data['createdAt'] as Timestamp).toDate(),
-        icon: 'person_add',
-      ));
+      activities.add(
+        ActivityItem(
+          type: 'user_created',
+          title: 'New user registered',
+          description: '${data['name']} joined as ${data['role']}',
+          timestamp: (data['createdAt'] as Timestamp).toDate(),
+          icon: 'person_add',
+        ),
+      );
     }
 
     // Get recent facilities (last 3)
@@ -248,13 +260,15 @@ class DashboardService {
 
     for (var doc in recentFacilities.docs) {
       final data = doc.data() as Map<String, dynamic>;
-      activities.add(ActivityItem(
-        type: 'facility_created',
-        title: 'New facility added',
-        description: '${data['name']} (${data['type']}) was registered',
-        timestamp: (data['createdAt'] as Timestamp).toDate(),
-        icon: 'business',
-      ));
+      activities.add(
+        ActivityItem(
+          type: 'facility_created',
+          title: 'New facility added',
+          description: '${data['name']} (${data['type']}) was registered',
+          timestamp: (data['createdAt'] as Timestamp).toDate(),
+          icon: 'business',
+        ),
+      );
     }
 
     // Sort by timestamp (most recent first)
@@ -265,8 +279,218 @@ class DashboardService {
 
   // Get real-time metrics stream for live updates
   static Stream<DashboardMetrics> getDashboardMetricsStream() {
-    return Stream.periodic(const Duration(minutes: 5), (i) => getDashboardMetrics())
-        .asyncMap((future) => future);
+    return Stream.periodic(
+      const Duration(minutes: 5),
+      (i) => getDashboardMetrics(),
+    ).asyncMap((future) => future);
+  }
+
+  // Supervisor-specific metrics -------------------------------------------------
+  static Future<SupervisorMetrics> getSupervisorMetrics({
+    String? facilityId,
+    String? chwId,
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    final DateTime rangeStart =
+        from ?? DateTime.now().subtract(const Duration(days: 30));
+    final DateTime rangeEnd = to ?? DateTime.now();
+
+    // Run queries in parallel
+    final results = await Future.wait([
+      _getFollowupStats(facilityId: facilityId, from: rangeStart, to: rangeEnd),
+      _getPatientsByTbStatus(facilityId: facilityId),
+      _getChwLeaderboard(
+        facilityId: facilityId,
+        from: rangeStart,
+        to: rangeEnd,
+      ),
+      _getFacilityPerformance(from: rangeStart, to: rangeEnd),
+    ]);
+
+    return SupervisorMetrics(
+      followupStats: results[0] as FollowupStats,
+      patientsByStatus: results[1] as Map<String, int>,
+      chwLeaderboard: results[2] as List<LeaderboardItem>,
+      facilityPerformance: results[3] as List<FacilityPerformance>,
+      from: rangeStart,
+      to: rangeEnd,
+    );
+  }
+
+  static Future<FollowupStats> _getFollowupStats({
+    String? facilityId,
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    Query<Map<String, dynamic>> q = _firestore.collection('followups');
+    if (facilityId != null && facilityId.isNotEmpty) {
+      q = q.where('facilityId', isEqualTo: facilityId);
+    }
+    q = q
+        .where(
+          'scheduledDate',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(from),
+        )
+        .where('scheduledDate', isLessThanOrEqualTo: Timestamp.fromDate(to));
+
+    final snap = await q.get();
+    int scheduled = 0,
+        completed = 0,
+        missed = 0,
+        cancelled = 0,
+        rescheduled = 0,
+        overdue = 0;
+    final now = DateTime.now();
+    for (final d in snap.docs) {
+      final data = d.data();
+      final String status = (data['status'] as String?) ?? 'scheduled';
+      final DateTime sched =
+          (data['scheduledDate'] as Timestamp?)?.toDate() ?? now;
+      switch (status) {
+        case 'scheduled':
+          scheduled++;
+          if (sched.isBefore(now)) overdue++;
+          break;
+        case 'completed':
+          completed++;
+          break;
+        case 'missed':
+          missed++;
+          break;
+        case 'cancelled':
+          cancelled++;
+          break;
+        case 'rescheduled':
+          rescheduled++;
+          break;
+      }
+    }
+    return FollowupStats(
+      scheduled: scheduled,
+      completed: completed,
+      missed: missed,
+      cancelled: cancelled,
+      rescheduled: rescheduled,
+      overdue: overdue,
+      total: snap.docs.length,
+    );
+  }
+
+  static Future<Map<String, int>> _getPatientsByTbStatus({
+    String? facilityId,
+  }) async {
+    Query<Map<String, dynamic>> q = _firestore.collection(
+      AppConstants.patientsCollection,
+    );
+    if (facilityId != null && facilityId.isNotEmpty) {
+      q = q.where('assignedFacility', isEqualTo: facilityId);
+    }
+    final snap = await q.get();
+    final Map<String, int> counts = {
+      AppConstants.newlyDiagnosedStatus: 0,
+      AppConstants.onTreatmentStatus: 0,
+      AppConstants.treatmentCompletedStatus: 0,
+      AppConstants.lostToFollowUpStatus: 0,
+    };
+    for (final d in snap.docs) {
+      final status =
+          (d.data()['tbStatus'] as String?) ??
+          AppConstants.newlyDiagnosedStatus;
+      counts[status] = (counts[status] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  static Future<List<LeaderboardItem>> _getChwLeaderboard({
+    String? facilityId,
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    // Approximation using followups completed per CHW within range
+    Query<Map<String, dynamic>> q = _firestore
+        .collection('followups')
+        .where('status', isEqualTo: 'completed')
+        .where(
+          'completedDate',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(from),
+        )
+        .where('completedDate', isLessThanOrEqualTo: Timestamp.fromDate(to));
+    if (facilityId != null && facilityId.isNotEmpty) {
+      q = q.where('facilityId', isEqualTo: facilityId);
+    }
+    final snap = await q.get();
+    final Map<String, int> perChw = {};
+    for (final d in snap.docs) {
+      final chwId =
+          (d.data()['completedBy'] as String?) ??
+          (d.data()['assignedStaffId'] as String?) ??
+          '';
+      if (chwId.isEmpty) continue;
+      perChw[chwId] = (perChw[chwId] ?? 0) + 1;
+    }
+    final items = perChw.entries
+        .map(
+          (e) => LeaderboardItem(
+            entityId: e.key,
+            label:
+                'CHW ${e.key.substring(0, e.key.length > 6 ? 6 : e.key.length)}',
+            score: e.value,
+          ),
+        )
+        .toList();
+    items.sort((a, b) => b.score.compareTo(a.score));
+    return items.take(10).toList();
+  }
+
+  static Future<List<FacilityPerformance>> _getFacilityPerformance({
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    // Compute per-facility counts: patients, followups completed, visits this month
+    final patientsSnap = await _firestore
+        .collection(AppConstants.patientsCollection)
+        .get();
+    final followupsSnap = await _firestore
+        .collection('followups')
+        .where(
+          'completedDate',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(from),
+        )
+        .where('completedDate', isLessThanOrEqualTo: Timestamp.fromDate(to))
+        .get();
+
+    final Map<String, int> facilityPatients = {};
+    for (final d in patientsSnap.docs) {
+      final fac = (d.data()['assignedFacility'] as String?) ?? '';
+      if (fac.isEmpty) continue;
+      facilityPatients[fac] = (facilityPatients[fac] ?? 0) + 1;
+    }
+
+    final Map<String, int> facilityCompletedFollowups = {};
+    for (final d in followupsSnap.docs) {
+      final fac = (d.data()['facilityId'] as String?) ?? '';
+      if (fac.isEmpty) continue;
+      facilityCompletedFollowups[fac] =
+          (facilityCompletedFollowups[fac] ?? 0) + 1;
+    }
+
+    final Set<String> facilityIds = {
+      ...facilityPatients.keys,
+      ...facilityCompletedFollowups.keys,
+    };
+    final List<FacilityPerformance> perf = [];
+    for (final id in facilityIds) {
+      perf.add(
+        FacilityPerformance(
+          facilityId: id,
+          patients: facilityPatients[id] ?? 0,
+          completedFollowups: facilityCompletedFollowups[id] ?? 0,
+        ),
+      );
+    }
+    perf.sort((a, b) => b.completedFollowups.compareTo(a.completedFollowups));
+    return perf;
   }
 }
 
@@ -388,4 +612,67 @@ class ActivityItem {
       return 'Just now';
     }
   }
+}
+
+// Supervisor metrics models -----------------------------------------------------
+class SupervisorMetrics {
+  final FollowupStats followupStats;
+  final Map<String, int> patientsByStatus;
+  final List<LeaderboardItem> chwLeaderboard;
+  final List<FacilityPerformance> facilityPerformance;
+  final DateTime from;
+  final DateTime to;
+
+  SupervisorMetrics({
+    required this.followupStats,
+    required this.patientsByStatus,
+    required this.chwLeaderboard,
+    required this.facilityPerformance,
+    required this.from,
+    required this.to,
+  });
+}
+
+class FollowupStats {
+  final int total;
+  final int scheduled;
+  final int completed;
+  final int missed;
+  final int cancelled;
+  final int rescheduled;
+  final int overdue;
+
+  FollowupStats({
+    required this.total,
+    required this.scheduled,
+    required this.completed,
+    required this.missed,
+    required this.cancelled,
+    required this.rescheduled,
+    required this.overdue,
+  });
+}
+
+class LeaderboardItem {
+  final String entityId;
+  final String label;
+  final int score;
+
+  LeaderboardItem({
+    required this.entityId,
+    required this.label,
+    required this.score,
+  });
+}
+
+class FacilityPerformance {
+  final String facilityId;
+  final int patients;
+  final int completedFollowups;
+
+  FacilityPerformance({
+    required this.facilityId,
+    required this.patients,
+    required this.completedFollowups,
+  });
 }
