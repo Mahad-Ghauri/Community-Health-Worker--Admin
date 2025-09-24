@@ -7,6 +7,11 @@ import '../../theme/theme.dart';
 import '../../providers/supervisor_dashboard_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../services/dashboard_service.dart';
+// import 'package:go_router/go_router.dart';
+// import '../../constants/app_constants.dart';
+import 'package:flutter/services.dart';
+// import 'package:go_router/go_router.dart';
+// import '../../constants/app_constants.dart';
 
 class SupervisorDashboard extends StatelessWidget {
   const SupervisorDashboard({super.key});
@@ -91,15 +96,28 @@ class SupervisorDashboard extends StatelessWidget {
                             color: CHWTheme.primaryColor,
                           ),
                         ),
-                        Text(
-                          'Welcome, ${user?.name ?? 'Supervisor'}',
-                          style: CHWTheme.subheadingStyle,
+                        Row(
+                          children: [
+                            Text(
+                              'Welcome, ${user?.name ?? 'Supervisor'}',
+                              style: CHWTheme.subheadingStyle,
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton(
+                              onPressed: () => supProv.load(),
+                              child: const Text('Refresh'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
 
-                    // KPI cards (initial subset)
+                    // Filters
+                    _filtersBar(context, supProv),
+                    const SizedBox(height: 16),
+
+                    // KPI cards (with View details)
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
@@ -107,18 +125,26 @@ class SupervisorDashboard extends StatelessWidget {
                         _kpiCard(
                           'Follow-ups (Total)',
                           (stats?.total ?? 0).toString(),
+                          onViewDetails: () =>
+                              _showDetails(context, 'followups', supProv),
                         ),
                         _kpiCard(
                           'Overdue Follow-ups',
                           (stats?.overdue ?? 0).toString(),
+                          onViewDetails: () =>
+                              _showDetails(context, 'overdue', supProv),
                         ),
                         _kpiCard(
                           'Newly Diagnosed',
                           (patientsByStatus['newly_diagnosed'] ?? 0).toString(),
+                          onViewDetails: () =>
+                              _showDetails(context, 'newly_diagnosed', supProv),
                         ),
                         _kpiCard(
                           'On Treatment',
                           (patientsByStatus['on_treatment'] ?? 0).toString(),
+                          onViewDetails: () =>
+                              _showDetails(context, 'on_treatment', supProv),
                         ),
                       ],
                     ),
@@ -175,7 +201,158 @@ class SupervisorDashboard extends StatelessWidget {
   }
 }
 
-Widget _kpiCard(String title, String value) {
+void _showDetails(
+  BuildContext context,
+  String type,
+  SupervisorDashboardProvider supProv,
+) {
+  final stats = supProv.followupStats;
+  final patientsByStatus = supProv.patientsByStatus;
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _detailsTitle(type),
+                  style: CHWTheme.subheadingStyle.copyWith(
+                    color: CHWTheme.primaryColor,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (type == 'followups' && stats != null) ...[
+              _detailsRow('Total', stats.total.toString()),
+              _detailsRow('Completed', stats.completed.toString()),
+              _detailsRow('Scheduled', stats.scheduled.toString()),
+              _detailsRow('Missed', stats.missed.toString()),
+              _detailsRow('Rescheduled', stats.rescheduled.toString()),
+              _detailsRow('Cancelled', stats.cancelled.toString()),
+              _detailsRow('Overdue', stats.overdue.toString()),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Navigate to manage followups screen if available
+                    // context.go(AppConstants.manageFollowupsRoute);
+                    Navigator.of(ctx).pop();
+                  },
+                  child: const Text('Manage Follow-ups'),
+                ),
+              ),
+            ] else if (type == 'overdue' && stats != null) ...[
+              _detailsRow('Overdue', stats.overdue.toString()),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Navigate to create/manage follow-ups filtered (not implemented here)
+                    Navigator.of(ctx).pop();
+                  },
+                  child: const Text('View Overdue'),
+                ),
+              ),
+            ] else if (type == 'newly_diagnosed') ...[
+              _detailsRow(
+                'Newly Diagnosed',
+                (patientsByStatus['newly_diagnosed'] ?? 0).toString(),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Go to patients list
+                    // context.go(AppConstants.patientsRoute);
+                    Navigator.of(ctx).pop();
+                  },
+                  child: const Text('View Patients'),
+                ),
+              ),
+            ] else if (type == 'on_treatment') ...[
+              _detailsRow(
+                'On Treatment',
+                (patientsByStatus['on_treatment'] ?? 0).toString(),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Go to patients list
+                    // context.go(AppConstants.patientsRoute);
+                    Navigator.of(ctx).pop();
+                  },
+                  child: const Text('View Patients'),
+                ),
+              ),
+            ] else ...[
+              Text(
+                'No details available',
+                style: CHWTheme.bodyStyle.copyWith(color: Colors.grey),
+              ),
+            ],
+            const SizedBox(height: 12),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+String _detailsTitle(String type) {
+  switch (type) {
+    case 'followups':
+      return 'Follow-ups Summary';
+    case 'overdue':
+      return 'Overdue Follow-ups';
+    case 'newly_diagnosed':
+      return 'Newly Diagnosed Patients';
+    case 'on_treatment':
+      return 'Patients On Treatment';
+    default:
+      return 'Details';
+  }
+}
+
+Widget _detailsRow(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: CHWTheme.bodyStyle.copyWith(color: Colors.grey.shade700),
+        ),
+        Text(
+          value,
+          style: CHWTheme.bodyStyle.copyWith(fontWeight: FontWeight.w600),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _kpiCard(String title, String value, {VoidCallback? onViewDetails}) {
   return Container(
     width: 220,
     padding: const EdgeInsets.all(16),
@@ -202,6 +379,8 @@ Widget _kpiCard(String title, String value) {
           value,
           style: CHWTheme.headingStyle.copyWith(color: CHWTheme.primaryColor),
         ),
+        const SizedBox(height: 12),
+        TextButton(onPressed: onViewDetails, child: const Text('View details')),
       ],
     ),
   );
@@ -364,19 +543,25 @@ Widget _leaderboardCard(String title, List<LeaderboardItem> items) {
         ...items
             .take(8)
             .map(
-              (e) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(child: Text(e.label, style: CHWTheme.bodyStyle)),
-                    Text(
-                      e.score.toString(),
-                      style: CHWTheme.bodyStyle.copyWith(
-                        fontWeight: FontWeight.bold,
+              (e) => InkWell(
+                onTap: () {
+                  // Example: navigate to patients list (if desired)
+                  // context.go(AppConstants.patientsRoute);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(child: Text(e.label, style: CHWTheme.bodyStyle)),
+                      Text(
+                        e.score.toString(),
+                        style: CHWTheme.bodyStyle.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -407,11 +592,29 @@ Widget _facilityPerfCard(String title, List<FacilityPerformance> items) {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: CHWTheme.subheadingStyle.copyWith(
-            color: CHWTheme.primaryColor,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: CHWTheme.subheadingStyle.copyWith(
+                color: CHWTheme.primaryColor,
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                final buffer = StringBuffer();
+                buffer.writeln('Facility ID,Patients,Completed Follow-ups');
+                for (final e in items) {
+                  buffer.writeln(
+                    '${e.facilityId},${e.patients},${e.completedFollowups}',
+                  );
+                }
+                await Clipboard.setData(ClipboardData(text: buffer.toString()));
+              },
+              child: const Text('Copy CSV'),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         ...items
@@ -448,5 +651,65 @@ Widget _facilityPerfCard(String title, List<FacilityPerformance> items) {
           ),
       ],
     ),
+  );
+}
+
+Widget _filtersBar(BuildContext context, SupervisorDashboardProvider supProv) {
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 8,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        _filterChip(
+          label: 'Last 30 days',
+          selected: supProv.from != null,
+          onTap: () {
+            final now = DateTime.now();
+            supProv.setDateRange(now.subtract(const Duration(days: 30)), now);
+          },
+        ),
+        _filterChip(
+          label: 'This Month',
+          selected: supProv.from != null,
+          onTap: () {
+            final now = DateTime.now();
+            final start = DateTime(now.year, now.month, 1);
+            supProv.setDateRange(start, now);
+          },
+        ),
+        _filterChip(
+          label: 'Clear',
+          selected: false,
+          onTap: () {
+            supProv.setDateRange(null, null);
+          },
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _filterChip({
+  required String label,
+  required bool selected,
+  required VoidCallback onTap,
+}) {
+  return ChoiceChip(
+    label: Text(label),
+    selected: selected,
+    onSelected: (_) => onTap(),
   );
 }
