@@ -25,6 +25,7 @@ import '../screens/staff/patients/facility_patients_screen.dart';
 import '../screens/staff/referrals/referrals_screen.dart';
 import '../screens/staff/followups/create_followups_screen.dart';
 import '../screens/staff/followups/manage_followups_screen.dart';
+import '../screens/dashboard/supervisor_dashboard.dart';
 
 class AppRouter {
   static GoRouter getRouter(AuthProvider authProvider) {
@@ -48,6 +49,9 @@ class AppRouter {
             if (role == AppConstants.staffRole) {
               return AppConstants.staffDashboardRoute;
             }
+            if (role == AppConstants.supervisorRole) {
+              return AppConstants.supervisorDashboardRoute;
+            }
             // Default to admin-style dashboard for other roles
             return AppConstants.dashboardRoute;
           }
@@ -56,6 +60,12 @@ class AppRouter {
           if (role == AppConstants.staffRole &&
               currentLocation == AppConstants.dashboardRoute) {
             return AppConstants.staffDashboardRoute;
+          }
+
+          // Prevent supervisor from landing on admin dashboard route
+          if (role == AppConstants.supervisorRole &&
+              currentLocation == AppConstants.dashboardRoute) {
+            return AppConstants.supervisorDashboardRoute;
           }
         }
 
@@ -180,14 +190,22 @@ class AppRouter {
               builder: (context, state) => const AssignPatientsScreen(),
             ),
 
-            GoRoute(name: 'patients', path: AppConstants.patientsRoute, builder: (context, state) {
-              return const PatientListScreen();
-            }),
+            GoRoute(
+              name: 'patients',
+              path: AppConstants.patientsRoute,
+              builder: (context, state) {
+                return const PatientListScreen();
+              },
+            ),
 
-            GoRoute(name: 'patientDetails', path: '${AppConstants.patientDetailsRoute}/:patientId', builder: (context, state) {
-              final patientId = state.pathParameters['patientId']!;
-              return PatientDetailsScreen(patientId: patientId);
-            }),
+            GoRoute(
+              name: 'patientDetails',
+              path: '${AppConstants.patientDetailsRoute}/:patientId',
+              builder: (context, state) {
+                final patientId = state.pathParameters['patientId']!;
+                return PatientDetailsScreen(patientId: patientId);
+              },
+            ),
 
             GoRoute(
               name: 'facilityPatients',
@@ -214,6 +232,13 @@ class AppRouter {
               builder: (context, state) => const ManageFollowupsScreen(),
             ),
           ],
+        ),
+
+        // Supervisor Route
+        GoRoute(
+          name: 'supervisorDashboard',
+          path: AppConstants.supervisorDashboardRoute,
+          builder: (context, state) => const SupervisorDashboard(),
         ),
       ],
       errorBuilder: (context, state) => Scaffold(

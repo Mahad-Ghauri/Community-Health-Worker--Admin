@@ -39,6 +39,9 @@ class AppConstants {
   static const String patientDetailsRoute = '/staff/patient-details';
   static const String patientsRoute = '/staff/patient-list';
 
+  // Supervisor Routes
+  static const String supervisorDashboardRoute = '/supervisor/dashboard';
+
   // Facility Types
   static const String hospitalType = 'hospital';
   static const String healthCenterType = 'health_center';

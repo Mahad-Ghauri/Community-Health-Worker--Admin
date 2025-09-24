@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../constants/app_constants.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -185,15 +186,18 @@ class AuthProvider extends ChangeNotifier {
 
   // Get user dashboard route based on role
   String getDashboardRoute() {
-    if (_currentUser == null) return '/login';
+    if (_currentUser == null) return AppConstants.loginRoute;
 
     switch (_currentUser!.role) {
-      case 'staff':
-        return '/staff/dashboard';
-      case 'admin':
-      case 'supervisor':
+      case AppConstants.staffRole:
+        return AppConstants.staffDashboardRoute;
+      case AppConstants.adminRole:
+        return AppConstants.dashboardRoute;
+      case AppConstants.supervisorRole:
+        return AppConstants.supervisorDashboardRoute;
+      case AppConstants.chwRole:
       default:
-        return '/dashboard';
+        return AppConstants.dashboardRoute;
     }
   }
 }
