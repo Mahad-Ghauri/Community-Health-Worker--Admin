@@ -20,7 +20,10 @@ class AuthService {
     if (firebaseUser == null) return null;
 
     try {
-      final doc = await _firestore.collection('accounts').doc(firebaseUser.uid).get();
+      final doc = await _firestore
+          .collection('accounts')
+          .doc(firebaseUser.uid)
+          .get();
       if (doc.exists) {
         return User.fromFirestore(doc.data()!);
       }
@@ -31,13 +34,16 @@ class AuthService {
   }
 
   // Sign in with email and password
-  Future<User?> signInWithEmailAndPassword(String email, String password) async {
+  Future<User?> signInWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     try {
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      
+
       if (credential.user != null) {
         return await getCurrentUserData();
       }
@@ -89,6 +95,140 @@ class AuthService {
       throw _handleAuthException(e);
     }
     return null;
+  }
+
+  // Create user account for admin (creates account without affecting current session)
+  Future<User?> createUserAccount({
+    required String email,
+    required String password,
+    required String name,
+    required String phone,
+    required String role,
+    String? facilityId,
+    String? dateOfBirth,
+    String? gender,
+  }) async {
+    try {
+      // Create the new user account
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (credential.user != null) {
+        final user = User(
+          userId: credential.user!.uid,
+          name: name,
+          email: email,
+          phone: phone,
+          role: role,
+          facilityId: facilityId,
+          dateOfBirth: dateOfBirth,
+          gender: gender,
+          createdAt: DateTime.now(),
+        );
+
+        // Save user data to Firestore
+        await _firestore
+            .collection('accounts')
+            .doc(credential.user!.uid)
+            .set(user.toFirestore());
+
+        // Sign out the newly created user immediately
+        await _auth.signOut();
+
+        return user;
+      }
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    }
+    return null;
+  }
+
+  // Create user with auth (simple approach - admin will need to re-login)
+  Future<User?> createUserWithAuth({
+    required String email,
+    required String password,
+    required String name,
+    required String phone,
+    required String role,
+    String? facilityId,
+    String? dateOfBirth,
+    String? gender,
+  }) async {
+    try {
+      // Create the new user account
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (credential.user != null) {
+        final user = User(
+          userId: credential.user!.uid,
+          name: name,
+          email: email,
+          phone: phone,
+          role: role,
+          facilityId: facilityId,
+          dateOfBirth: dateOfBirth,
+          gender: gender,
+          createdAt: DateTime.now(),
+        );
+
+        // Save user data to Firestore
+        await _firestore
+            .collection('accounts')
+            .doc(credential.user!.uid)
+            .set(user.toFirestore());
+
+        // Sign out the newly created user
+        await _auth.signOut();
+
+        return user;
+      }
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    }
+    return null;
+  }
+
+  // Create user profile only (no Firebase Auth, just Firestore)
+  Future<User?> createUserProfile({
+    required String email,
+    required String name,
+    required String phone,
+    required String role,
+    String? facilityId,
+    String? dateOfBirth,
+    String? gender,
+  }) async {
+    try {
+      // Generate a unique ID for the user
+      final userId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      final user = User(
+        userId: userId,
+        name: name,
+        email: email,
+        phone: phone,
+        role: role,
+        facilityId: facilityId,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
+        createdAt: DateTime.now(),
+      );
+
+      // Save user data to Firestore
+      await _firestore
+          .collection('accounts')
+          .doc(userId)
+          .set(user.toFirestore());
+
+      return user;
+    } catch (e) {
+      throw 'Failed to create user profile: $e';
+    }
   }
 
   // Sign out
@@ -149,7 +289,7 @@ class AuthService {
     try {
       // Delete from Firestore
       await _firestore.collection('accounts').doc(userId).delete();
-      
+
       // Delete from Firebase Auth (only if it's the current user)
       if (currentUser?.uid == userId) {
         await currentUser?.delete();

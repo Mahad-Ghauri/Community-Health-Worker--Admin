@@ -105,6 +105,112 @@ class AuthProvider extends ChangeNotifier {
     return false;
   }
 
+  // Create user account (for admin creating users)
+  Future<bool> createUserAccount({
+    required String email,
+    required String password,
+    required String name,
+    required String phone,
+    required String role,
+    String? facilityId,
+    String? dateOfBirth,
+    String? gender,
+  }) async {
+    _setLoading(true);
+    try {
+      final user = await _authService.createUserAccount(
+        email: email,
+        password: password,
+        name: name,
+        phone: phone,
+        role: role,
+        facilityId: facilityId,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
+      );
+
+      if (user != null) {
+        _errorMessage = null;
+        _setLoading(false);
+        return true;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    }
+    _setLoading(false);
+    return false;
+  }
+
+  // Create user profile only (no Firebase Auth, just Firestore)
+  Future<bool> createUserProfile({
+    required String email,
+    required String name,
+    required String phone,
+    required String role,
+    String? facilityId,
+    String? dateOfBirth,
+    String? gender,
+  }) async {
+    _setLoading(true);
+    try {
+      final user = await _authService.createUserProfile(
+        email: email,
+        name: name,
+        phone: phone,
+        role: role,
+        facilityId: facilityId,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
+      );
+
+      if (user != null) {
+        _errorMessage = null;
+        _setLoading(false);
+        return true;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    }
+    _setLoading(false);
+    return false;
+  }
+
+  // Create user with authentication (admin will need to re-login)
+  Future<bool> createUserWithAuth({
+    required String email,
+    required String password,
+    required String name,
+    required String phone,
+    required String role,
+    String? facilityId,
+    String? dateOfBirth,
+    String? gender,
+  }) async {
+    _setLoading(true);
+    try {
+      final user = await _authService.createUserWithAuth(
+        email: email,
+        password: password,
+        name: name,
+        phone: phone,
+        role: role,
+        facilityId: facilityId,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
+      );
+
+      if (user != null) {
+        _errorMessage = null;
+        _setLoading(false);
+        return true;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    }
+    _setLoading(false);
+    return false;
+  }
+
   // Sign out
   Future<void> signOut() async {
     _setLoading(true);

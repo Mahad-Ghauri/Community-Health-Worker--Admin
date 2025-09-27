@@ -58,16 +58,18 @@ class AppRouter {
             return AppConstants.dashboardRoute;
           }
 
-          // Prevent staff from landing on admin dashboard route
-          if (role == AppConstants.staffRole &&
-              currentLocation == AppConstants.dashboardRoute) {
-            return AppConstants.staffDashboardRoute;
-          }
+          // Only redirect if user is trying to access a route they shouldn't
+          // Don't redirect if they're already on an appropriate route
+          if (currentLocation == AppConstants.dashboardRoute) {
+            // Prevent staff from landing on admin dashboard route
+            if (role == AppConstants.staffRole) {
+              return AppConstants.staffDashboardRoute;
+            }
 
-          // Prevent supervisor from landing on admin dashboard route
-          if (role == AppConstants.supervisorRole &&
-              currentLocation == AppConstants.dashboardRoute) {
-            return AppConstants.supervisorDashboardRoute;
+            // Prevent supervisor from landing on admin dashboard route
+            if (role == AppConstants.supervisorRole) {
+              return AppConstants.supervisorDashboardRoute;
+            }
           }
         }
 
