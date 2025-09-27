@@ -11,10 +11,13 @@ class User {
   final String email;
   final String phone;
   final String role; // 'admin', 'staff', 'supervisor'
-  final String? facilityId; // Can be null for users working at multiple facilities
+  final String?
+  facilityId; // Can be null for users working at multiple facilities
   final String? dateOfBirth; // Date of birth
   final String? gender; // Gender
   final DateTime createdAt;
+  final bool?
+  needsPasswordSetup; // Flag to indicate if user needs to set up password
 
   User({
     required this.userId,
@@ -26,6 +29,7 @@ class User {
     this.dateOfBirth,
     this.gender,
     required this.createdAt,
+    this.needsPasswordSetup,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -39,6 +43,7 @@ class User {
       'dateOfBirth': dateOfBirth,
       'gender': gender,
       'createdAt': Timestamp.fromDate(createdAt),
+      'needsPasswordSetup': needsPasswordSetup,
     };
   }
 
@@ -53,6 +58,7 @@ class User {
       dateOfBirth: data['dateOfBirth'],
       gender: data['gender'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      needsPasswordSetup: data['needsPasswordSetup'],
     );
   }
 
@@ -67,9 +73,9 @@ class UserRole {
   static const String admin = 'admin';
   static const String staff = 'staff';
   static const String supervisor = 'supervisor';
-  
+
   static List<String> get all => [admin, staff, supervisor];
-  
+
   static String getDisplayName(String role) {
     switch (role) {
       case admin:

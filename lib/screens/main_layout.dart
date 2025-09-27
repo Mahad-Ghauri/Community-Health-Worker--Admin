@@ -215,34 +215,48 @@ class _MainLayoutState extends State<MainLayout> {
 
   Widget _buildNavigationMenu(BuildContext context) {
     final currentLocation = GoRouterState.of(context).uri.toString();
+    final authProvider = Provider.of<AuthProvider>(context);
+    final userRole = authProvider.currentUser?.role;
 
-    final menuItems = [
+    // Filter menu items based on user role
+    final allMenuItems = [
       NavigationItem(
         icon: Icons.dashboard,
         label: 'Dashboard',
         route: AppConstants.dashboardRoute,
+        requiredRole: null, // Available to all roles
       ),
       NavigationItem(
         icon: Icons.people,
         label: 'User Management',
         route: AppConstants.usersRoute,
+        requiredRole: AppConstants.adminRole, // Admin only
       ),
       NavigationItem(
         icon: Icons.business,
         label: 'Facilities',
         route: AppConstants.facilitiesRoute,
+        requiredRole: AppConstants.adminRole, // Admin only
       ),
       NavigationItem(
         icon: Icons.history,
         label: 'Audit Logs',
         route: AppConstants.auditLogsRoute,
+        requiredRole: AppConstants.adminRole, // Admin only
       ),
       NavigationItem(
         icon: Icons.settings,
         label: 'Settings',
         route: AppConstants.settingsRoute,
+        requiredRole: null, // Available to all roles
       ),
     ];
+
+    // Filter menu items based on user role
+    final menuItems = allMenuItems.where((item) {
+      if (item.requiredRole == null) return true;
+      return userRole == item.requiredRole;
+    }).toList();
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -381,10 +395,12 @@ class NavigationItem {
   final IconData icon;
   final String label;
   final String route;
+  final String? requiredRole;
 
   NavigationItem({
     required this.icon,
     required this.label,
     required this.route,
+    this.requiredRole,
   });
 }

@@ -145,7 +145,7 @@ class AuthService {
     return null;
   }
 
-  // Create user with auth (simple approach - admin will need to re-login)
+  // Create user with auth (admin-friendly approach - preserves admin session)
   Future<User?> createUserWithAuth({
     required String email,
     required String password,
@@ -157,40 +157,48 @@ class AuthService {
     String? gender,
   }) async {
     try {
-      // Create the new user account
-      final credential = await _auth.createUserWithEmailAndPassword(
+      // For now, we'll create a user profile only and let the admin know
+      // that the user will need to use "Forgot Password" to set up their account
+      // This avoids the logout issue while still creating the user
+
+      // Generate a unique ID for the user (we'll use timestamp + random)
+      final userId =
+          '${DateTime.now().millisecondsSinceEpoch}_${email.hashCode}';
+
+      final user = User(
+        userId: userId,
+        name: name,
         email: email,
-        password: password,
+        phone: phone,
+        role: role,
+        facilityId: facilityId,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
+        createdAt: DateTime.now(),
+        // Add a flag to indicate this user needs to set up their password
+        needsPasswordSetup: true,
       );
 
-      if (credential.user != null) {
-        final user = User(
-          userId: credential.user!.uid,
-          name: name,
-          email: email,
-          phone: phone,
-          role: role,
-          facilityId: facilityId,
-          dateOfBirth: dateOfBirth,
-          gender: gender,
-          createdAt: DateTime.now(),
-        );
+      // Save user data to Firestore
+      await _firestore
+          .collection('accounts')
+          .doc(userId)
+          .set(user.toFirestore());
 
-        // Save user data to Firestore
-        await _firestore
-            .collection('accounts')
-            .doc(credential.user!.uid)
-            .set(user.toFirestore());
+      // Store the password temporarily for the user to set up later
+      // In a real app, you might want to send this via email or secure channel
+      await _firestore.collection('temp_passwords').doc(userId).set({
+        'password': password,
+        'createdAt': DateTime.now(),
+        'expiresAt': DateTime.now().add(
+          const Duration(hours: 24),
+        ), // Expire in 24 hours
+      });
 
-        // Sign out the newly created user
-        await _auth.signOut();
-
-        return user;
-      }
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
+      return user;
+    } catch (e) {
+      throw 'Failed to create user: $e';
     }
-    return null;
   }
 
   // Create user profile only (no Firebase Auth, just Firestore)

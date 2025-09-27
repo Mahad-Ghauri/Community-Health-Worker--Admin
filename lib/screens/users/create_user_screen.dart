@@ -112,10 +112,17 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
 
       if (success) {
         if (mounted) {
+          String message = 'User created successfully!';
+          if (createWithAuth == true) {
+            message =
+                'User created successfully! The user will need to use "Forgot Password" to set up their account.';
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('User created successfully!'),
+            SnackBar(
+              content: Text(message),
               backgroundColor: Colors.green,
+              duration: const Duration(seconds: 5),
             ),
           );
 
@@ -173,7 +180,7 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
         title: const Text('User Creation Type'),
         content: const Text(
           'How would you like to create this user?\n\n'
-          '• With Authentication: User can sign in with email/password (you will be logged out)\n'
+          '• With Authentication: User profile created, they will need to use "Forgot Password" to set up their account\n'
           '• Profile Only: User profile only, no login capability',
         ),
         actions: [

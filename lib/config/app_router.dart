@@ -2,6 +2,7 @@ import 'package:chw_admin/screens/staff/patients/patient_details_screen.dart';
 import 'package:chw_admin/screens/staff/patients/patient_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../constants/app_constants.dart';
 import '../services/auth_provider.dart';
 import '../screens/auth/login_screen.dart';
@@ -254,15 +255,20 @@ class AppRouter {
         ),
 
         // Supervisor Routes
-        GoRoute(
-          name: 'supervisorDashboard',
-          path: AppConstants.supervisorDashboardRoute,
-          builder: (context, state) => const SupervisorDashboard(),
-        ),
-        GoRoute(
-          name: 'supervisorPatients',
-          path: AppConstants.supervisorPatientsRoute,
-          builder: (context, state) => const SupervisorPatientsScreen(),
+        ShellRoute(
+          builder: (context, state, child) => MainLayout(child: child),
+          routes: [
+            GoRoute(
+              name: 'supervisorDashboard',
+              path: AppConstants.supervisorDashboardRoute,
+              builder: (context, state) => const SupervisorDashboard(),
+            ),
+            GoRoute(
+              name: 'supervisorPatients',
+              path: AppConstants.supervisorPatientsRoute,
+              builder: (context, state) => const SupervisorPatientsScreen(),
+            ),
+          ],
         ),
       ],
       errorBuilder: (context, state) => Scaffold(
@@ -283,7 +289,25 @@ class AppRouter {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => context.goNamed('dashboard'),
+                onPressed: () {
+                  // Navigate to appropriate dashboard based on user role
+                  final authProvider = Provider.of<AuthProvider>(
+                    context,
+                    listen: false,
+                  );
+                  if (authProvider.isAuthenticated) {
+                    final role = authProvider.currentUser?.role;
+                    if (role == AppConstants.staffRole) {
+                      context.goNamed('staffDashboard');
+                    } else if (role == AppConstants.supervisorRole) {
+                      context.goNamed('supervisorDashboard');
+                    } else {
+                      context.goNamed('dashboard');
+                    }
+                  } else {
+                    context.goNamed('login');
+                  }
+                },
                 child: const Text('Go to Dashboard'),
               ),
             ],
