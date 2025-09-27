@@ -6,11 +6,8 @@ import '../../constants/app_constants.dart';
 
 class StaffLayout extends StatefulWidget {
   final Widget child;
-  
-  const StaffLayout({
-    super.key,
-    required this.child,
-  });
+
+  const StaffLayout({super.key, required this.child});
 
   @override
   State<StaffLayout> createState() => _StaffLayoutState();
@@ -62,13 +59,19 @@ class _StaffLayoutState extends State<StaffLayout> {
       icon: Icons.medical_services,
       route: AppConstants.manageMedicationsRoute,
     ),
+    StaffNavigationItem(
+      id: 'contact_screening',
+      label: 'Contact Screening',
+      icon: Icons.science,
+      route: AppConstants.contactScreeningRoute,
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
-    
+
     // Responsive breakpoints
     final isMobile = screenWidth < 600;
     final isTablet = screenWidth >= 600 && screenWidth < 1024;
@@ -91,7 +94,9 @@ class _StaffLayoutState extends State<StaffLayout> {
         currentIndex: _selectedIndex,
         onTap: _onNavigationTap,
         selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+        unselectedItemColor: Theme.of(
+          context,
+        ).colorScheme.onSurface.withOpacity(0.6),
         selectedFontSize: 12,
         unselectedFontSize: 12,
         items: [
@@ -126,10 +131,14 @@ class _StaffLayoutState extends State<StaffLayout> {
             onDestinationSelected: _onNavigationTap,
             labelType: NavigationRailLabelType.selected,
             backgroundColor: Theme.of(context).colorScheme.surface,
-            destinations: _navigationItems.map((item) => NavigationRailDestination(
-              icon: Icon(item.icon),
-              label: Text(item.label),
-            )).toList(),
+            destinations: _navigationItems
+                .map(
+                  (item) => NavigationRailDestination(
+                    icon: Icon(item.icon),
+                    label: Text(item.label),
+                  ),
+                )
+                .toList(),
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(child: widget.child),
@@ -152,7 +161,9 @@ class _StaffLayoutState extends State<StaffLayout> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
                     border: Border(
                       bottom: BorderSide(
                         color: Theme.of(context).dividerColor,
@@ -171,10 +182,11 @@ class _StaffLayoutState extends State<StaffLayout> {
                       Expanded(
                         child: Text(
                           'TB Staff Portal',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                       ),
                     ],
@@ -188,27 +200,36 @@ class _StaffLayoutState extends State<StaffLayout> {
                     itemBuilder: (context, index) {
                       final item = _navigationItems[index];
                       final isSelected = index == _selectedIndex;
-                      
+
                       return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         child: ListTile(
                           leading: Icon(
                             item.icon,
-                            color: isSelected 
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
                           ),
                           title: Text(
                             item.label,
                             style: TextStyle(
-                              color: isSelected 
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.onSurface,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                             ),
                           ),
                           selected: isSelected,
-                          selectedTileColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          selectedTileColor: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.1),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -232,7 +253,7 @@ class _StaffLayoutState extends State<StaffLayout> {
     setState(() {
       _selectedIndex = index;
     });
-    
+
     // Navigate to the selected route
     final route = _navigationItems[index].route;
     if (mounted) {

@@ -27,6 +27,7 @@ import '../screens/staff/followups/create_followups_screen.dart';
 import '../screens/staff/followups/manage_followups_screen.dart';
 import '../screens/dashboard/supervisor_dashboard.dart';
 import '../screens/staff/medications/manage_medications_screen.dart';
+import '../screens/staff/contact_screening/contact_screening_screen.dart';
 
 class AppRouter {
   static GoRouter getRouter(AuthProvider authProvider) {
@@ -238,6 +239,13 @@ class AppRouter {
               name: 'manageMedications',
               path: AppConstants.manageMedicationsRoute,
               builder: (context, state) => const ManageMedicationsScreen(),
+            ),
+
+            // Contact Screening
+            GoRoute(
+              name: 'contactScreening',
+              path: AppConstants.contactScreeningRoute,
+              builder: (context, state) => const ContactScreeningScreen(),
             ),
           ],
         ),

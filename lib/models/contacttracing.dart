@@ -13,6 +13,11 @@ class ContactTracing {
   final List<String> symptoms; // From symptoms checklist
   final String testResult; // 'negative', 'positive', 'pending', 'not_tested'
   final bool referralNeeded;
+  final String? referredFacilityId; // ID of facility patient is referred to
+  final String? referredFacilityName; // Name of facility for display
+  final String? referralReason; // Reason for referral
+  final String? referralUrgency; // 'low', 'medium', 'high', 'urgent'
+  final DateTime? referralDate; // When referral was made
   final String notes;
   final DateTime? followUpDate;
 
@@ -29,6 +34,11 @@ class ContactTracing {
     required this.symptoms,
     required this.testResult,
     required this.referralNeeded,
+    this.referredFacilityId,
+    this.referredFacilityName,
+    this.referralReason,
+    this.referralUrgency,
+    this.referralDate,
     required this.notes,
     this.followUpDate,
   });
@@ -47,8 +57,17 @@ class ContactTracing {
       'symptoms': symptoms,
       'testResult': testResult,
       'referralNeeded': referralNeeded,
+      'referredFacilityId': referredFacilityId,
+      'referredFacilityName': referredFacilityName,
+      'referralReason': referralReason,
+      'referralUrgency': referralUrgency,
+      'referralDate': referralDate != null
+          ? Timestamp.fromDate(referralDate!)
+          : null,
       'notes': notes,
-      'followUpDate': followUpDate != null ? Timestamp.fromDate(followUpDate!) : null,
+      'followUpDate': followUpDate != null
+          ? Timestamp.fromDate(followUpDate!)
+          : null,
     };
   }
 
@@ -61,11 +80,17 @@ class ContactTracing {
       relationship: data['relationship'] ?? '',
       age: data['age'] ?? 0,
       gender: data['gender'] ?? '',
-      screeningDate: (data['screeningDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      screeningDate:
+          (data['screeningDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       screenedBy: data['screenedBy'] ?? '',
       symptoms: List<String>.from(data['symptoms'] ?? []),
       testResult: data['testResult'] ?? 'pending',
       referralNeeded: data['referralNeeded'] ?? false,
+      referredFacilityId: data['referredFacilityId'],
+      referredFacilityName: data['referredFacilityName'],
+      referralReason: data['referralReason'],
+      referralUrgency: data['referralUrgency'],
+      referralDate: (data['referralDate'] as Timestamp?)?.toDate(),
       notes: data['notes'] ?? '',
       followUpDate: (data['followUpDate'] as Timestamp?)?.toDate(),
     );
