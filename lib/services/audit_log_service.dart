@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/audit_log.dart';
-import '../constants/app_constants.dart';
 
 class AuditLogService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;

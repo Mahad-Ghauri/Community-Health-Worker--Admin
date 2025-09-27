@@ -350,7 +350,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: testTypeController.text.isEmpty
+                  initialValue: testTypeController.text.isEmpty
                       ? null
                       : testTypeController.text,
                   decoration: const InputDecoration(
@@ -383,7 +383,7 @@ class _ContactScreeningScreenState extends State<ContactScreeningScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: testResultController.text.isEmpty
+                  initialValue: testResultController.text.isEmpty
                       ? null
                       : testResultController.text,
                   decoration: const InputDecoration(

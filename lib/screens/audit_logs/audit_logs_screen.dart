@@ -760,7 +760,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     final auditLogs = provider.auditLogs;
     print('[DEBUG] auditLogs in _buildAuditLogsList: ${auditLogs.length}');
     if (auditLogs.isEmpty) {
-      return Container(
+      return SizedBox(
         height: 300,
         child: Center(
           child: Column(

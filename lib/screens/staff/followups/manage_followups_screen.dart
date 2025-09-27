@@ -440,7 +440,7 @@ class _SidebarSection extends StatelessWidget {
             padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [
-                Text('$title', style: Theme.of(context).textTheme.titleMedium),
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(width: 8),
                 Chip(label: Text('$count')),
               ],
