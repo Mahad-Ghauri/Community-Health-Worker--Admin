@@ -26,6 +26,7 @@ import '../screens/staff/referrals/referrals_screen.dart';
 import '../screens/staff/followups/create_followups_screen.dart';
 import '../screens/staff/followups/manage_followups_screen.dart';
 import '../screens/dashboard/supervisor_dashboard.dart';
+import '../screens/supervisor/supervisor_patients_screen.dart';
 import '../screens/staff/medications/manage_medications_screen.dart';
 import '../screens/staff/contact_screening/contact_screening_screen.dart';
 
@@ -252,11 +253,16 @@ class AppRouter {
           ],
         ),
 
-        // Supervisor Route
+        // Supervisor Routes
         GoRoute(
           name: 'supervisorDashboard',
           path: AppConstants.supervisorDashboardRoute,
           builder: (context, state) => const SupervisorDashboard(),
+        ),
+        GoRoute(
+          name: 'supervisorPatients',
+          path: AppConstants.supervisorPatientsRoute,
+          builder: (context, state) => const SupervisorPatientsScreen(),
         ),
       ],
       errorBuilder: (context, state) => Scaffold(

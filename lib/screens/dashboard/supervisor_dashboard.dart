@@ -282,7 +282,7 @@ void _showDetails(
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    context.go(AppConstants.patientsRoute);
+                    context.go(AppConstants.supervisorPatientsRoute);
                   },
                   child: const Text('View Patients'),
                 ),
@@ -298,7 +298,7 @@ void _showDetails(
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    context.go(AppConstants.patientsRoute);
+                    context.go(AppConstants.supervisorPatientsRoute);
                   },
                   child: const Text('View Patients'),
                 ),
@@ -550,7 +550,7 @@ Widget _leaderboardCard(
                 padding: const EdgeInsets.symmetric(vertical: 6.0),
                 child: InkWell(
                   onTap: () {
-                    context.go(AppConstants.patientsRoute);
+                    context.go(AppConstants.supervisorPatientsRoute);
                   },
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
