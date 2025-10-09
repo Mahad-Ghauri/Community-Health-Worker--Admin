@@ -70,6 +70,17 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
       return;
     }
 
+    // Validate password is provided
+    if (_passwordController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password is required for user creation'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -77,60 +88,34 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      // Ask admin which type of user creation they want
-      final createWithAuth = await _showUserCreationDialog();
-
-      bool success;
-      if (createWithAuth == true) {
-        // Create user with authentication
-        success = await authProvider.createUserWithAuth(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-          name: _nameController.text.trim(),
-          phone: _phoneController.text.trim(),
-          role: _selectedRole!,
-          facilityId: _selectedFacilityId,
-          dateOfBirth: _dateOfBirthController.text.isNotEmpty
-              ? _dateOfBirthController.text
-              : null,
-          gender: _selectedGender,
-        );
-      } else {
-        // Create user profile only (no auth)
-        success = await authProvider.createUserProfile(
-          email: _emailController.text.trim(),
-          name: _nameController.text.trim(),
-          phone: _phoneController.text.trim(),
-          role: _selectedRole!,
-          facilityId: _selectedFacilityId,
-          dateOfBirth: _dateOfBirthController.text.isNotEmpty
-              ? _dateOfBirthController.text
-              : null,
-          gender: _selectedGender,
-        );
-      }
+      // Create user with Firebase Authentication
+      final success = await authProvider.createUserAccount(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        role: _selectedRole!,
+        facilityId: _selectedFacilityId,
+        dateOfBirth: _dateOfBirthController.text.isNotEmpty
+            ? _dateOfBirthController.text
+            : null,
+        gender: _selectedGender,
+      );
 
       if (success) {
         if (mounted) {
-          String message = 'User created successfully!';
-          if (createWithAuth == true) {
-            message =
-                'User created successfully! The user will need to use "Forgot Password" to set up their account.';
-          }
-
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
+            const SnackBar(
+              content: Text(
+                'User created successfully! The user can now log in with their email and password.',
+              ),
               backgroundColor: Colors.green,
-              duration: const Duration(seconds: 5),
+              duration: Duration(seconds: 5),
             ),
           );
 
           // Clear form
           _clearForm();
-
-          // Stay on the same page - don't navigate away
-          return;
         }
       } else {
         if (mounted) {
@@ -173,29 +158,7 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
     });
   }
 
-  Future<bool?> _showUserCreationDialog() async {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('User Creation Type'),
-        content: const Text(
-          'How would you like to create this user?\n\n'
-          '• With Authentication: User profile created, they will need to use "Forgot Password" to set up their account\n'
-          '• Profile Only: User profile only, no login capability',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Profile Only'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('With Authentication'),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
@@ -220,6 +183,16 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
   String? _validateRequired(String? value, String fieldName) {
     if (value == null || value.isEmpty) {
       return '$fieldName is required';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Password is required';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
     }
     return null;
   }
@@ -292,16 +265,13 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Password Field (optional - only needed for auth)
+                          // Password Field
                           CustomTextField(
-                            label: 'Password (Optional)',
-                            hint: 'Enter password for authentication',
+                            label: 'Password',
+                            hint: 'Enter password for the user',
                             controller: _passwordController,
                             obscureText: true,
-                            validator: (value) {
-                              // Only validate if user chooses auth
-                              return null;
-                            },
+                            validator: (value) => _validatePassword(value),
                           ),
                           const SizedBox(height: 16),
 
