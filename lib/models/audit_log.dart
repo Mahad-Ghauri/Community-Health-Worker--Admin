@@ -38,9 +38,30 @@ class AuditLog {
       who: data['who'] ?? '',
       what: data['what'] ?? '',
       when: (data['when'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      where: data['where'] != null ? Map<String, double>.from(data['where']) : null,
+      where: data['where'] != null ? _parseLocationMap(data['where']) : null,
       additionalData: data['additionalData'],
     );
+  }
+
+  // Helper method to safely parse location map handling both int and double types
+  static Map<String, double>? _parseLocationMap(dynamic locationData) {
+    if (locationData == null) return null;
+    
+    try {
+      final Map<String, dynamic> rawMap = Map<String, dynamic>.from(locationData);
+      final Map<String, double> result = {};
+      
+      rawMap.forEach((key, value) {
+        if (value is num) {
+          result[key] = value.toDouble();
+        }
+      });
+      
+      return result.isNotEmpty ? result : null;
+    } catch (e) {
+      // If parsing fails, return null to avoid crashes
+      return null;
+    }
   }
 
   // Create AuditLog from Firestore document (for backward compatibility)

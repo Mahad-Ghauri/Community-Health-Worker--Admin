@@ -53,15 +53,24 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: Consumer<AuditLogProvider>(
         builder: (context, auditLogProvider, child) {
-          // DEBUG: Print audit log provider state
-         
           return Column(
             children: [
+              // Fixed header section
               _buildHeader(context, auditLogProvider),
-              _buildStatisticsCards(context, auditLogProvider),
-              _buildFiltersBar(context, auditLogProvider),
-              Flexible(
-                child: _buildAuditLogsList(context, auditLogProvider),
+              // Scrollable content section
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildStatisticsCards(context, auditLogProvider),
+                      _buildFiltersBar(context, auditLogProvider),
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.6,
+                        child: _buildAuditLogsList(context, auditLogProvider),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           );
