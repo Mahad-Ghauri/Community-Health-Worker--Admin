@@ -454,7 +454,7 @@ class _SupervisorPatientsScreenState extends State<SupervisorPatientsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<String>(
-              value: _selectedTbStatus.isEmpty ? null : _selectedTbStatus,
+              initialValue: _selectedTbStatus.isEmpty ? null : _selectedTbStatus,
               decoration: const InputDecoration(labelText: 'TB Status'),
               items: [
                 const DropdownMenuItem(value: '', child: Text('All Statuses')),
@@ -480,7 +480,7 @@ class _SupervisorPatientsScreenState extends State<SupervisorPatientsScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedGender.isEmpty ? null : _selectedGender,
+              initialValue: _selectedGender.isEmpty ? null : _selectedGender,
               decoration: const InputDecoration(labelText: 'Gender'),
               items: [
                 const DropdownMenuItem(value: '', child: Text('All Genders')),
