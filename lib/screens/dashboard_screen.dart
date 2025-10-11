@@ -16,7 +16,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final dashboardProvider = Provider.of<DashboardProvider>(context, listen: false);
+      final dashboardProvider = Provider.of<DashboardProvider>(
+        context,
+        listen: false,
+      );
       dashboardProvider.loadMetrics();
       dashboardProvider.startAutoRefresh();
     });
@@ -39,7 +42,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     _buildHeader(dashboardProvider),
                     const SizedBox(height: 24),
-                    if (dashboardProvider.isLoading && !dashboardProvider.hasData)
+                    if (dashboardProvider.isLoading &&
+                        !dashboardProvider.hasData)
                       const Center(child: CircularProgressIndicator())
                     else if (dashboardProvider.error != null)
                       _buildErrorCard(dashboardProvider)
@@ -77,9 +81,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'Admin Dashboard',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -105,15 +109,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(width: 4),
             Text(
               'Last updated: ${provider.lastRefreshText}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[500],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
             ),
             const SizedBox(width: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: _getStatusColor(provider.systemHealthStatus).withOpacity(0.1),
+                color: _getStatusColor(
+                  provider.systemHealthStatus,
+                ).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _getStatusColor(provider.systemHealthStatus),
@@ -175,14 +181,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildMetricsGrid(DashboardProvider provider) {
     final metrics = provider.metrics!;
-    
+    final width = MediaQuery.of(context).size.width;
+    // Responsive grid settings for small screens to prevent overflow
+    final isVeryNarrow = width < 340;
+    final isNarrow = width < 380;
+    final crossAxisCount = isVeryNarrow ? 1 : 2;
+    final childAspectRatio = isVeryNarrow
+        ? 0.85 // single column, make cards taller to prevent overflow
+        : (isNarrow
+              ? 0.75 // two columns: taller on narrow phones to prevent overflow
+              : 1.2); // normal aspect ratio for wider screens
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
+      crossAxisCount: crossAxisCount,
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: 1.3,
+      childAspectRatio: childAspectRatio,
       children: [
         _buildMetricCard(
           title: 'Total Users',
@@ -228,8 +244,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color color,
     required double growth,
   }) {
+    final width = MediaQuery.of(context).size.width;
+    final isVeryNarrow = width < 340;
+    
+    // Responsive padding and spacing
+    final cardPadding = isVeryNarrow ? 10.0 : 12.0;
+    final iconPadding = isVeryNarrow ? 6.0 : 8.0;
+    final iconSize = isVeryNarrow ? 18.0 : 20.0;
+    final titleFontSize = isVeryNarrow ? 11.0 : 12.0;
+    final valueFontSize = isVeryNarrow ? 18.0 : 20.0;
+    final subtitleFontSize = isVeryNarrow ? 10.0 : 11.0;
+    final verticalSpacing = isVeryNarrow ? 4.0 : 6.0;
+    
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(cardPadding),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -242,23 +270,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(iconPadding),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Icon(icon, color: color, size: iconSize),
               ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: growth >= 0 ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                  color: growth >= 0
+                      ? Colors.green.withOpacity(0.1)
+                      : Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -283,29 +314,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: verticalSpacing),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 14,
+            style: TextStyle(
+              fontSize: titleFontSize,
               color: Colors.grey,
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+          const SizedBox(height: 2),
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: valueFontSize,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
+          const SizedBox(height: 2),
+          Flexible(
+            child: Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: subtitleFontSize,
+                color: Colors.grey[600],
+                height: 1.1,
+              ),
             ),
           ),
         ],
@@ -319,9 +357,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         Text(
           'System Overview',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Container(
@@ -351,15 +389,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildSystemHealthIndicator(DashboardProvider provider) {
     final indicators = provider.performanceIndicators;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'System Health Indicators',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -367,9 +405,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
           runSpacing: 8,
           children: [
             _buildIndicatorChip('Users Active', indicators['hasUsers']!),
-            _buildIndicatorChip('Facilities Online', indicators['hasFacilities']!),
-            _buildIndicatorChip('Patients Registered', indicators['hasPatients']!),
-            _buildIndicatorChip('Recent Activity', indicators['hasRecentActivity']!),
+            _buildIndicatorChip(
+              'Facilities Online',
+              indicators['hasFacilities']!,
+            ),
+            _buildIndicatorChip(
+              'Patients Registered',
+              indicators['hasPatients']!,
+            ),
+            _buildIndicatorChip(
+              'Recent Activity',
+              indicators['hasRecentActivity']!,
+            ),
           ],
         ),
       ],
@@ -380,7 +427,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+        color: isActive
+            ? Colors.green.withOpacity(0.1)
+            : Colors.red.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isActive ? Colors.green : Colors.red,
@@ -414,15 +463,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildDistributionChart(DashboardProvider provider) {
     final metrics = provider.metrics!;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Data Distribution',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
         Row(
@@ -459,17 +508,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDistributionBar(String label, int value, int total, Color color) {
+  Widget _buildDistributionBar(
+    String label,
+    int value,
+    int total,
+    Color color,
+  ) {
     final percentage = total > 0 ? (value / total) : 0.0;
-    
+
     return Column(
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 4),
         Container(
@@ -504,10 +555,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 2),
         Text(
           '${(percentage * 100).toStringAsFixed(1)}%',
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 10, color: Colors.grey[600]),
         ),
       ],
     );
@@ -515,7 +563,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildRecentActivity(DashboardProvider provider) {
     final activities = provider.recentActivity;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -523,9 +571,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Text(
               'Recent Activity',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const Spacer(),
             TextButton(
@@ -569,10 +617,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: activities.length > 5 ? 5 : activities.length,
-                  separatorBuilder: (context, index) => Divider(
-                    height: 1,
-                    color: Colors.grey[200],
-                  ),
+                  separatorBuilder: (context, index) =>
+                      Divider(height: 1, color: Colors.grey[200]),
                   itemBuilder: (context, index) {
                     final activity = activities[index];
                     return _buildActivityItem(activity);
@@ -641,7 +687,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _formatActivityTime(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-    
+
     if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inMinutes < 60) {
@@ -679,10 +725,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            provider.error!,
-            style: TextStyle(color: Colors.red[600]),
-          ),
+          Text(provider.error!, style: TextStyle(color: Colors.red[600])),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -716,16 +759,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 16),
           Text(
             'No dashboard data available',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
           ),
           const SizedBox(height: 8),
           Text(
             'Data will appear here once users start using the system',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
             textAlign: TextAlign.center,
           ),
         ],

@@ -3,10 +3,12 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user.dart';
+import 'firebase_admin_service.dart';
 
 class AuthService {
   final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAdminService _adminService = FirebaseAdminService();
 
   // Get current user stream
   Stream<firebase_auth.User?> get authStateChanges => _auth.authStateChanges();
@@ -109,40 +111,20 @@ class AuthService {
     String? gender,
   }) async {
     try {
-      // Create the new user account
-      final credential = await _auth.createUserWithEmailAndPassword(
+      // Use Firebase Admin Service to create user without affecting current session
+      return await _adminService.createUserWithFirebaseAuth(
         email: email,
         password: password,
+        name: name,
+        phone: phone,
+        role: role,
+        facilityId: facilityId,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
       );
-
-      if (credential.user != null) {
-        final user = User(
-          userId: credential.user!.uid,
-          name: name,
-          email: email,
-          phone: phone,
-          role: role,
-          facilityId: facilityId,
-          dateOfBirth: dateOfBirth,
-          gender: gender,
-          createdAt: DateTime.now(),
-        );
-
-        // Save user data to Firestore
-        await _firestore
-            .collection('accounts')
-            .doc(credential.user!.uid)
-            .set(user.toFirestore());
-
-        // Sign out the newly created user immediately
-        await _auth.signOut();
-
-        return user;
-      }
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
+    } catch (e) {
+      throw 'Failed to create user account: $e';
     }
-    return null;
   }
 
   // Create user with auth (admin-friendly approach - preserves admin session)
@@ -157,45 +139,17 @@ class AuthService {
     String? gender,
   }) async {
     try {
-      // For now, we'll create a user profile only and let the admin know
-      // that the user will need to use "Forgot Password" to set up their account
-      // This avoids the logout issue while still creating the user
-
-      // Generate a unique ID for the user (we'll use timestamp + random)
-      final userId =
-          '${DateTime.now().millisecondsSinceEpoch}_${email.hashCode}';
-
-      final user = User(
-        userId: userId,
-        name: name,
+      // Use Firebase Admin Service to create user with Firebase Auth without affecting current session
+      return await _adminService.createUserWithFirebaseAuth(
         email: email,
+        password: password,
+        name: name,
         phone: phone,
         role: role,
         facilityId: facilityId,
         dateOfBirth: dateOfBirth,
         gender: gender,
-        createdAt: DateTime.now(),
-        // Add a flag to indicate this user needs to set up their password
-        needsPasswordSetup: true,
       );
-
-      // Save user data to Firestore
-      await _firestore
-          .collection('accounts')
-          .doc(userId)
-          .set(user.toFirestore());
-
-      // Store the password temporarily for the user to set up later
-      // In a real app, you might want to send this via email or secure channel
-      await _firestore.collection('temp_passwords').doc(userId).set({
-        'password': password,
-        'createdAt': DateTime.now(),
-        'expiresAt': DateTime.now().add(
-          const Duration(hours: 24),
-        ), // Expire in 24 hours
-      });
-
-      return user;
     } catch (e) {
       throw 'Failed to create user: $e';
     }
