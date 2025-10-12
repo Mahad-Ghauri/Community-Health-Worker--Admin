@@ -7,6 +7,7 @@ import '../../../models/patient.dart';
 import '../../../models/chw_user.dart';
 import '../../../models/assignment.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/auth_provider.dart';
 
 class AssignPatientsScreen extends StatefulWidget {
   const AssignPatientsScreen({super.key});
@@ -35,6 +36,23 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
 
   // Add this flag to prevent multiple navigation calls
   bool _isProcessing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize facility context
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      final assignmentProvider = context.read<AssignmentProvider>();
+      final facilityId = auth.currentUser?.facilityId;
+      if (facilityId != null && facilityId.isNotEmpty) {
+        assignmentProvider.setFacilityId(facilityId);
+        print('DEBUG: Facility ID set to: $facilityId');
+      } else {
+        print('DEBUG: ERROR - No facility ID found for user');
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -100,6 +118,17 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
                     setState(() => _isProcessing = true);
                     try {
                       final userId = _authService.currentUser?.uid ?? '';
+                      if (userId.isEmpty) {
+                        _showSnack(
+                          context,
+                          'Authentication error - please login again',
+                        );
+                        return;
+                      }
+
+                      print(
+                        'DEBUG: Checking phone exists for: ${_phoneCtrl.text.trim()}',
+                      );
                       final exists = await provider.phoneExists(
                         _phoneCtrl.text.trim(),
                       );
@@ -107,6 +136,10 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
                         _showSnack(context, 'Phone already exists');
                         return;
                       }
+
+                      print(
+                        'DEBUG: Creating patient with name: ${_nameCtrl.text.trim()}',
+                      );
                       final id = await provider.createPatient(
                         name: _nameCtrl.text.trim(),
                         age: int.tryParse(_ageCtrl.text.trim()) ?? 0,
@@ -117,15 +150,32 @@ class _AssignPatientsScreenState extends State<AssignPatientsScreen> {
                         diagnosisDate: _diagnosisDate,
                         createdBy: userId,
                       );
+
+                      print('DEBUG: Patient creation result: $id');
                       if (id != null) {
                         final doc = await provider.searchPatients(id);
+                        print('DEBUG: Search results count: ${doc.length}');
                         if (doc.isNotEmpty) {
                           setState(() {
                             _selectedPatient = doc.first;
                             _currentStep = 1;
                           });
+                          print('DEBUG: Successfully advanced to step 1');
+                        } else {
+                          _showSnack(
+                            context,
+                            'Patient created but could not be retrieved',
+                          );
                         }
+                      } else {
+                        _showSnack(
+                          context,
+                          'Failed to create patient - check facility context',
+                        );
                       }
+                    } catch (e) {
+                      print('DEBUG: Exception in patient creation: $e');
+                      _showSnack(context, 'Error creating patient: $e');
                     } finally {
                       if (mounted) {
                         setState(() => _isProcessing = false);
