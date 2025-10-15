@@ -1,8 +1,13 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:universal_html/html.dart' as html;
 import '../providers/dashboard_provider.dart';
+import '../services/patient_service.dart';
+import '../utils/export_utils.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -94,12 +99,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            else
+            else ...[
+              IconButton(
+                onPressed: () => _showExportDialog(context),
+                icon: Icon(Icons.download, color: Colors.green[600]),
+                tooltip: 'Export Patient Data',
+              ),
               IconButton(
                 onPressed: provider.refreshMetrics,
                 icon: Icon(Icons.refresh, color: Colors.blue[600]),
                 tooltip: 'Refresh Dashboard',
               ),
+            ],
           ],
         ),
         const SizedBox(height: 8),
@@ -772,6 +783,254 @@ class _DashboardScreenState extends State<DashboardScreen> {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+
+  void _showExportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.download, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Export Patient Data'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This will export all patient data from the system as a CSV file.',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, 
+                    size: 20, 
+                    color: Colors.orange[700],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This may take a moment for large datasets.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange[900],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _exportPatientsData(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.download),
+            label: const Text('Export CSV'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportPatientsData(BuildContext context) async {
+    print('[EXPORT] Starting patient data export...');
+    final startTime = DateTime.now();
+    
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Exporting patient data...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      print('[EXPORT] Creating PatientService instance...');
+      final patientService = PatientService();
+      
+      print('[EXPORT] Fetching all patients from Firestore...');
+      final fetchStartTime = DateTime.now();
+      final patients = await patientService.getAllPatients();
+      final fetchDuration = DateTime.now().difference(fetchStartTime);
+      print('[EXPORT] Fetched ${patients.length} patients in ${fetchDuration.inMilliseconds}ms');
+
+      // Close loading dialog first
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        print('[EXPORT] Loading dialog closed');
+      }
+
+      if (patients.isEmpty) {
+        print('[EXPORT] No patients found to export');
+        if (context.mounted) {
+          _showMessage(
+            context,
+            'No patient data to export',
+            isError: true,
+          );
+        }
+        return;
+      }
+
+      print('[EXPORT] Generating CSV data...');
+      final csvStartTime = DateTime.now();
+      final csvData = ExportUtils.generatePatientsCsv(patients);
+      final csvDuration = DateTime.now().difference(csvStartTime);
+      print('[EXPORT] CSV generated in ${csvDuration.inMilliseconds}ms, size: ${csvData.length} characters');
+      
+      final filename = 'patients_export_${DateTime.now().millisecondsSinceEpoch}.csv';
+      print('[EXPORT] Initiating download for file: $filename');
+      
+      final downloadStartTime = DateTime.now();
+      _downloadCsv(csvData, filename);
+      final downloadDuration = DateTime.now().difference(downloadStartTime);
+      print('[EXPORT] Download initiated in ${downloadDuration.inMilliseconds}ms');
+      
+      final totalDuration = DateTime.now().difference(startTime);
+      print('[EXPORT] Total export process completed in ${totalDuration.inSeconds}s');
+      
+      if (context.mounted) {
+        _showMessage(
+          context,
+          'Successfully exported ${patients.length} patient records',
+        );
+      }
+    } catch (e, stackTrace) {
+      print('[EXPORT] ERROR: $e');
+      print('[EXPORT] Stack trace: $stackTrace');
+      
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+      
+      if (context.mounted) {
+        _showMessage(
+          context,
+          'Failed to export patient data: $e',
+          isError: true,
+        );
+      }
+    }
+  }
+
+  void _downloadCsv(String csvData, String filename) {
+    print('[DOWNLOAD] Starting download for: $filename');
+    print('[DOWNLOAD] CSV size: ${csvData.length} characters (${(csvData.length / 1024).toStringAsFixed(2)} KB)');
+    print('[DOWNLOAD] Platform: ${kIsWeb ? "Web" : "Mobile/Desktop"}');
+    
+    if (kIsWeb) {
+      try {
+        print('[DOWNLOAD] Creating blob for web download...');
+        // Web download
+        final bytes = utf8.encode(csvData);
+        print('[DOWNLOAD] Encoded ${bytes.length} bytes');
+        
+        final blob = html.Blob([bytes]);
+        print('[DOWNLOAD] Blob created');
+        
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        print('[DOWNLOAD] Object URL created: $url');
+        
+        print('[DOWNLOAD] Creating and clicking anchor element...');
+        html.AnchorElement(href: url)
+          ..setAttribute('download', filename)
+          ..click();
+        print('[DOWNLOAD] Click triggered');
+        
+        html.Url.revokeObjectUrl(url);
+        print('[DOWNLOAD] Object URL revoked');
+        print('[DOWNLOAD] Web download completed successfully');
+      } catch (e, stackTrace) {
+        print('[DOWNLOAD] ERROR in web download: $e');
+        print('[DOWNLOAD] Stack trace: $stackTrace');
+      }
+    } else {
+      print('[DOWNLOAD] Showing CSV preview dialog for mobile/desktop...');
+      // For mobile/desktop, show the CSV in a dialog
+      // In a production app, you would use file_picker or path_provider
+      _showCsvPreviewDialog(csvData, filename);
+    }
+  }
+
+  void _showCsvPreviewDialog(String csvData, String filename) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('CSV Export: $filename'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              csvData,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMessage(BuildContext context, String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_outline,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: isError ? Colors.red[600] : Colors.green[600],
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
       ),
     );
   }

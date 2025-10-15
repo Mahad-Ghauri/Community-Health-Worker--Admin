@@ -182,4 +182,53 @@ class PatientService {
 
     return filtered;
   }
+
+  /// Get all patients from all facilities for admin export
+  Future<List<Patient>> getAllPatients() async {
+    print('[PatientService] getAllPatients called');
+    try {
+      print('[PatientService] Querying Firestore for all patients...');
+      final queryStartTime = DateTime.now();
+      
+      final QuerySnapshot<Map<String, dynamic>> snapshot = await _patientsCol
+          .orderBy('createdAt', descending: true)
+          .get()
+          .timeout(
+            const Duration(seconds: 60),
+            onTimeout: () {
+              print('[PatientService] Query timed out after 60 seconds');
+              throw Exception('Firestore query timed out after 60 seconds');
+            },
+          );
+      
+      final queryDuration = DateTime.now().difference(queryStartTime);
+      print('[PatientService] Firestore query completed in ${queryDuration.inMilliseconds}ms');
+      print('[PatientService] Retrieved ${snapshot.docs.length} documents');
+
+      print('[PatientService] Mapping documents to Patient objects...');
+      final mapStartTime = DateTime.now();
+      
+      final patients = snapshot.docs
+          .map((doc) {
+            try {
+              return Patient.fromMap(doc.data(), doc.id);
+            } catch (e) {
+              print('[PatientService] Error mapping document ${doc.id}: $e');
+              return null;
+            }
+          })
+          .whereType<Patient>()
+          .toList();
+      
+      final mapDuration = DateTime.now().difference(mapStartTime);
+      print('[PatientService] Mapping completed in ${mapDuration.inMilliseconds}ms');
+      print('[PatientService] Successfully mapped ${patients.length} patients');
+      
+      return patients;
+    } catch (e, stackTrace) {
+      print('[PatientService] ERROR in getAllPatients: $e');
+      print('[PatientService] Stack trace: $stackTrace');
+      throw Exception('Failed to fetch all patients: $e');
+    }
+  }
 }
