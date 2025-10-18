@@ -47,9 +47,7 @@ class _UserListScreenState extends State<UserListScreen> {
           const SizedBox(height: 16),
           _buildStatistics(context),
           const SizedBox(height: 16),
-          Expanded(
-            child: _buildUsersList(context),
-          ),
+          Expanded(child: _buildUsersList(context)),
         ],
       ),
     );
@@ -60,22 +58,35 @@ class _UserListScreenState extends State<UserListScreen> {
     final screenWidth = mediaQuery.size.width;
     final isCompact = screenWidth < 600;
     final isSmallMobile = screenWidth < 480;
-    
+
     // Adaptive font sizes based on screen width
-    final titleFontSize = isSmallMobile ? 20.0 : 
-                          isCompact ? 24.0 : 
-                          screenWidth < 900 ? 28.0 :
-                          screenWidth < 1200 ? 32.0 : 36.0;
-    
-    final subtitleFontSize = isSmallMobile ? 12.0 :
-                             isCompact ? 14.0 :
-                             screenWidth < 1200 ? 16.0 : 18.0;
-    
+    final titleFontSize = isSmallMobile
+        ? 20.0
+        : isCompact
+        ? 24.0
+        : screenWidth < 900
+        ? 28.0
+        : screenWidth < 1200
+        ? 32.0
+        : 36.0;
+
+    final subtitleFontSize = isSmallMobile
+        ? 12.0
+        : isCompact
+        ? 14.0
+        : screenWidth < 1200
+        ? 16.0
+        : 18.0;
+
     // Adaptive button sizing
-    final buttonWidth = isSmallMobile ? 120.0 :
-                        isCompact ? 140.0 :
-                        screenWidth < 1200 ? 160.0 : 180.0;
-    
+    final buttonWidth = isSmallMobile
+        ? 120.0
+        : isCompact
+        ? 140.0
+        : screenWidth < 1200
+        ? 160.0
+        : 180.0;
+
     if (isSmallMobile) {
       // Stack vertically for very small screens
       return Column(
@@ -109,7 +120,7 @@ class _UserListScreenState extends State<UserListScreen> {
         ],
       );
     }
-    
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -154,7 +165,7 @@ class _UserListScreenState extends State<UserListScreen> {
       builder: (context, userProvider, child) {
         final mediaQuery = MediaQuery.of(context);
         final screenWidth = mediaQuery.size.width;
-        
+
         return LayoutBuilder(
           builder: (context, constraints) {
             // Determine layout based on available width
@@ -163,9 +174,16 @@ class _UserListScreenState extends State<UserListScreen> {
             } else if (screenWidth < 768) {
               return _buildMixedFiltersLayout(userProvider, screenWidth);
             } else if (screenWidth < 1024) {
-              return _buildHorizontalFiltersLayout(userProvider, screenWidth, 2);
+              return _buildHorizontalFiltersLayout(
+                userProvider,
+                screenWidth,
+                2,
+              );
             } else {
-              return _buildFullHorizontalFiltersLayout(userProvider, screenWidth);
+              return _buildFullHorizontalFiltersLayout(
+                userProvider,
+                screenWidth,
+              );
             }
           },
         );
@@ -173,9 +191,12 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
-  Widget _buildVerticalFiltersLayout(UserProvider userProvider, double screenWidth) {
+  Widget _buildVerticalFiltersLayout(
+    UserProvider userProvider,
+    double screenWidth,
+  ) {
     final spacing = screenWidth * 0.03;
-    
+
     return Column(
       children: [
         _buildAdaptiveSearchField(userProvider, screenWidth),
@@ -192,18 +213,25 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
-  Widget _buildMixedFiltersLayout(UserProvider userProvider, double screenWidth) {
+  Widget _buildMixedFiltersLayout(
+    UserProvider userProvider,
+    double screenWidth,
+  ) {
     final spacing = screenWidth * 0.025;
-    
+
     return Column(
       children: [
         _buildAdaptiveSearchField(userProvider, screenWidth),
         SizedBox(height: spacing),
         Row(
           children: [
-            Expanded(child: _buildAdaptiveRoleFilter(userProvider, screenWidth)),
+            Expanded(
+              child: _buildAdaptiveRoleFilter(userProvider, screenWidth),
+            ),
             SizedBox(width: spacing),
-            Expanded(child: _buildAdaptiveFacilityFilter(userProvider, screenWidth)),
+            Expanded(
+              child: _buildAdaptiveFacilityFilter(userProvider, screenWidth),
+            ),
           ],
         ),
         SizedBox(height: spacing),
@@ -217,22 +245,33 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
-  Widget _buildHorizontalFiltersLayout(UserProvider userProvider, double screenWidth, int rows) {
+  Widget _buildHorizontalFiltersLayout(
+    UserProvider userProvider,
+    double screenWidth,
+    int rows,
+  ) {
     final spacing = screenWidth * 0.02;
-    
+
     return Column(
       children: [
         Row(
           children: [
-            Expanded(flex: 3, child: _buildAdaptiveSearchField(userProvider, screenWidth)),
+            Expanded(
+              flex: 3,
+              child: _buildAdaptiveSearchField(userProvider, screenWidth),
+            ),
             SizedBox(width: spacing),
-            Expanded(child: _buildAdaptiveRoleFilter(userProvider, screenWidth)),
+            Expanded(
+              child: _buildAdaptiveRoleFilter(userProvider, screenWidth),
+            ),
           ],
         ),
         SizedBox(height: spacing),
         Row(
           children: [
-            Expanded(child: _buildAdaptiveFacilityFilter(userProvider, screenWidth)),
+            Expanded(
+              child: _buildAdaptiveFacilityFilter(userProvider, screenWidth),
+            ),
             SizedBox(width: spacing),
             _buildClearFiltersButton(userProvider, screenWidth),
           ],
@@ -241,43 +280,76 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
-  Widget _buildFullHorizontalFiltersLayout(UserProvider userProvider, double screenWidth) {
-    final spacing = screenWidth < 1200 ? 16.0 : 
-                   screenWidth < 1600 ? 20.0 : 24.0;
-    
+  Widget _buildFullHorizontalFiltersLayout(
+    UserProvider userProvider,
+    double screenWidth,
+  ) {
+    final spacing = screenWidth < 1200
+        ? 16.0
+        : screenWidth < 1600
+        ? 20.0
+        : 24.0;
+
     return Row(
       children: [
-        Expanded(flex: 3, child: _buildAdaptiveSearchField(userProvider, screenWidth)),
+        Expanded(
+          flex: 3,
+          child: _buildAdaptiveSearchField(userProvider, screenWidth),
+        ),
         SizedBox(width: spacing),
         Expanded(child: _buildAdaptiveRoleFilter(userProvider, screenWidth)),
         SizedBox(width: spacing),
-        Expanded(child: _buildAdaptiveFacilityFilter(userProvider, screenWidth)),
+        Expanded(
+          child: _buildAdaptiveFacilityFilter(userProvider, screenWidth),
+        ),
         SizedBox(width: spacing),
         _buildClearFiltersButton(userProvider, screenWidth),
       ],
     );
   }
 
-  Widget _buildAdaptiveSearchField(UserProvider userProvider, double screenWidth) {
+  Widget _buildAdaptiveSearchField(
+    UserProvider userProvider,
+    double screenWidth,
+  ) {
     // Dynamic measurements based on screen width
-    final height = screenWidth < 480 ? 44.0 :
-                  screenWidth < 768 ? 48.0 :
-                  screenWidth < 1024 ? 52.0 : 56.0;
-    
-    final iconSize = screenWidth < 480 ? 18.0 :
-                    screenWidth < 768 ? 20.0 :
-                    screenWidth < 1024 ? 22.0 : 24.0;
-    
-    final fontSize = screenWidth < 480 ? 13.0 :
-                    screenWidth < 768 ? 14.0 :
-                    screenWidth < 1024 ? 15.0 : 16.0;
-    
-    final borderRadius = screenWidth < 600 ? 8.0 :
-                        screenWidth < 1024 ? 12.0 : 16.0;
-    
-    final horizontalPadding = screenWidth < 480 ? 12.0 :
-                             screenWidth < 768 ? 16.0 :
-                             screenWidth < 1024 ? 20.0 : 24.0;
+    final height = screenWidth < 480
+        ? 44.0
+        : screenWidth < 768
+        ? 48.0
+        : screenWidth < 1024
+        ? 52.0
+        : 56.0;
+
+    final iconSize = screenWidth < 480
+        ? 18.0
+        : screenWidth < 768
+        ? 20.0
+        : screenWidth < 1024
+        ? 22.0
+        : 24.0;
+
+    final fontSize = screenWidth < 480
+        ? 13.0
+        : screenWidth < 768
+        ? 14.0
+        : screenWidth < 1024
+        ? 15.0
+        : 16.0;
+
+    final borderRadius = screenWidth < 600
+        ? 8.0
+        : screenWidth < 1024
+        ? 12.0
+        : 16.0;
+
+    final horizontalPadding = screenWidth < 480
+        ? 12.0
+        : screenWidth < 768
+        ? 16.0
+        : screenWidth < 1024
+        ? 20.0
+        : 24.0;
 
     return Container(
       height: height,
@@ -291,11 +363,10 @@ class _UserListScreenState extends State<UserListScreen> {
         onChanged: userProvider.searchUsers,
         style: TextStyle(fontSize: fontSize),
         decoration: InputDecoration(
-          hintText: screenWidth < 480 ? 'Search...' : 'Search users by name, email, or phone...',
-          hintStyle: TextStyle(
-            fontSize: fontSize - 1,
-            color: Colors.grey[500],
-          ),
+          hintText: screenWidth < 480
+              ? 'Search...'
+              : 'Search users by name, email, or phone...',
+          hintStyle: TextStyle(fontSize: fontSize - 1, color: Colors.grey[500]),
           prefixIcon: Icon(
             Icons.search,
             size: iconSize,
@@ -320,22 +391,30 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
-  Widget _buildAdaptiveRoleFilter(UserProvider userProvider, double screenWidth) {
+  Widget _buildAdaptiveRoleFilter(
+    UserProvider userProvider,
+    double screenWidth,
+  ) {
     return _buildAdaptiveDropdown(
       value: userProvider.selectedRole,
       hint: 'Role',
       items: ['All', 'Admin', 'Staff', 'Supervisor'],
-      onChanged: (value) => userProvider.filterByRole(value == 'All' ? null : value),
+      onChanged: (value) =>
+          userProvider.filterByRole(value == 'All' ? null : value),
       screenWidth: screenWidth,
     );
   }
 
-  Widget _buildAdaptiveFacilityFilter(UserProvider userProvider, double screenWidth) {
+  Widget _buildAdaptiveFacilityFilter(
+    UserProvider userProvider,
+    double screenWidth,
+  ) {
     return _buildAdaptiveDropdown(
       value: userProvider.selectedFacility,
       hint: 'Facility',
       items: ['All', 'Main Hospital', 'Branch Clinic', 'Community Center'],
-      onChanged: (value) => userProvider.filterByFacility(value == 'All' ? null : value),
+      onChanged: (value) =>
+          userProvider.filterByFacility(value == 'All' ? null : value),
       screenWidth: screenWidth,
     );
   }
@@ -347,24 +426,41 @@ class _UserListScreenState extends State<UserListScreen> {
     required Function(String?) onChanged,
     required double screenWidth,
   }) {
-    final height = screenWidth < 480 ? 44.0 :
-                  screenWidth < 768 ? 48.0 :
-                  screenWidth < 1024 ? 52.0 : 56.0;
-    
-    final fontSize = screenWidth < 480 ? 13.0 :
-                    screenWidth < 768 ? 14.0 :
-                    screenWidth < 1024 ? 15.0 : 16.0;
-    
-    final borderRadius = screenWidth < 600 ? 8.0 :
-                        screenWidth < 1024 ? 12.0 : 16.0;
-    
-    final iconSize = screenWidth < 480 ? 18.0 :
-                    screenWidth < 768 ? 20.0 :
-                    screenWidth < 1024 ? 22.0 : 24.0;
+    final height = screenWidth < 480
+        ? 44.0
+        : screenWidth < 768
+        ? 48.0
+        : screenWidth < 1024
+        ? 52.0
+        : 56.0;
+
+    final fontSize = screenWidth < 480
+        ? 13.0
+        : screenWidth < 768
+        ? 14.0
+        : screenWidth < 1024
+        ? 15.0
+        : 16.0;
+
+    final borderRadius = screenWidth < 600
+        ? 8.0
+        : screenWidth < 1024
+        ? 12.0
+        : 16.0;
+
+    final iconSize = screenWidth < 480
+        ? 18.0
+        : screenWidth < 768
+        ? 20.0
+        : screenWidth < 1024
+        ? 22.0
+        : 24.0;
 
     return Container(
       height: height,
-      padding: EdgeInsets.symmetric(horizontal: screenWidth < 480 ? 12.0 : 16.0),
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth < 480 ? 12.0 : 16.0,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(color: Colors.grey[300]!),
@@ -375,10 +471,7 @@ class _UserListScreenState extends State<UserListScreen> {
           value: value,
           hint: Text(
             hint,
-            style: TextStyle(
-              fontSize: fontSize,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: fontSize, color: Colors.grey[500]),
           ),
           icon: Icon(Icons.arrow_drop_down, size: iconSize),
           isExpanded: true,
@@ -387,10 +480,7 @@ class _UserListScreenState extends State<UserListScreen> {
             color: Theme.of(context).colorScheme.onSurface,
           ),
           items: items.map((String item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            );
+            return DropdownMenuItem<String>(value: item, child: Text(item));
           }).toList(),
           onChanged: onChanged,
         ),
@@ -398,12 +488,19 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
-  Widget _buildClearFiltersButton(UserProvider userProvider, double screenWidth) {
+  Widget _buildClearFiltersButton(
+    UserProvider userProvider,
+    double screenWidth,
+  ) {
     final isCompact = screenWidth < 768;
-    final buttonWidth = screenWidth < 480 ? double.infinity :
-                       screenWidth < 768 ? 120.0 :
-                       screenWidth < 1024 ? 140.0 : 160.0;
-    
+    final buttonWidth = screenWidth < 480
+        ? double.infinity
+        : screenWidth < 768
+        ? 120.0
+        : screenWidth < 1024
+        ? 140.0
+        : 160.0;
+
     final widget = common.CustomButton(
       text: isCompact ? 'Clear' : 'Clear Filters',
       isSecondary: true,
@@ -413,25 +510,36 @@ class _UserListScreenState extends State<UserListScreen> {
       },
     );
 
-    return screenWidth < 480 
-        ? widget 
+    return screenWidth < 480
+        ? widget
         : SizedBox(width: buttonWidth, child: widget);
   }
 
   Widget _buildSearchField(UserProvider userProvider) {
     final screenWidth = ResponsiveHelper.getScreenWidth(context);
     final isExtraSmall = ResponsiveHelper.isExtraSmall(context);
-    final borderRadius = ResponsiveHelper.getResponsiveBorderRadius(context, 12);
-    
+    final borderRadius = ResponsiveHelper.getResponsiveBorderRadius(
+      context,
+      12,
+    );
+
     // Ultra-adaptive height and padding
-    final height = isExtraSmall ? 44.0 : 
-                  screenWidth < 600 ? 48.0 : 
-                  screenWidth < 1200 ? 52.0 : 56.0;
-    
-    final iconSize = isExtraSmall ? 18.0 : 
-                    screenWidth < 600 ? 20.0 : 
-                    screenWidth < 1200 ? 22.0 : 24.0;
-    
+    final height = isExtraSmall
+        ? 44.0
+        : screenWidth < 600
+        ? 48.0
+        : screenWidth < 1200
+        ? 52.0
+        : 56.0;
+
+    final iconSize = isExtraSmall
+        ? 18.0
+        : screenWidth < 600
+        ? 20.0
+        : screenWidth < 1200
+        ? 22.0
+        : 24.0;
+
     return SizedBox(
       height: height,
       child: TextField(
@@ -449,10 +557,7 @@ class _UserListScreenState extends State<UserListScreen> {
           ),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-                  icon: Icon(
-                    Icons.clear,
-                    size: iconSize,
-                  ),
+                  icon: Icon(Icons.clear, size: iconSize),
                   onPressed: () {
                     _searchController.clear();
                     userProvider.searchUsers('');
@@ -472,8 +577,16 @@ class _UserListScreenState extends State<UserListScreen> {
             borderSide: const BorderSide(color: Colors.blue, width: 2),
           ),
           contentPadding: EdgeInsets.symmetric(
-            horizontal: isExtraSmall ? 12 : screenWidth < 600 ? 16 : 20,
-            vertical: isExtraSmall ? 10 : screenWidth < 600 ? 12 : 16,
+            horizontal: isExtraSmall
+                ? 12
+                : screenWidth < 600
+                ? 16
+                : 20,
+            vertical: isExtraSmall
+                ? 10
+                : screenWidth < 600
+                ? 12
+                : 16,
           ),
           filled: true,
           fillColor: Colors.grey[50],
@@ -505,10 +618,12 @@ class _UserListScreenState extends State<UserListScreen> {
       value: userProvider.selectedRole,
       items: [
         const DropdownMenuItem(value: null, child: Text('All Roles')),
-        ...UserRole.all.map((role) => DropdownMenuItem(
-          value: role,
-          child: Text(UserRole.getDisplayName(role)),
-        )),
+        ...UserRole.all.map(
+          (role) => DropdownMenuItem(
+            value: role,
+            child: Text(UserRole.getDisplayName(role)),
+          ),
+        ),
       ],
       onChanged: userProvider.filterByRole,
     );
@@ -535,7 +650,7 @@ class _UserListScreenState extends State<UserListScreen> {
 
         final mediaQuery = MediaQuery.of(context);
         final screenWidth = mediaQuery.size.width;
-        
+
         // Calculate optimal columns based on screen width
         int columns;
         if (screenWidth < 480) {
@@ -547,40 +662,73 @@ class _UserListScreenState extends State<UserListScreen> {
         } else {
           columns = 4;
         }
-        
+
         // Dynamic spacing based on screen width
-        final spacing = screenWidth < 600 ? 12.0 :
-                       screenWidth < 900 ? 16.0 :
-                       screenWidth < 1200 ? 20.0 : 24.0;
-        
+        final spacing = screenWidth < 600
+            ? 12.0
+            : screenWidth < 900
+            ? 16.0
+            : screenWidth < 1200
+            ? 20.0
+            : 24.0;
+
         // Adaptive aspect ratio for cards
-        final aspectRatio = screenWidth < 480 ? 4.5 :
-                           screenWidth < 768 ? 3.8 :
-                           screenWidth < 1024 ? 3.2 : 3.0;
+        final aspectRatio = screenWidth < 480
+            ? 4.5
+            : screenWidth < 768
+            ? 3.8
+            : screenWidth < 1024
+            ? 3.2
+            : 3.0;
 
         return _buildFluidStatsGrid(stats, columns, spacing, aspectRatio);
       },
     );
   }
 
-  Widget _buildFluidStatsGrid(Map<String, int> stats, int columns, double spacing, double aspectRatio) {
+  Widget _buildFluidStatsGrid(
+    Map<String, int> stats,
+    int columns,
+    double spacing,
+    double aspectRatio,
+  ) {
     final statsList = [
-      {'title': 'Total Users', 'value': stats['total'] ?? 0, 'icon': Icons.people, 'color': Colors.blue},
-      {'title': 'Administrators', 'value': stats['admin'] ?? 0, 'icon': Icons.admin_panel_settings, 'color': Colors.purple},
-      {'title': 'Staff Members', 'value': stats['staff'] ?? 0, 'icon': Icons.person, 'color': Colors.green},
-      {'title': 'Supervisors', 'value': stats['supervisor'] ?? 0, 'icon': Icons.supervisor_account, 'color': Colors.orange},
+      {
+        'title': 'Total Users',
+        'value': stats['total'] ?? 0,
+        'icon': Icons.people,
+        'color': Colors.blue,
+      },
+      {
+        'title': 'Administrators',
+        'value': stats['admin'] ?? 0,
+        'icon': Icons.admin_panel_settings,
+        'color': Colors.purple,
+      },
+      {
+        'title': 'Staff Members',
+        'value': stats['staff'] ?? 0,
+        'icon': Icons.person,
+        'color': Colors.green,
+      },
+      {
+        'title': 'Supervisors',
+        'value': stats['supervisor'] ?? 0,
+        'icon': Icons.supervisor_account,
+        'color': Colors.orange,
+      },
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final mediaQuery = MediaQuery.of(context);
         final screenWidth = mediaQuery.size.width;
-        
+
         // Calculate card width considering constraints and spacing
         final availableWidth = constraints.maxWidth;
         final totalSpacing = (columns - 1) * spacing;
         final cardWidth = (availableWidth - totalSpacing) / columns;
-        
+
         return Wrap(
           spacing: spacing,
           runSpacing: spacing,
@@ -597,27 +745,49 @@ class _UserListScreenState extends State<UserListScreen> {
 
   Widget _buildAdaptiveStatCard(Map<String, dynamic> stat, double screenWidth) {
     // Adaptive measurements based on screen width
-    final iconSize = screenWidth < 480 ? 24.0 :
-                    screenWidth < 768 ? 32.0 :
-                    screenWidth < 1024 ? 36.0 : 40.0;
-    
-    final titleFontSize = screenWidth < 480 ? 11.0 :
-                         screenWidth < 768 ? 12.0 :
-                         screenWidth < 1024 ? 13.0 : 14.0;
-    
-    final valueFontSize = screenWidth < 480 ? 18.0 :
-                         screenWidth < 768 ? 22.0 :
-                         screenWidth < 1024 ? 26.0 : 28.0;
-    
-    final cardPadding = screenWidth < 480 ? 12.0 :
-                       screenWidth < 768 ? 16.0 :
-                       screenWidth < 1024 ? 20.0 : 24.0;
-    
-    final borderRadius = screenWidth < 600 ? 8.0 :
-                        screenWidth < 1024 ? 12.0 : 16.0;
-    
-    final elevation = screenWidth < 600 ? 1.0 :
-                     screenWidth < 1024 ? 2.0 : 3.0;
+    final iconSize = screenWidth < 480
+        ? 24.0
+        : screenWidth < 768
+        ? 32.0
+        : screenWidth < 1024
+        ? 36.0
+        : 40.0;
+
+    final titleFontSize = screenWidth < 480
+        ? 11.0
+        : screenWidth < 768
+        ? 12.0
+        : screenWidth < 1024
+        ? 13.0
+        : 14.0;
+
+    final valueFontSize = screenWidth < 480
+        ? 18.0
+        : screenWidth < 768
+        ? 22.0
+        : screenWidth < 1024
+        ? 26.0
+        : 28.0;
+
+    final cardPadding = screenWidth < 480
+        ? 12.0
+        : screenWidth < 768
+        ? 16.0
+        : screenWidth < 1024
+        ? 20.0
+        : 24.0;
+
+    final borderRadius = screenWidth < 600
+        ? 8.0
+        : screenWidth < 1024
+        ? 12.0
+        : 16.0;
+
+    final elevation = screenWidth < 600
+        ? 1.0
+        : screenWidth < 1024
+        ? 2.0
+        : 3.0;
 
     return Card(
       elevation: elevation,
@@ -634,7 +804,9 @@ class _UserListScreenState extends State<UserListScreen> {
               padding: EdgeInsets.all(screenWidth < 600 ? 8.0 : 12.0),
               decoration: BoxDecoration(
                 color: (stat['color'] as Color).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(screenWidth < 600 ? 8.0 : 12.0),
+                borderRadius: BorderRadius.circular(
+                  screenWidth < 600 ? 8.0 : 12.0,
+                ),
               ),
               child: Icon(
                 stat['icon'] as IconData,
@@ -695,9 +867,10 @@ class _UserListScreenState extends State<UserListScreen> {
         if (users.isEmpty) {
           return common.EmptyStateWidget(
             title: 'No Users Found',
-            message: userProvider.searchTerm.isNotEmpty || 
-                     userProvider.selectedRole != null || 
-                     userProvider.selectedFacility != null
+            message:
+                userProvider.searchTerm.isNotEmpty ||
+                    userProvider.selectedRole != null ||
+                    userProvider.selectedFacility != null
                 ? 'No users match your current filters'
                 : 'No users have been created yet',
             icon: const Icon(Icons.people_outline, size: 64),
@@ -711,8 +884,9 @@ class _UserListScreenState extends State<UserListScreen> {
 
         return ResponsiveWidget(
           mobile: _buildUserCards(users),
-          tabletSmall: ResponsiveHelper.isTabletSmall(context) && users.length > 10 
-              ? _buildTabletCards(users) 
+          tabletSmall:
+              ResponsiveHelper.isTabletSmall(context) && users.length > 10
+              ? _buildTabletCards(users)
               : _buildUsersTable(users),
           tabletLarge: _buildUsersTable(users),
           desktop: _buildUsersTable(users),
@@ -737,7 +911,8 @@ class _UserListScreenState extends State<UserListScreen> {
         return Card(
           elevation: 2,
           child: InkWell(
-            onTap: () => context.go('${AppConstants.userDetailsRoute}/${user.userId}'),
+            onTap: () =>
+                context.go('${AppConstants.userDetailsRoute}/${user.userId}'),
             borderRadius: BorderRadius.circular(8),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -745,7 +920,9 @@ class _UserListScreenState extends State<UserListScreen> {
                 children: [
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: _getRoleColor(user.role).withValues(alpha: 0.2),
+                    backgroundColor: _getRoleColor(
+                      user.role,
+                    ).withValues(alpha: 0.2),
                     child: Text(
                       user.name.substring(0, 1).toUpperCase(),
                       style: TextStyle(
@@ -785,7 +962,9 @@ class _UserListScreenState extends State<UserListScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: _getRoleColor(user.role).withValues(alpha: 0.1),
+                            color: _getRoleColor(
+                              user.role,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -801,7 +980,8 @@ class _UserListScreenState extends State<UserListScreen> {
                     ),
                   ),
                   PopupMenuButton<String>(
-                    onSelected: (value) => _handleUserAction(context, value, user),
+                    onSelected: (value) =>
+                        _handleUserAction(context, value, user),
                     icon: const Icon(Icons.more_vert),
                     itemBuilder: (context) => [
                       const PopupMenuItem(
@@ -854,203 +1034,243 @@ class _UserListScreenState extends State<UserListScreen> {
           color: Colors.white,
         ),
         child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minWidth: MediaQuery.of(context).size.width - 64,
-            ),
-            child: DataTable(
-              columnSpacing: 32,
-              headingRowHeight: 64,
-              dataRowHeight: 72,
-              headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
-              columns: const [
-                DataColumn(
-                  label: Text(
-                    'User',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Contact',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Role & Status',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Created',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Actions',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
-                ),
-              ],
-              rows: users.map((user) {
-                return DataRow(
-                  cells: [
-                    DataCell(
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: _getRoleColor(user.role).withValues(alpha: 0.2),
-                            child: Text(
-                              user.name.substring(0, 1).toUpperCase(),
-                              style: TextStyle(
-                                color: _getRoleColor(user.role),
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                user.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                'ID: ${user.userId}',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width - 64,
+              child: DataTable(
+                columnSpacing: 32,
+                headingRowHeight: 64,
+                dataRowHeight: 72,
+                headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
+                columns: const [
+                  DataColumn(
+                    label: Text(
+                      'User',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
                       ),
                     ),
-                    DataCell(
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.email, size: 16, color: Colors.grey),
-                              const SizedBox(width: 8),
-                              Text(user.email),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          if (user.phone.isNotEmpty)
-                            Row(
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Contact',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Role & Status',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Created',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Actions',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+                rows: users.map((user) {
+                  return DataRow(
+                    cells: [
+                      DataCell(
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: _getRoleColor(
+                                user.role,
+                              ).withValues(alpha: 0.2),
+                              child: Text(
+                                user.name.substring(0, 1).toUpperCase(),
+                                style: TextStyle(
+                                  color: _getRoleColor(user.role),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.phone, size: 16, color: Colors.grey),
-                                const SizedBox(width: 8),
-                                Text(user.phone),
+                                Text(
+                                  user.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                Text(
+                                  'ID: ${user.userId}',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
+                      DataCell(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.email,
+                                  size: 16,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(user.email),
+                              ],
                             ),
-                            decoration: BoxDecoration(
-                              color: _getRoleColor(user.role).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              UserRole.getDisplayName(user.role),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: _getRoleColor(user.role),
-                                fontWeight: FontWeight.w600,
+                            const SizedBox(height: 4),
+                            if (user.phone.isNotEmpty)
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.phone,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(user.phone),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                      DataCell(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getRoleColor(
+                                  user.role,
+                                ).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                UserRole.getDisplayName(user.role),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: _getRoleColor(user.role),
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                'Active',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              'Active',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.green,
+                          ],
+                        ),
+                      ),
+                      DataCell(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              DateFormat('MMM dd, yyyy').format(user.createdAt),
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    DataCell(
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            DateFormat('MMM dd, yyyy').format(user.createdAt),
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                          Text(
-                            DateFormat('hh:mm a').format(user.createdAt),
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
+                            Text(
+                              DateFormat('hh:mm a').format(user.createdAt),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.visibility, color: Colors.blue),
-                            onPressed: () => context.go('${AppConstants.userDetailsRoute}/${user.userId}'),
-                            tooltip: 'View Details',
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.orange),
-                            onPressed: () => context.go('${AppConstants.editUserRoute}/${user.userId}'),
-                            tooltip: 'Edit User',
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _handleUserAction(context, 'delete', user),
-                            tooltip: 'Delete User',
-                          ),
-                        ],
+                      DataCell(
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.visibility,
+                                color: Colors.blue,
+                              ),
+                              onPressed: () => context.go(
+                                '${AppConstants.userDetailsRoute}/${user.userId}',
+                              ),
+                              tooltip: 'View Details',
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.edit,
+                                color: Colors.orange,
+                              ),
+                              onPressed: () => context.go(
+                                '${AppConstants.editUserRoute}/${user.userId}',
+                              ),
+                              tooltip: 'Edit User',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () =>
+                                  _handleUserAction(context, 'delete', user),
+                              tooltip: 'Delete User',
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              }).toList(),
+                    ],
+                  );
+                }).toList(),
+              ),
             ),
           ),
         ),
@@ -1070,23 +1290,30 @@ class _UserListScreenState extends State<UserListScreen> {
           ),
           elevation: 2,
           child: InkWell(
-            onTap: () => context.go('${AppConstants.userDetailsRoute}/${user.userId}'),
+            onTap: () =>
+                context.go('${AppConstants.userDetailsRoute}/${user.userId}'),
             borderRadius: BorderRadius.circular(8),
             child: Padding(
-              padding: EdgeInsets.all(ResponsiveHelper.isMobile(context) ? 12 : 16),
+              padding: EdgeInsets.all(
+                ResponsiveHelper.isMobile(context) ? 12 : 16,
+              ),
               child: Column(
                 children: [
                   Row(
                     children: [
                       CircleAvatar(
                         radius: ResponsiveHelper.isMobile(context) ? 20 : 24,
-                        backgroundColor: _getRoleColor(user.role).withValues(alpha: 0.2),
+                        backgroundColor: _getRoleColor(
+                          user.role,
+                        ).withValues(alpha: 0.2),
                         child: Text(
                           user.name.substring(0, 1).toUpperCase(),
                           style: TextStyle(
                             color: _getRoleColor(user.role),
                             fontWeight: FontWeight.bold,
-                            fontSize: ResponsiveHelper.isMobile(context) ? 16 : 18,
+                            fontSize: ResponsiveHelper.isMobile(context)
+                                ? 16
+                                : 18,
                           ),
                         ),
                       ),
@@ -1099,7 +1326,11 @@ class _UserListScreenState extends State<UserListScreen> {
                               user.name,
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
-                                fontSize: ResponsiveHelper.getResponsiveFontSize(context, 16),
+                                fontSize:
+                                    ResponsiveHelper.getResponsiveFontSize(
+                                      context,
+                                      16,
+                                    ),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1108,17 +1339,26 @@ class _UserListScreenState extends State<UserListScreen> {
                               user.email,
                               style: TextStyle(
                                 color: Colors.grey[600],
-                                fontSize: ResponsiveHelper.getResponsiveFontSize(context, 14),
+                                fontSize:
+                                    ResponsiveHelper.getResponsiveFontSize(
+                                      context,
+                                      14,
+                                    ),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (ResponsiveHelper.isMobile(context) && user.phone.isNotEmpty) ...[
+                            if (ResponsiveHelper.isMobile(context) &&
+                                user.phone.isNotEmpty) ...[
                               const SizedBox(height: 2),
                               Text(
                                 user.phone,
                                 style: TextStyle(
                                   color: Colors.grey[600],
-                                  fontSize: ResponsiveHelper.getResponsiveFontSize(context, 12),
+                                  fontSize:
+                                      ResponsiveHelper.getResponsiveFontSize(
+                                        context,
+                                        12,
+                                      ),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1127,7 +1367,8 @@ class _UserListScreenState extends State<UserListScreen> {
                         ),
                       ),
                       PopupMenuButton<String>(
-                        onSelected: (value) => _handleUserAction(context, value, user),
+                        onSelected: (value) =>
+                            _handleUserAction(context, value, user),
                         icon: Icon(
                           Icons.more_vert,
                           size: ResponsiveHelper.isMobile(context) ? 20 : 24,
@@ -1159,7 +1400,10 @@ class _UserListScreenState extends State<UserListScreen> {
                               children: [
                                 Icon(Icons.delete, color: Colors.red, size: 18),
                                 SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: Colors.red)),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(color: Colors.red),
+                                ),
                               ],
                             ),
                           ),
@@ -1172,17 +1416,24 @@ class _UserListScreenState extends State<UserListScreen> {
                     children: [
                       Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: ResponsiveHelper.isMobile(context) ? 8 : 10,
+                          horizontal: ResponsiveHelper.isMobile(context)
+                              ? 8
+                              : 10,
                           vertical: ResponsiveHelper.isMobile(context) ? 4 : 6,
                         ),
                         decoration: BoxDecoration(
-                          color: _getRoleColor(user.role).withValues(alpha: 0.1),
+                          color: _getRoleColor(
+                            user.role,
+                          ).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           UserRole.getDisplayName(user.role),
                           style: TextStyle(
-                            fontSize: ResponsiveHelper.getResponsiveFontSize(context, 12),
+                            fontSize: ResponsiveHelper.getResponsiveFontSize(
+                              context,
+                              12,
+                            ),
                             color: _getRoleColor(user.role),
                             fontWeight: FontWeight.w500,
                           ),
@@ -1192,7 +1443,10 @@ class _UserListScreenState extends State<UserListScreen> {
                       Text(
                         'Created: ${DateFormat('MMM dd, yyyy').format(user.createdAt)}',
                         style: TextStyle(
-                          fontSize: ResponsiveHelper.getResponsiveFontSize(context, 11),
+                          fontSize: ResponsiveHelper.getResponsiveFontSize(
+                            context,
+                            11,
+                          ),
                           color: Colors.grey[600],
                         ),
                       ),
@@ -1210,184 +1464,271 @@ class _UserListScreenState extends State<UserListScreen> {
   Widget _buildUsersTable(List<User> users) {
     return Card(
       child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minWidth: MediaQuery.of(context).size.width - 32,
-          ),
-          child: DataTable(
-            columnSpacing: ResponsiveHelper.isMobile(context) ? 16 : 24,
-            headingRowHeight: ResponsiveHelper.isMobile(context) ? 56 : 64,
-            dataRowMinHeight: ResponsiveHelper.isMobile(context) ? 48 : 56,
-            dataRowMaxHeight: ResponsiveHelper.isMobile(context) ? 72 : 80,
-            columns: ResponsiveHelper.isMobile(context) 
-                ? const [
-                    DataColumn(label: Text('User', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
-                    DataColumn(label: Text('Role', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
-                    DataColumn(label: Text('Actions', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
-                  ]
-                : const [
-                    DataColumn(label: Text('Name', style: TextStyle(fontWeight: FontWeight.w600))),
-                    DataColumn(label: Text('Email', style: TextStyle(fontWeight: FontWeight.w600))),
-                    DataColumn(label: Text('Phone', style: TextStyle(fontWeight: FontWeight.w600))),
-                    DataColumn(label: Text('Role', style: TextStyle(fontWeight: FontWeight.w600))),
-                    DataColumn(label: Text('Created', style: TextStyle(fontWeight: FontWeight.w600))),
-                    DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.w600))),
-                  ],
-            rows: users.map((user) {
-              if (ResponsiveHelper.isMobile(context)) {
-                return DataRow(
-                  cells: [
-                    DataCell(
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            user.name,
-                            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            user.email,
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    DataCell(
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: _getRoleColor(user.role).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          UserRole.getDisplayName(user.role),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width - 32,
+            child: DataTable(
+              columnSpacing: ResponsiveHelper.isMobile(context) ? 16 : 24,
+              headingRowHeight: ResponsiveHelper.isMobile(context) ? 56 : 64,
+              dataRowMinHeight: ResponsiveHelper.isMobile(context) ? 48 : 56,
+              dataRowMaxHeight: ResponsiveHelper.isMobile(context) ? 72 : 80,
+              columns: ResponsiveHelper.isMobile(context)
+                  ? const [
+                      DataColumn(
+                        label: Text(
+                          'User',
                           style: TextStyle(
-                            fontSize: 11,
-                            color: _getRoleColor(user.role),
-                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                    ),
-                    DataCell(
-                      PopupMenuButton<String>(
-                        onSelected: (value) => _handleUserAction(context, value, user),
-                        icon: const Icon(Icons.more_vert, size: 20),
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'view',
-                            child: Row(
-                              children: [
-                                Icon(Icons.visibility, size: 18),
-                                SizedBox(width: 8),
-                                Text('View'),
-                              ],
-                            ),
+                      DataColumn(
+                        label: Text(
+                          'Role',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, size: 18),
-                                SizedBox(width: 8),
-                                Text('Edit'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, color: Colors.red, size: 18),
-                                SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: Colors.red)),
-                              ],
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              } else {
-                return DataRow(
-                  cells: [
-                    DataCell(
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: _getRoleColor(user.role).withValues(alpha: 0.2),
-                            child: Text(
-                              user.name.substring(0, 1).toUpperCase(),
-                              style: TextStyle(
-                                color: _getRoleColor(user.role),
+                      DataColumn(
+                        label: Text(
+                          'Actions',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ]
+                  : const [
+                      DataColumn(
+                        label: Text(
+                          'Name',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Email',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Phone',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Role',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Created',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Actions',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+              rows: users.map((user) {
+                if (ResponsiveHelper.isMobile(context)) {
+                  return DataRow(
+                    cells: [
+                      DataCell(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              user.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
                                 fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              user.email,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      DataCell(
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getRoleColor(
+                              user.role,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            UserRole.getDisplayName(user.role),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _getRoleColor(user.role),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        PopupMenuButton<String>(
+                          onSelected: (value) =>
+                              _handleUserAction(context, value, user),
+                          icon: const Icon(Icons.more_vert, size: 20),
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'view',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.visibility, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('View'),
+                                ],
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            user.name,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                    ),
-                    DataCell(Text(user.email)),
-                    DataCell(Text(user.phone)),
-                    DataCell(
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: _getRoleColor(user.role).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Edit'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Delete',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        child: Text(
-                          UserRole.getDisplayName(user.role),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _getRoleColor(user.role),
-                            fontWeight: FontWeight.w500,
+                      ),
+                    ],
+                  );
+                } else {
+                  return DataRow(
+                    cells: [
+                      DataCell(
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: _getRoleColor(
+                                user.role,
+                              ).withValues(alpha: 0.2),
+                              child: Text(
+                                user.name.substring(0, 1).toUpperCase(),
+                                style: TextStyle(
+                                  color: _getRoleColor(user.role),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              user.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      DataCell(Text(user.email)),
+                      DataCell(Text(user.phone)),
+                      DataCell(
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getRoleColor(
+                              user.role,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            UserRole.getDisplayName(user.role),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _getRoleColor(user.role),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    DataCell(
-                      Text(DateFormat('MMM dd, yyyy').format(user.createdAt)),
-                    ),
-                    DataCell(
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.visibility),
-                            onPressed: () => context.go('${AppConstants.userDetailsRoute}/${user.userId}'),
-                            tooltip: 'View Details',
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () => context.go('${AppConstants.editUserRoute}/${user.userId}'),
-                            tooltip: 'Edit User',
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _handleUserAction(context, 'delete', user),
-                            tooltip: 'Delete User',
-                          ),
-                        ],
+                      DataCell(
+                        Text(DateFormat('MMM dd, yyyy').format(user.createdAt)),
                       ),
-                    ),
-                  ],
-                );
-              }
-            }).toList(),
+                      DataCell(
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.visibility),
+                              onPressed: () => context.go(
+                                '${AppConstants.userDetailsRoute}/${user.userId}',
+                              ),
+                              tooltip: 'View Details',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () => context.go(
+                                '${AppConstants.editUserRoute}/${user.userId}',
+                              ),
+                              tooltip: 'Edit User',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () =>
+                                  _handleUserAction(context, 'delete', user),
+                              tooltip: 'Delete User',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }
+              }).toList(),
+            ),
           ),
         ),
       ),
@@ -1426,7 +1767,9 @@ class _UserListScreenState extends State<UserListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete ${user.name}? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete ${user.name}? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -1435,14 +1778,16 @@ class _UserListScreenState extends State<UserListScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              final success = await context.read<UserProvider>().deleteUser(user.userId);
+              final success = await context.read<UserProvider>().deleteUser(
+                user.userId,
+              );
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      success 
-                        ? 'User deleted successfully' 
-                        : 'Failed to delete user',
+                      success
+                          ? 'User deleted successfully'
+                          : 'Failed to delete user',
                     ),
                     backgroundColor: success ? Colors.green : Colors.red,
                   ),
