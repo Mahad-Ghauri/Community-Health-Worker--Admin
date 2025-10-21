@@ -91,11 +91,14 @@ class FacilityService {
         throw Exception('A facility with this name already exists');
       }
 
-      // Create facility with server timestamp
-      DocumentReference docRef = await _firestore.collection(_collection).add({
+      // Create facility with server timestamp and sync generated ID
+      final docRef = await _firestore.collection(_collection).add({
         ...facility.toFirestore(),
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      // Store the generated document ID inside the document data
+      await docRef.update({'facilityId': docRef.id});
 
       return docRef.id;
     } catch (e) {

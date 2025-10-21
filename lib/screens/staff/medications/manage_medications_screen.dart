@@ -86,6 +86,7 @@ class _ManageMedicationsScreenState extends State<ManageMedicationsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading facility: $e')),
         );
+        debugPrint('Error loading facility: $e');
       }
     }
   }
@@ -110,6 +111,7 @@ class _ManageMedicationsScreenState extends State<ManageMedicationsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading patients: $e')),
         );
+        debugPrint('[DEBUG] Error loading patients: $e');
       }
     }
   }
