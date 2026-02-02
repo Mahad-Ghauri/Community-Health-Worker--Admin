@@ -44,6 +44,7 @@ class AppConstants {
   // Supervisor Routes
   static const String supervisorDashboardRoute = '/supervisor/dashboard';
   static const String supervisorPatientsRoute = '/supervisor/patients';
+  static const String supervisorVisitsRoute = '/supervisor/visits';
 
   // Facility Types
   static const String hospitalType = 'hospital';

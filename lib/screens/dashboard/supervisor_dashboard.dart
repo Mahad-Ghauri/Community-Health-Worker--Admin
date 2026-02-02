@@ -117,6 +117,25 @@ class SupervisorDashboard extends StatelessWidget {
                     _filtersBar(context, supProv),
                     const SizedBox(height: 16),
 
+                    // Quick Action Button - View CHW Visits
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => context.go(AppConstants.supervisorVisitsRoute),
+                        icon: const Icon(Icons.assignment),
+                        label: const Text('View CHW Field Visits'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: CHWTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
                     // KPI cards (with View details)
                     Wrap(
                       spacing: 12,

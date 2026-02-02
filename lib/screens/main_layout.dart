@@ -245,45 +245,78 @@ class _MainLayoutState extends State<MainLayout> {
     final authProvider = Provider.of<AuthProvider>(context);
     final userRole = authProvider.currentUser?.role;
 
-    // Filter menu items based on user role
-    final allMenuItems = [
-      NavigationItem(
-        icon: Icons.dashboard,
-        label: 'Dashboard',
-        route: AppConstants.dashboardRoute,
-        requiredRole: null, // Available to all roles
-      ),
-      NavigationItem(
-        icon: Icons.people,
-        label: 'User Management',
-        route: AppConstants.usersRoute,
-        requiredRole: AppConstants.adminRole, // Admin only
-      ),
-      NavigationItem(
-        icon: Icons.business,
-        label: 'Facilities',
-        route: AppConstants.facilitiesRoute,
-        requiredRole: AppConstants.adminRole, // Admin only
-      ),
-      NavigationItem(
-        icon: Icons.history,
-        label: 'Audit Logs',
-        route: AppConstants.auditLogsRoute,
-        requiredRole: AppConstants.adminRole, // Admin only
-      ),
-      NavigationItem(
-        icon: Icons.settings,
-        label: 'Settings',
-        route: AppConstants.settingsRoute,
-        requiredRole: null, // Available to all roles
-      ),
-    ];
+    // Define navigation items based on role
+    List<NavigationItem> menuItems = [];
 
-    // Filter menu items based on user role
-    final menuItems = allMenuItems.where((item) {
-      if (item.requiredRole == null) return true;
-      return userRole == item.requiredRole;
-    }).toList();
+    if (userRole == AppConstants.supervisorRole) {
+      // Supervisor-specific navigation
+      menuItems = [
+        NavigationItem(
+          icon: Icons.dashboard,
+          label: 'Dashboard',
+          route: AppConstants.supervisorDashboardRoute,
+          requiredRole: null,
+        ),
+        NavigationItem(
+          icon: Icons.assignment,
+          label: 'CHW Field Visits',
+          route: AppConstants.supervisorVisitsRoute,
+          requiredRole: null,
+        ),
+        NavigationItem(
+          icon: Icons.people,
+          label: 'All Patients',
+          route: AppConstants.supervisorPatientsRoute,
+          requiredRole: null,
+        ),
+        NavigationItem(
+          icon: Icons.settings,
+          label: 'Settings',
+          route: AppConstants.settingsRoute,
+          requiredRole: null,
+        ),
+      ];
+    } else {
+      // Admin and other roles navigation
+      final allMenuItems = [
+        NavigationItem(
+          icon: Icons.dashboard,
+          label: 'Dashboard',
+          route: AppConstants.dashboardRoute,
+          requiredRole: null, // Available to all roles
+        ),
+        NavigationItem(
+          icon: Icons.people,
+          label: 'User Management',
+          route: AppConstants.usersRoute,
+          requiredRole: AppConstants.adminRole, // Admin only
+        ),
+        NavigationItem(
+          icon: Icons.business,
+          label: 'Facilities',
+          route: AppConstants.facilitiesRoute,
+          requiredRole: AppConstants.adminRole, // Admin only
+        ),
+        NavigationItem(
+          icon: Icons.history,
+          label: 'Audit Logs',
+          route: AppConstants.auditLogsRoute,
+          requiredRole: AppConstants.adminRole, // Admin only
+        ),
+        NavigationItem(
+          icon: Icons.settings,
+          label: 'Settings',
+          route: AppConstants.settingsRoute,
+          requiredRole: null, // Available to all roles
+        ),
+      ];
+
+      // Filter menu items based on user role
+      menuItems = allMenuItems.where((item) {
+        if (item.requiredRole == null) return true;
+        return userRole == item.requiredRole;
+      }).toList();
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
