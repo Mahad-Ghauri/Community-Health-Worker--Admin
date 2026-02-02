@@ -178,20 +178,12 @@ class _MainLayoutState extends State<MainLayout> {
     return Container(
       margin: const EdgeInsets.all(8),
       child: ListTile(
-        leading: const Icon(
-          Icons.logout,
-          color: Colors.red,
-        ),
+        leading: const Icon(Icons.logout, color: Colors.red),
         title: const Text(
           'Logout',
-          style: TextStyle(
-            color: Colors.red,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         onTap: () {
           Navigator.of(context).pop(); // Close drawer first
           _handleLogout(context, authProvider);

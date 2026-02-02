@@ -121,7 +121,8 @@ class SupervisorDashboard extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () => context.go(AppConstants.supervisorVisitsRoute),
+                        onPressed: () =>
+                            context.go(AppConstants.supervisorVisitsRoute),
                         icon: const Icon(Icons.assignment),
                         label: const Text('View CHW Field Visits'),
                         style: ElevatedButton.styleFrom(

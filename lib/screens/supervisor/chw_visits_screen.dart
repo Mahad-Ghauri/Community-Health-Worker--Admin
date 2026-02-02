@@ -88,15 +88,24 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                     children: [
                       _buildFilterChip('All', ''),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Home Visits', AppConstants.homeVisitType),
+                      _buildFilterChip(
+                        'Home Visits',
+                        AppConstants.homeVisitType,
+                      ),
                       const SizedBox(width: 8),
                       _buildFilterChip('Follow-ups', AppConstants.followUpType),
                       const SizedBox(width: 8),
                       _buildFilterChip('Tracing', AppConstants.tracingType),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Medicine Delivery', AppConstants.medicineDeliveryType),
+                      _buildFilterChip(
+                        'Medicine Delivery',
+                        AppConstants.medicineDeliveryType,
+                      ),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Counseling', AppConstants.counselingType),
+                      _buildFilterChip(
+                        'Counseling',
+                        AppConstants.counselingType,
+                      ),
                     ],
                   ),
                 ),
@@ -120,16 +129,24 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: CHWTheme.errorColor),
+                        Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: CHWTheme.errorColor,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'Error loading visits',
-                          style: CHWTheme.bodyStyle.copyWith(color: CHWTheme.errorColor),
+                          style: CHWTheme.bodyStyle.copyWith(
+                            color: CHWTheme.errorColor,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           snapshot.error.toString(),
-                          style: CHWTheme.bodyStyle.copyWith(color: Colors.grey),
+                          style: CHWTheme.bodyStyle.copyWith(
+                            color: Colors.grey,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -138,22 +155,30 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                 }
 
                 final allVisits = snapshot.data ?? [];
-                
+
                 if (allVisits.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.assignment_outlined, size: 64, color: Colors.grey[400]),
+                        Icon(
+                          Icons.assignment_outlined,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'No visits recorded yet',
-                          style: CHWTheme.subheadingStyle.copyWith(color: Colors.grey),
+                          style: CHWTheme.subheadingStyle.copyWith(
+                            color: Colors.grey,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'CHW field visits will appear here',
-                          style: CHWTheme.bodyStyle.copyWith(color: Colors.grey[600]),
+                          style: CHWTheme.bodyStyle.copyWith(
+                            color: Colors.grey[600],
+                          ),
                         ),
                       ],
                     ),
@@ -163,19 +188,29 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                 // Apply filters
                 final filteredVisits = allVisits.where((visit) {
                   // Filter by visit type
-                  if (_selectedVisitType.isNotEmpty && 
+                  if (_selectedVisitType.isNotEmpty &&
                       visit['visitType'] != _selectedVisitType) {
                     return false;
                   }
 
                   // Filter by search query
                   if (_searchQuery.isNotEmpty) {
-                    final chwId = (visit['chwId'] ?? '').toString().toLowerCase();
-                    final patientId = (visit['patientId'] ?? '').toString().toLowerCase();
-                    final notes = (visit['notes'] ?? '').toString().toLowerCase();
-                    final chwName = (visit['chwName'] ?? '').toString().toLowerCase();
-                    final patientName = (visit['patientName'] ?? '').toString().toLowerCase();
-                    
+                    final chwId = (visit['chwId'] ?? '')
+                        .toString()
+                        .toLowerCase();
+                    final patientId = (visit['patientId'] ?? '')
+                        .toString()
+                        .toLowerCase();
+                    final notes = (visit['notes'] ?? '')
+                        .toString()
+                        .toLowerCase();
+                    final chwName = (visit['chwName'] ?? '')
+                        .toString()
+                        .toLowerCase();
+                    final patientName = (visit['patientName'] ?? '')
+                        .toString()
+                        .toLowerCase();
+
                     if (!chwId.contains(_searchQuery) &&
                         !patientId.contains(_searchQuery) &&
                         !notes.contains(_searchQuery) &&
@@ -193,16 +228,24 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'No visits found',
-                          style: CHWTheme.subheadingStyle.copyWith(color: Colors.grey),
+                          style: CHWTheme.subheadingStyle.copyWith(
+                            color: Colors.grey,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Try adjusting your filters',
-                          style: CHWTheme.bodyStyle.copyWith(color: Colors.grey[600]),
+                          style: CHWTheme.bodyStyle.copyWith(
+                            color: Colors.grey[600],
+                          ),
                         ),
                       ],
                     ),
@@ -244,9 +287,10 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
   }
 
   Widget _buildVisitCard(Map<String, dynamic> visit) {
-    final visitDate = (visit['visitDate'] as Timestamp?)?.toDate() ?? 
-                     (visit['date'] as Timestamp?)?.toDate() ?? 
-                     DateTime.now();
+    final visitDate =
+        (visit['visitDate'] as Timestamp?)?.toDate() ??
+        (visit['date'] as Timestamp?)?.toDate() ??
+        DateTime.now();
     final visitType = visit['visitType'] ?? 'Unknown';
     final found = visit['found'] ?? false;
     final notes = visit['notes'] ?? 'No notes';
@@ -298,7 +342,9 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: found ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+          color: found
+              ? Colors.green.withValues(alpha: 0.3)
+              : Colors.red.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -344,9 +390,14 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: found ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                      color: found
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -399,7 +450,11 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.medical_information_outlined, size: 16, color: Colors.grey[600]),
+                  Icon(
+                    Icons.medical_information_outlined,
+                    size: 16,
+                    color: Colors.grey[600],
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Patient: ',
@@ -452,9 +507,10 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
   }
 
   void _showVisitDetails(Map<String, dynamic> visit) {
-    final visitDate = (visit['visitDate'] as Timestamp?)?.toDate() ?? 
-                     (visit['date'] as Timestamp?)?.toDate() ?? 
-                     DateTime.now();
+    final visitDate =
+        (visit['visitDate'] as Timestamp?)?.toDate() ??
+        (visit['date'] as Timestamp?)?.toDate() ??
+        DateTime.now();
     final visitType = visit['visitType'] ?? 'Unknown';
     final found = visit['found'] ?? false;
     final notes = visit['notes'] ?? 'No notes';
@@ -501,8 +557,14 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                   ),
                   const SizedBox(height: 24),
                   _buildDetailRow('Visit Type', _formatVisitType(visitType)),
-                  _buildDetailRow('Date & Time', DateFormat('MMM d, y - h:mm a').format(visitDate)),
-                  _buildDetailRow('Status', found ? 'Patient Found' : 'Patient Not Found'),
+                  _buildDetailRow(
+                    'Date & Time',
+                    DateFormat('MMM d, y - h:mm a').format(visitDate),
+                  ),
+                  _buildDetailRow(
+                    'Status',
+                    found ? 'Patient Found' : 'Patient Not Found',
+                  ),
                   const Divider(height: 32),
                   _buildDetailRow('CHW', chwName),
                   _buildDetailRow('CHW ID', chwId),
@@ -523,10 +585,7 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                       color: Colors.grey[100],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      notes,
-                      style: CHWTheme.bodyStyle,
-                    ),
+                    child: Text(notes, style: CHWTheme.bodyStyle),
                   ),
                   if (gpsLocation != null && gpsLocation.isNotEmpty) ...[
                     const SizedBox(height: 24),
@@ -537,8 +596,14 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _buildDetailRow('Latitude', gpsLocation['latitude']?.toString() ?? 'N/A'),
-                    _buildDetailRow('Longitude', gpsLocation['longitude']?.toString() ?? 'N/A'),
+                    _buildDetailRow(
+                      'Latitude',
+                      gpsLocation['latitude']?.toString() ?? 'N/A',
+                    ),
+                    _buildDetailRow(
+                      'Longitude',
+                      gpsLocation['longitude']?.toString() ?? 'N/A',
+                    ),
                   ],
                   if (photos != null && photos.isNotEmpty) ...[
                     const SizedBox(height: 24),
@@ -551,7 +616,9 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Photos attached',
-                      style: CHWTheme.bodyStyle.copyWith(color: Colors.grey[600]),
+                      style: CHWTheme.bodyStyle.copyWith(
+                        color: Colors.grey[600],
+                      ),
                     ),
                   ],
                 ],
@@ -583,9 +650,7 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
           Expanded(
             child: Text(
               value,
-              style: CHWTheme.bodyStyle.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: CHWTheme.bodyStyle.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -618,7 +683,9 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Use the filter chips below the search bar to filter by visit type.'),
+            const Text(
+              'Use the filter chips below the search bar to filter by visit type.',
+            ),
           ],
         ),
         actions: [
