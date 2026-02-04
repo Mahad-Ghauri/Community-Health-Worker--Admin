@@ -10,6 +10,7 @@ import '../../services/dashboard_service.dart';
 import 'package:go_router/go_router.dart';
 import '../../constants/app_constants.dart';
 import 'package:flutter/services.dart';
+import '../supervisor/visits_diagnostic_screen.dart';
 // import 'package:go_router/go_router.dart';
 // import '../../constants/app_constants.dart';
 
@@ -133,6 +134,25 @@ class SupervisorDashboard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Debug button (temporary)
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const VisitsDiagnosticScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.bug_report),
+                      label: const Text('Troubleshoot Visits (Debug)'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
                     const SizedBox(height: 16),

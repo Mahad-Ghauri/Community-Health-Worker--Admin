@@ -120,6 +120,22 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                 facilityId: facilityId,
               ),
               builder: (context, snapshot) {
+                // Debug logging
+                print('🔍 CHW Visits Stream State:');
+                print('  Connection: ${snapshot.connectionState}');
+                print('  Has Error: ${snapshot.hasError}');
+                print('  Has Data: ${snapshot.hasData}');
+                if (snapshot.hasData) {
+                  print('  Data Count: ${snapshot.data?.length ?? 0}');
+                  if (snapshot.data!.isNotEmpty) {
+                    print('  First visit: ${snapshot.data!.first}');
+                  }
+                }
+                if (snapshot.hasError) {
+                  print('  ❌ Error: ${snapshot.error}');
+                  print('  Stack: ${snapshot.stackTrace}');
+                }
+
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -142,12 +158,23 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          snapshot.error.toString(),
-                          style: CHWTheme.bodyStyle.copyWith(
-                            color: Colors.grey,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            snapshot.error.toString(),
+                            style: CHWTheme.bodyStyle.copyWith(
+                              color: Colors.grey,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            setState(() {}); // Trigger rebuild
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
                         ),
                       ],
                     ),
