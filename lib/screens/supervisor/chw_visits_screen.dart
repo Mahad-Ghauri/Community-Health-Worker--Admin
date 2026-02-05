@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import '../../services/visit_service.dart';
-import '../../services/auth_provider.dart';
 import '../../theme/theme.dart';
 import '../../constants/app_constants.dart';
 import 'package:go_router/go_router.dart';
@@ -29,8 +27,9 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final facilityId = authProvider.currentUser?.facilityId;
+    // Note: facilityId filtering disabled because visits don't have facilityId field
+    // final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    // final facilityId = authProvider.currentUser?.facilityId;
 
     return Scaffold(
       backgroundColor: CHWTheme.backgroundColor,
@@ -117,7 +116,7 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: _visitService.getAllVisits(
                 limit: 200,
-                facilityId: facilityId,
+                facilityId: null, // Don't filter - visits don't have facilityId yet
               ),
               builder: (context, snapshot) {
                 // Debug logging
