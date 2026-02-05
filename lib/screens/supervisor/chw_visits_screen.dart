@@ -116,7 +116,8 @@ class _CHWVisitsScreenState extends State<CHWVisitsScreen> {
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: _visitService.getAllVisits(
                 limit: 200,
-                facilityId: null, // Don't filter - visits don't have facilityId yet
+                facilityId:
+                    null, // Don't filter - visits don't have facilityId yet
               ),
               builder: (context, snapshot) {
                 // Debug logging
